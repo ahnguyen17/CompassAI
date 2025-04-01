@@ -11,29 +11,32 @@ const User = require('./models/User');
 // Connect to DB
 mongoose.connect(process.env.MONGODB_URI);
 
-// Function to import data
+// Function to import data (creates default admin if not exists)
 const importData = async () => {
   try {
-    const userEmail = 'ahnguyen17@gmail.com';
-    const userPassword = 'Summer23';
+    const adminUsername = 'admin';
+    const adminEmail = 'admin@example.com'; // Placeholder email
+    const adminPassword = 'password'; // Default password - CHANGE IMMEDIATELY
 
-    // Check if user already exists by email
-    const existingUser = await User.findOne({ email: userEmail });
-    if (existingUser) {
-      console.log(`User with email ${userEmail} already exists.`.yellow.inverse);
-      process.exit();
+    // Check if admin user already exists by username
+    const existingAdmin = await User.findOne({ username: adminUsername });
+    if (existingAdmin) {
+      console.log(`Admin user '${adminUsername}' already exists.`.yellow.inverse);
+    } else {
+      // Create the admin user
+      // Note: The password will be automatically hashed by the pre-save hook in the User model
+      await User.create({
+        username: adminUsername,
+        email: adminEmail, // Ensure email is unique if required by schema
+        password: adminPassword,
+        role: 'admin' // Assign admin role
+      });
+      console.log(`Default admin user '${adminUsername}' created successfully.`.green.inverse);
+      console.log('IMPORTANT: Change the default password immediately!'.yellow.bold);
     }
 
-    // Create the user
-    // Note: The password will be automatically hashed by the pre-save hook in the User model
-    await User.create({
-      username: userEmail, // Using email as username for simplicity
-      email: userEmail,
-      password: userPassword,
-      role: 'admin' // Assign admin role
-    });
+    // Optional: Add other seed data here if needed (e.g., referral codes)
 
-    console.log(`User ${userEmail} created successfully.`.green.inverse);
     process.exit();
   } catch (err) {
     console.error(`${err}`.red.inverse);
@@ -41,13 +44,17 @@ const importData = async () => {
   }
 };
 
-// Function to delete data (optional, for cleanup)
+// Function to delete data (optional, for cleanup - adjust as needed)
 const deleteData = async () => {
   try {
-    // Delete the specific user or the old root user if needed
-    await User.deleteMany({ email: 'ahnguyen17@gmail.com' });
-    await User.deleteMany({ username: 'root' }); // Also remove the old root user if it exists
-    console.log('Specified user(s) destroyed...'.red.inverse);
+    // Example: Delete the default admin user
+    await User.deleteMany({ username: 'admin' });
+    console.log(`Default admin user 'admin' destroyed...`.red.inverse);
+
+    // Example: Delete all users (use with caution!)
+    // await User.deleteMany();
+    // console.log('All users destroyed...'.red.inverse);
+
     process.exit();
   } catch (err) {
     console.error(`${err}`.red.inverse);

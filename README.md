@@ -57,6 +57,7 @@ ai-chatbox/
     *   `NODE_ENV`: `development`
 4.  Install dependencies: `npm install`
 5.  Start the server: `npm run dev` (uses nodemon) or `npm start`
+6.  **(Optional) Create Initial Admin User:** To create the default admin user (`admin`/`password`), run the seeder: `node seeder.js -i`. **Change this password immediately after first login!**
 
 ### Frontend
 
@@ -107,6 +108,7 @@ This guide uses **Render** for the backend and **Netlify** for the frontend as e
         *   `NODE_ENV`: `production`
     *   Deploy the service.
     *   **Copy the backend URL** provided by Render (e.g., `https://your-backend.onrender.com`).
+    *   **(Optional) Seed Initial Admin:** Connect to your deployed backend environment (e.g., Render Shell, SSH) navigate to the `backend` directory, and run `node seeder.js -i` once to create the default admin user.
 
 ### III. Frontend Deployment (Netlify)
 
@@ -124,7 +126,8 @@ This guide uses **Render** for the backend and **Netlify** for the frontend as e
 ### IV. Final Checks
 
 1.  **Backend CORS:** Verify the `origin` in `backend/server.js`'s `corsOptions` matches your deployed Netlify frontend URL. If you had to update it after getting the Netlify URL, commit, push, and redeploy the backend.
-2.  **Test:** Access your Netlify URL and test registration, login (desktop & mobile), chat functionality, and share links.
+2.  **Initial Login:** If you ran the seeder, log in with `admin` / `password` and **change the password immediately**. Otherwise, register the first user through the UI.
+3.  **Test:** Access your Netlify URL and test registration, login (desktop & mobile), chat functionality, and share links.
 
 ## Important Notes
 

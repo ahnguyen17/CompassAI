@@ -19,11 +19,21 @@ connectDB();
 const app = express();
 
 // Middleware
-// Configure CORS to allow specific origin in production
+// Configure CORS to allow specific origins in production
+const allowedOrigins = [
+    'https://frolicking-elf-a41c93.netlify.app', // Previous Netlify URL
+    'https://asianblvd.com'                     // New custom domain
+];
+
 const corsOptions = {
-    origin: process.env.NODE_ENV === 'production'
-        ? 'https://frolicking-elf-a41c93.netlify.app' // Your deployed frontend URL
-        : '*', // Allow all origins in development (or specify localhost)
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests) or from allowed origins
+        if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true, // Allow cookies if needed for auth later
     optionsSuccessStatus: 204 // For legacy browser support

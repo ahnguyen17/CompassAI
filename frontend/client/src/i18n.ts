@@ -58,6 +58,8 @@ const resources = {
       "settings_api_keys_title": "API Key Management",
       "settings_users_title": "User Management",
       "settings_referral_title": "Referral Code Management",
+      // General terms
+      "optional": "required", // Changed from Optional to required
       // Add more keys as needed
     }
   },
@@ -113,6 +115,8 @@ const resources = {
       "settings_api_keys_title": "Quản lý Khóa API",
       "settings_users_title": "Quản lý Người dùng",
       "settings_referral_title": "Quản lý Mã giới thiệu",
+      // General terms
+      "optional": "bắt buộc", // Changed from Tùy chọn to bắt buộc
       // Add more keys as needed
     }
   }

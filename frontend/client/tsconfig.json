@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true, // Enables compatibility with CommonJS modules
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler", // Use modern bundler resolution
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    // Add typeRoots if needed, but usually not required with standard setup
+    // "typeRoots": ["./node_modules/@types", "./src/types"]
+  },
+  "include": ["src"] // Ensure src directory (and thus src/types) is included
+  // Removed "references" array as tsconfig.node.json does not exist
+}

@@ -126,7 +126,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess }) => {
           {loading ? t('register_registering') : t('register_button')}
         </button>
         <p className={styles.loginLink}>
-            {t('register_already_account')} <Link to="/login">{t('register_login_link')}</Link>
+            {t('register_have_account')} <Link to="/login">{t('register_login_link')}</Link>
         </p>
       </form>
     </div>

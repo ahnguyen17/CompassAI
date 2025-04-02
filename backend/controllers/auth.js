@@ -6,32 +6,29 @@ const ReferralCode = require('../models/ReferralCode'); // Import ReferralCode m
 // @access  Public
 exports.register = async (req, res, next) => {
   try {
-    const { username, email, password, referralCode } = req.body; // Add referralCode
+    const { username, email, password, referralCode } = req.body;
 
-    // Basic validation - Check if referral code is required by your logic
-    // If referral code is truly required for registration:
-    if (!username || !email || !password || !referralCode) {
-       return res.status(400).json({ success: false, error: 'Please provide username, email, password, and referral code' });
+    // Basic validation (always require username, email, password)
+    if (!username || !email || !password) {
+       return res.status(400).json({ success: false, error: 'Please provide username, email, and password' });
     }
-    // If referral code is optional:
-    // if (!username || !email || !password) {
-    //    return res.status(400).json({ success: false, error: 'Please provide username, email, and password' });
-    // }
 
+    // --- Conditional Referral Code Validation ---
+    const referralCodesExist = await ReferralCode.countDocuments() > 0;
 
-    // --- Referral Code Validation ---
-    // Only validate if a code was provided
-    if (referralCode && referralCode.trim()) {
+    if (referralCodesExist) {
+        // If codes exist, the field is required and must be valid
+        if (!referralCode || !referralCode.trim()) {
+             return res.status(400).json({ success: false, error: 'Referral code is required.' });
+        }
         const validCode = await ReferralCode.findOne({ code: referralCode.trim() });
         if (!validCode) {
             return res.status(400).json({ success: false, error: 'Invalid referral code.' });
         }
-        // Optional: Implement usage limits/expiration checks here if added to the model
-    } else {
-        // Handle case where referral code is required but not provided (if applicable)
-         return res.status(400).json({ success: false, error: 'Referral code is required.' }); // Uncomment if required
+        // Optional: Implement usage limits/expiration checks here
     }
-    // --- End Referral Code Validation ---
+    // If no referral codes exist in the DB, we ignore the referralCode field entirely
+    // --- End Conditional Referral Code Validation ---
 
 
     // Check if user already exists (email or username)

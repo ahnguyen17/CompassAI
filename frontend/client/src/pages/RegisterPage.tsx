@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Import useEffect
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/api';
-import styles from './RegisterPage.module.css'; // Import CSS module
+import styles from './RegisterPage.module.css';
 
-// Define props interface
 interface RegisterPageProps {
-  onRegisterSuccess: () => void; // Callback for successful registration
+  onRegisterSuccess: () => void;
 }
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess }) => {
@@ -14,11 +13,31 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [referralCode, setReferralCode] = useState(''); // State for referral code
+  const [referralCode, setReferralCode] = useState('');
+  const [isReferralRequired, setIsReferralRequired] = useState<boolean | null>(null); // null = loading, true/false = status
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  // Fetch referral code status on mount
+  useEffect(() => {
+    const checkReferralStatus = async () => {
+      try {
+        const response = await apiClient.get('/referralcodes/status');
+        if (response.data?.success) {
+          setIsReferralRequired(response.data.isRequired);
+        } else {
+          console.error('Failed to fetch referral status, assuming not required.');
+          setIsReferralRequired(false); // Default to not required on error
+        }
+      } catch (err) {
+        console.error('Error fetching referral status:', err);
+        setIsReferralRequired(false); // Default to not required on error
+      }
+    };
+    checkReferralStatus();
+  }, []); // Empty dependency array means run once on mount
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,26 +51,28 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess }) => {
         setError('Password must be at least 6 characters long.');
         return;
     }
+    // Check if referral is required and not provided
+    if (isReferralRequired === true && !referralCode.trim()) {
+        setError('Referral code is required.');
+        return;
+    }
 
     setLoading(true);
 
     try {
-      // Include referralCode in the request body if it's provided
       const payload: any = { username, email, password };
-      if (referralCode.trim()) {
+      // Only include referralCode if it's required and has a value
+      if (isReferralRequired && referralCode.trim()) {
           payload.referralCode = referralCode.trim();
       }
 
       const response = await apiClient.post('/auth/register', payload);
 
       if (response.data && response.data.success && response.data.token) {
-        // Store the token (optional, depends if you want auto-login after register)
         localStorage.setItem('authToken', response.data.token);
-        localStorage.setItem('lastLoginIdentifier', email); // Store email as identifier
-        // Call the callback
+        localStorage.setItem('lastLoginIdentifier', email);
         onRegisterSuccess();
-        // Redirect to the main chat page or login page
-        navigate('/'); // Redirect to chat after successful registration
+        navigate('/');
       } else {
         setError(response.data?.error || 'Registration failed. Please try again.');
       }
@@ -62,6 +83,11 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess }) => {
       setLoading(false);
     }
   };
+
+  // Don't render the form until we know the referral status
+  if (isReferralRequired === null) {
+      return <div>Loading registration form...</div>; // Or a spinner
+  }
 
   return (
     <div className={styles.registerContainer}>
@@ -111,16 +137,20 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess }) => {
             autoComplete="new-password"
           />
         </div>
-         <div className={styles.inputGroup}>
-            <label htmlFor="referralCode">{t('register_referral_label')} ({t('optional')})</label>
-            <input
-                type="text"
-                id="referralCode"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value)}
-                autoComplete="off"
-            />
-        </div>
+        {/* Conditionally render referral code input */}
+        {isReferralRequired && (
+            <div className={styles.inputGroup}>
+                <label htmlFor="referralCode">{t('register_referral_label')} ({t('optional')})</label> {/* Keep using 'optional' key which now means 'required' */}
+                <input
+                    type="text"
+                    id="referralCode"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value)}
+                    required={isReferralRequired} // Make input required only if needed
+                    autoComplete="off"
+                />
+            </div>
+        )}
         {error && <p className={styles.errorMessage}>{error}</p>}
         <button type="submit" disabled={loading} className={styles.submitButton}>
           {loading ? t('register_registering') : t('register_button')}

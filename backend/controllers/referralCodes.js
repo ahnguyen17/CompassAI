@@ -74,3 +74,19 @@ exports.deleteReferralCode = async (req, res, next) => {
         res.status(500).json({ success: false, error: 'Server Error deleting code' });
     }
 };
+
+// @desc    Check if referral codes are required (i.e., if any exist)
+// @route   GET /api/v1/referralcodes/status
+// @access  Public
+exports.getReferralStatus = async (req, res, next) => {
+    try {
+        const count = await ReferralCode.countDocuments();
+        const isRequired = count > 0;
+        res.status(200).json({ success: true, isRequired: isRequired });
+    } catch (error) {
+        console.error("Get Referral Status Error:", error);
+        // Send back a generic status even on error, maybe default to required? Or false?
+        // Let's default to false (not required) if there's an error checking.
+        res.status(500).json({ success: false, isRequired: false, error: 'Server error checking referral status' });
+    }
+};

@@ -30,8 +30,7 @@ interface ReferralCode {
 
 interface SettingsPageProps {
     currentUser: User | null;
-    // Add a function prop to refresh currentUser if needed after updates
-    // refreshCurrentUser: () => void;
+    // refreshCurrentUser: () => void; // Optional prop to refresh user data in App
 }
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurrentUser */ }) => {
@@ -634,54 +633,3 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
 };
 
 export default SettingsPage;
-</final_file_content>
-
-IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.
-
-<environment_details>
-# VSCode Visible Files
-../../Desktop/ai-chatbox/frontend/client/src/pages/SettingsPage.tsx
-
-# VSCode Open Tabs
-google-ai-agent/.gitignore
-google-ai-agent/.env
-google-ai-agent/verification-guide.html
-google-ai-agent/test-auth.js
-google-ai-agent/index.js
-google-ai-agent/test-email-filter.js
-google-ai-agent/package.json
-google-ai-agent/README.md
-zalo-perplexity-bot/.gitignore
-zalo-perplexity-bot/README.md
-zalo-perplexity-bot/.env.example
-zalo-perplexity-bot/simple-test.js
-zalo-perplexity-bot/package.json
-zalo-perplexity-bot/test-bot.js
-zalo-perplexity-bot/index.js
-zalo-perplexity-bot/.env
-viber-perplexity-bot/package.json
-viber-perplexity-bot/.env.example
-viber-perplexity-bot/.gitignore
-viber-perplexity-bot/index.js
-viber-perplexity-bot/test-bot.js
-viber-perplexity-bot/README.md
-viber-perplexity-bot/.env
-../../Desktop/ai-chatbox/frontend/client/src/pages/SharedChatPage.tsx
-../../Desktop/ai-chatbox/frontend/client/src/pages/RegisterPage.module.css
-../../Desktop/ai-chatbox/frontend/client/src/pages/RegisterPage.tsx
-../../Desktop/ai-chatbox/frontend/client/src/i18n.ts
-../../Desktop/ai-chatbox/backend/server.js
-../../Desktop/ai-chatbox/backend/seeder.js
-../../Desktop/ai-chatbox/README.md
-../../Desktop/ai-chatbox/backend/routes/auth.js
-../../Desktop/ai-chatbox/backend/controllers/auth.js
-../../Desktop/ai-chatbox/backend/controllers/users.js
-../../Desktop/ai-chatbox/backend/routes/users.js
-../../Desktop/ai-chatbox/frontend/client/src/pages/SettingsPage.tsx
-
-# Current Time
-4/1/2025, 10:10:29 PM (America/Los_Angeles, UTC-7:00)
-
-# Current Mode
-ACT MODE
-</environment_details>

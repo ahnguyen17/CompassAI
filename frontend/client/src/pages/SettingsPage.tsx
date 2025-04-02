@@ -472,10 +472,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
        )}
 
 
-      {/* API Key Management */}
-      <section style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', background: '#f9f9f9' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>{t('settings_api_keys_title')}</h3>
-        <h4>Existing Keys (Sorted by Priority)</h4>
+      {/* API Key Management - Only show if user is admin */}
+      {currentUser?.role === 'admin' && (
+          <section style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', background: '#f9f9f9' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>{t('settings_api_keys_title')}</h3>
+            <h4>Existing Keys (Sorted by Priority)</h4>
         {loadingApiKeys && <p>Loading...</p>}
         {fetchApiKeysError && <p style={{ color: 'red' }}>{fetchApiKeysError}</p>}
         {!loadingApiKeys && !fetchApiKeysError && ( apiKeys.length > 0 ? (
@@ -514,6 +515,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
          </div>
          {apiKeyActionError && <p style={{ color: 'red', marginTop: '10px' }}>{apiKeyActionError}</p>}
       </section>
+      )}
 
       {/* User Management (Admin Only) */}
       {currentUser?.role === 'admin' && (

@@ -45,3 +45,5 @@ const ChatSessionSchema = new mongoose.Schema({
 //     this.shareId = uuidv4();
 //   }
 // };
+
+module.exports = mongoose.model('ChatSession', ChatSessionSchema);

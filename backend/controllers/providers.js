@@ -1,4 +1,5 @@
 const ApiKey = require('../models/ApiKey');
+const DisabledModel = require('../models/DisabledModel'); // Import the DisabledModel model
 
 // Hardcoded list of common models per provider
 // In a real application, you might fetch this dynamically if APIs allow
@@ -36,13 +37,22 @@ const AVAILABLE_MODELS = {
 // @access  Private
 exports.getAvailableModels = async (req, res, next) => {
     try {
-        const enabledKeys = await ApiKey.find({ isEnabled: true }).select('providerName');
+        // Fetch enabled API keys and disabled model names concurrently
+        const [enabledKeys, disabledModels] = await Promise.all([
+            ApiKey.find({ isEnabled: true }).select('providerName'),
+            DisabledModel.find().select('modelName')
+        ]);
+
         const enabledProviders = enabledKeys.map(key => key.providerName);
+        const disabledModelNamesSet = new Set(disabledModels.map(m => m.modelName));
 
         const availableModels = {};
         for (const provider of enabledProviders) {
             if (AVAILABLE_MODELS[provider]) {
-                availableModels[provider] = AVAILABLE_MODELS[provider];
+                // Filter out disabled models for this provider
+                availableModels[provider] = AVAILABLE_MODELS[provider].filter(
+                    modelName => !disabledModelNamesSet.has(modelName)
+                );
             }
         }
 

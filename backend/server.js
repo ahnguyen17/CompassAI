@@ -11,6 +11,7 @@ const userRoutes = require('./routes/users');
 const chatSessionRoutes = require('./routes/chatSessions');
 const providerRoutes = require('./routes/providers');
 const referralCodeRoutes = require('./routes/referralCodes'); // Import referral code routes
+const disabledModelRoutes = require('./routes/disabledModels'); // Import disabled models routes
 
 // Connect to Database
 connectDB();
@@ -53,6 +54,7 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/chatsessions', chatSessionRoutes);
 app.use('/api/v1/providers', providerRoutes);
 app.use('/api/v1/referralcodes', referralCodeRoutes); // Mount referral code routes
+app.use('/api/v1/disabledmodels', disabledModelRoutes); // Mount disabled models routes
 
 // Define the port
 const PORT = process.env.PORT || 5000; // Use port from .env or default to 5000

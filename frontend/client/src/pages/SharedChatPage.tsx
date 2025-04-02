@@ -5,7 +5,7 @@ import CopyButton from '../components/CopyButton';
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import remarkGfm from 'remark-gfm'; // Import GFM plugin
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'; // Import SyntaxHighlighter
-import { prism } from 'react-syntax-highlighter/dist/esm/styles/prism'; // Import Prism style
+import { prism, okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism'; // Import both light and dark themes
 
 interface Message {
   _id: string;
@@ -23,7 +23,12 @@ interface SharedChatData {
     messages: Message[];
 }
 
-const SharedChatPage: React.FC = () => {
+// Define props interface
+interface SharedChatPageProps {
+  isDarkMode: boolean;
+}
+
+const SharedChatPage: React.FC<SharedChatPageProps> = ({ isDarkMode }) => {
   const { shareId } = useParams<{ shareId: string }>();
   const [chatData, setChatData] = useState<SharedChatData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,13 +75,46 @@ const SharedChatPage: React.FC = () => {
     return <div style={{ padding: '20px' }}>Shared chat not found.</div>;
   }
 
+  // Define dark mode styles
+  const containerStyle = {
+    padding: '20px',
+    maxWidth: '900px',
+    margin: '20px auto',
+    background: isDarkMode ? '#2a2a2a' : '#f8f9fa',
+    border: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
+    borderRadius: '8px',
+    color: isDarkMode ? '#e0e0e0' : 'inherit'
+  };
+
+  const titleStyle = {
+    textAlign: 'center' as const,
+    color: isDarkMode ? '#e0e0e0' : '#343a40'
+  };
+
+  const subtitleStyle = {
+    color: isDarkMode ? '#bbb' : '#6c757d',
+    marginBottom: '20px',
+    textAlign: 'center' as const
+  };
+
+  const messagesContainerStyle = {
+    flex: 1 as const,
+    overflowY: 'auto' as const,
+    marginBottom: '15px',
+    padding: '10px',
+    border: `1px solid ${isDarkMode ? '#444' : '#eee'}`,
+    background: isDarkMode ? '#1a1a1a' : '#fff',
+    borderRadius: '8px',
+    minHeight: '400px'
+  };
+
   return (
-    <div className="shared-chat-page" style={{ padding: '20px', maxWidth: '900px', margin: '20px auto', background: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '8px' }}>
-      <h2 style={{ textAlign: 'center', color: '#343a40' }}>{chatData.title}</h2>
-      <p style={{ color: '#6c757d', marginBottom: '20px', textAlign: 'center' }}>
+    <div className="shared-chat-page" style={containerStyle}>
+      <h2 style={titleStyle}>{chatData.title}</h2>
+      <p style={subtitleStyle}>
         <small>Shared on: {new Date(chatData.createdAt).toLocaleString()}</small>
       </p>
-      <div style={{ flex: 1, overflowY: 'auto', marginBottom: '15px', padding: '10px', border: '1px solid #eee', background: '#fff', borderRadius: '8px', minHeight: '400px' }}>
+      <div style={messagesContainerStyle}>
         {chatData.messages.map((msg) => (
           <div
               key={msg._id}
@@ -91,8 +129,12 @@ const SharedChatPage: React.FC = () => {
               <div style={{
                   padding: '10px 15px',
                   borderRadius: '15px',
-                  background: msg.sender === 'user' ? '#007bff' : '#e9ecef',
-                  color: msg.sender === 'user' ? 'white' : '#343a40',
+                  background: msg.sender === 'user' 
+                    ? (isDarkMode ? '#0d6efd' : '#007bff') 
+                    : (isDarkMode ? '#3a3d41' : '#e9ecef'),
+                  color: msg.sender === 'user' 
+                    ? 'white' 
+                    : (isDarkMode ? '#e0e0e0' : '#343a40'),
                   maxWidth: '75%',
                   wordWrap: 'break-word',
               }}>
@@ -103,10 +145,27 @@ const SharedChatPage: React.FC = () => {
                           components={{
                               code({ className, children, ...props }: { className?: string; children?: React.ReactNode }) {
                                   const match = /language-(\w+)/.exec(className || '');
+                                  // Create a custom style by overriding the background
+                                  const baseTheme = isDarkMode ? okaidia : prism;
+                                  const customSyntaxTheme = {
+                                      ...baseTheme,
+                                      'pre[class*="language-"]': {
+                                          ...(baseTheme['pre[class*="language-"]'] || {}),
+                                          background: 'transparent',
+                                          backgroundColor: 'transparent',
+                                      },
+                                      'code[class*="language-"]': {
+                                          ...(baseTheme['code[class*="language-"]'] || {}),
+                                          background: 'transparent',
+                                          backgroundColor: 'transparent',
+                                      }
+                                  };
+                                  
                                   return match ? (
                                       <SyntaxHighlighter
-                                          style={prism as any}
+                                          style={customSyntaxTheme as any}
                                           language={match[1]}
+                                          useInlineStyles={true}
                                       >
                                           {String(children).replace(/\n$/, '')}
                                       </SyntaxHighlighter>

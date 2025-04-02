@@ -86,10 +86,8 @@ exports.updateUser = async (req, res, next) => {
     if (userToUpdate._id.toString() === req.user.id && req.body.role && userToUpdate.role !== req.body.role) {
         return res.status(400).json({ success: false, error: 'Admins cannot change their own role via this endpoint.' });
     }
-    // Prevent admin from changing another admin's details (except their own via /auth/updatedetails)
-    if (userToUpdate.role === 'admin' && userToUpdate._id.toString() !== req.user.id) {
-         return res.status(403).json({ success: false, error: 'Cannot modify another admin user.' });
-    }
+    // Note: The check preventing modification of other admins has been removed based on user feedback.
+    // Admins can now change other admins' roles.
 
 
     const { username, email, role } = req.body;

@@ -28,12 +28,19 @@ interface ReferralCode {
     createdAt: string;
 }
 
+// Add interface for Model Status
+interface ModelStatus {
+    modelName: string;
+    isDisabled: boolean;
+}
+
 interface SettingsPageProps {
     currentUser: User | null;
+    isDarkMode: boolean; // Add isDarkMode prop
     // refreshCurrentUser: () => void; // Optional prop to refresh user data in App
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurrentUser */ }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, isDarkMode /*, refreshCurrentUser */ }) => {
   const { t } = useTranslation();
 
   // API Key State
@@ -62,8 +69,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
   const [editUsername, setEditUsername] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
-  const [adminResetPwdLoading, setAdminResetPwdLoading] = useState<string | null>(null); // Loading state for admin reset
-  const [adminResetPwdError, setAdminResetPwdError] = useState(''); // Error state for admin reset
+  const [adminResetPwdLoading, setAdminResetPwdLoading] = useState<string | null>(null);
+  const [adminResetPwdError, setAdminResetPwdError] = useState('');
+
+  // Model Visibility State (Admin) - ADDED
+  const [modelStatuses, setModelStatuses] = useState<ModelStatus[]>([]);
+  const [loadingModelStatuses, setLoadingModelStatuses] = useState(true);
+  const [fetchModelStatusError, setFetchModelStatusError] = useState('');
+  const [modelActionLoading, setModelActionLoading] = useState<string | null>(null);
+  const [modelActionError, setModelActionError] = useState('');
 
   // Referral Code State (Admin)
   const [referralCodes, setReferralCodes] = useState<ReferralCode[]>([]);
@@ -135,16 +149,39 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
       } finally { setLoadingReferralCodes(false); }
   };
 
+  // --- Fetch Model Statuses (Admin) ---
+  const fetchModelStatuses = async () => {
+      if (currentUser?.role !== 'admin') return;
+      setLoadingModelStatuses(true); setFetchModelStatusError('');
+      try {
+          const response = await apiClient.get('/disabledmodels/status');
+          if (response.data?.success) {
+              // Sort models alphabetically for consistent display
+              setModelStatuses(response.data.data.sort((a: ModelStatus, b: ModelStatus) => a.modelName.localeCompare(b.modelName)));
+          } else {
+              setFetchModelStatusError('Failed to load model statuses.');
+          }
+      } catch (err: any) {
+          setFetchModelStatusError(err.response?.data?.error || 'Error loading model statuses.');
+          if (err.response?.status === 401) setFetchModelStatusError('Unauthorized.');
+          if (err.response?.status === 403) setFetchModelStatusError('Forbidden.');
+      } finally {
+          setLoadingModelStatuses(false);
+      }
+  };
+
   // Initial data fetching
   useEffect(() => {
     fetchApiKeys(); // All users need API keys
     if (currentUser?.role === 'admin') {
         fetchUsers();
         fetchReferralCodes();
+        fetchModelStatuses(); // Fetch model statuses for admin
     } else {
         // Ensure loading states are false if not admin
         setLoadingUsers(false);
         setLoadingReferralCodes(false);
+        setLoadingModelStatuses(false); // Also set model status loading to false
     }
   }, [currentUser]); // Refetch if currentUser changes (e.g., after login)
 
@@ -267,6 +304,32 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
         }
     };
 
+  // --- Model Visibility Handler (Admin) --- ADDED
+  const handleToggleModelVisibility = async (modelName: string, currentlyDisabled: boolean) => {
+      setModelActionLoading(modelName);
+      setModelActionError('');
+      try {
+          let response;
+          if (currentlyDisabled) {
+              // Enable the model (DELETE request)
+              response = await apiClient.delete(`/disabledmodels/${encodeURIComponent(modelName)}`);
+          } else {
+              // Disable the model (POST request)
+              response = await apiClient.post('/disabledmodels', { modelName });
+          }
+
+          if (response.data?.success) {
+              fetchModelStatuses(); // Refresh the list after successful toggle
+          } else {
+              setModelActionError(response.data?.error || `Failed to ${currentlyDisabled ? 'enable' : 'disable'} model.`);
+          }
+      } catch (err: any) {
+          setModelActionError(err.response?.data?.error || `Error ${currentlyDisabled ? 'enabling' : 'disabling'} model.`);
+      } finally {
+          setModelActionLoading(null);
+      }
+  };
+
 
    // --- Referral Code Handlers (Admin) ---
     const handleAddReferralCode = async (e: React.FormEvent) => {
@@ -381,42 +444,182 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
        }
   };
 
-
   // --- Render Component ---
+  // Define Styles *inside* the component to access isDarkMode
+  const pageStyle = {
+    padding: '20px',
+    maxWidth: '800px',
+    margin: 'auto',
+    color: isDarkMode ? '#e0e0e0' : 'inherit' // Base text color
+  };
+
+  const sectionStyle = {
+    marginBottom: '30px',
+    padding: '20px',
+    border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`,
+    borderRadius: '8px',
+    background: isDarkMode ? '#2a2a2a' : '#f9f9f9',
+    color: isDarkMode ? '#e0e0e0' : 'inherit'
+  };
+
+  const h3Style = {
+    marginTop: 0,
+    marginBottom: '20px',
+    borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}`,
+    paddingBottom: '10px',
+    color: isDarkMode ? '#e0e0e0' : 'inherit'
+  };
+
+  const h4Style = {
+    marginTop: 0,
+    marginBottom: '15px',
+    color: isDarkMode ? '#e0e0e0' : 'inherit'
+  };
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: '5px',
+    fontWeight: '500' as const,
+    color: isDarkMode ? '#ccc' : 'inherit'
+  };
+
+  const inputStyle = {
+    padding: '10px',
+    width: '100%',
+    maxWidth: '400px',
+    borderRadius: '4px',
+    border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
+    background: isDarkMode ? '#3a3d41' : 'white',
+    color: isDarkMode ? '#e0e0e0' : 'inherit',
+    boxSizing: 'border-box' as const
+  };
+
+  const smallInputStyle = { // Style for smaller inputs like priority
+      ...inputStyle,
+      padding: '4px',
+      width: '50px',
+      maxWidth: 'none',
+      marginLeft: '5px',
+      marginRight: '5px'
+  };
+
+  const editFormInputStyle = { // Style for inputs within the edit user form
+      ...inputStyle,
+      padding: '8px',
+      flexGrow: 1,
+      minWidth: '120px',
+      maxWidth: 'none' // Allow flex grow
+  };
+
+  const editFormSelectStyle = { // Style for select within the edit user form
+      ...inputStyle,
+      padding: '8px',
+      width: 'auto', // Adjust width as needed
+      maxWidth: 'none'
+  };
+
+  const buttonStyle = {
+    padding: '10px 20px',
+    cursor: 'pointer',
+    background: isDarkMode ? '#0d6efd' : '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px'
+  };
+
+  const disabledButtonStyle = {
+      ...buttonStyle,
+      background: isDarkMode ? '#495057' : '#6c757d',
+      cursor: 'not-allowed'
+  };
+
+  const smallButtonStyle = {
+      padding: '6px 10px',
+      fontSize: '0.9em',
+      cursor: 'pointer',
+      background: isDarkMode ? '#3a3d41' : '#f8f9fa',
+      border: `1px solid ${isDarkMode ? '#555' : '#dee2e6'}`,
+      color: isDarkMode ? '#e0e0e0' : 'inherit',
+      borderRadius: '4px'
+  };
+
+  const smallSaveButtonStyle = { // Specific style for small save/cancel buttons
+      ...smallButtonStyle,
+      marginRight: '5px',
+      padding: '4px 8px',
+      fontSize: '0.9em'
+  };
+
+  const smallEditButtonStyle = { // Specific style for small edit priority button
+      ...smallButtonStyle,
+      marginLeft: '10px',
+      fontSize: '0.8em',
+      padding: '2px 5px'
+  };
+
+  const deleteButtonStyle = {
+      ...smallButtonStyle,
+      color: 'white',
+      background: isDarkMode ? '#c82333' : '#dc3545', // Slightly darker red for dark mode
+      border: 'none'
+  };
+
+  const resetPwdButtonStyle = {
+      ...smallButtonStyle,
+      background: isDarkMode ? '#e0a800' : '#ffc107', // Darker yellow
+      color: '#1a1a1a', // Ensure text is readable
+      border: 'none'
+  };
+
+  // Style for model toggle button
+  const modelToggleButtonEnableStyle = {
+      ...smallButtonStyle,
+      background: isDarkMode ? '#198754' : '#28a745', // Green
+      color: 'white',
+      border: 'none'
+  };
+  const modelToggleButtonDisableStyle = {
+      ...smallButtonStyle,
+      background: isDarkMode ? '#dc3545' : '#ffc107', // Red / Yellow
+      color: isDarkMode ? 'white' : '#333',
+      border: 'none'
+  };
+
+
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: 'auto' }}> {/* Center content */}
-      <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>{t('settings_title')}</h2>
+    <div style={pageStyle}> {/* Use pageStyle */}
+      <h2 style={{ textAlign: 'center', marginBottom: '30px', color: isDarkMode ? '#e0e0e0' : 'inherit' }}>{t('settings_title')}</h2>
 
        {/* User Profile Section */}
        {currentUser && (
-           <section style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', background: '#f9f9f9' }}>
-               <h3 style={{ marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>My Profile</h3>
+           <section style={sectionStyle}> {/* Use sectionStyle */}
+               <h3 style={h3Style}>My Profile</h3> {/* Use h3Style */}
                {/* Update Details Form */}
-               <form onSubmit={handleUpdateProfileDetails} style={{ marginBottom: '25px', paddingBottom: '25px', borderBottom: '1px solid #eee' }}>
-                   <h4 style={{ marginTop: 0, marginBottom: '15px' }}>Update Details</h4>
+               <form onSubmit={handleUpdateProfileDetails} style={{ marginBottom: '25px', paddingBottom: '25px', borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}` }}>
+                   <h4 style={h4Style}>Update Details</h4>
                    <div style={{ marginBottom: '15px' }}>
-                       <label htmlFor="profileUsername" style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Username:</label>
+                       <label htmlFor="profileUsername" style={labelStyle}>Username:</label>
                        <input
                            type="text"
                            id="profileUsername"
                            value={profileUsername}
                            onChange={(e) => setProfileUsername(e.target.value)}
                            required
-                           style={{ padding: '10px', width: '100%', maxWidth: '400px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                           style={inputStyle}
                        />
                    </div>
                    <div style={{ marginBottom: '20px' }}>
-                       <label htmlFor="profileEmail" style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Email:</label>
+                       <label htmlFor="profileEmail" style={labelStyle}>Email:</label>
                        <input
                            type="email"
                            id="profileEmail"
                            value={profileEmail}
                            onChange={(e) => setProfileEmail(e.target.value)}
                            required
-                           style={{ padding: '10px', width: '100%', maxWidth: '400px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                           style={inputStyle}
                        />
                    </div>
-                   <button type="submit" disabled={profileUpdateLoading} style={{ padding: '10px 20px', cursor: 'pointer', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}>
+                   <button type="submit" disabled={profileUpdateLoading} style={profileUpdateLoading ? disabledButtonStyle : buttonStyle}>
                        {profileUpdateLoading ? 'Saving...' : 'Save Details'}
                    </button>
                    {profileUpdateError && <p style={{ color: 'red', marginTop: '10px', fontSize: '0.9em' }}>{profileUpdateError}</p>}
@@ -425,9 +628,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
 
                {/* Change Password Form */}
                <form onSubmit={handleUpdateProfilePassword}>
-                   <h4 style={{ marginTop: 0, marginBottom: '15px' }}>Change Password</h4>
+                   <h4 style={h4Style}>Change Password</h4>
                     <div style={{ marginBottom: '15px' }}>
-                       <label htmlFor="currentPassword" style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Current Password:</label>
+                       <label htmlFor="currentPassword" style={labelStyle}>Current Password:</label>
                        <input
                            type="password"
                            id="currentPassword"
@@ -435,11 +638,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
                            onChange={(e) => setCurrentPassword(e.target.value)}
                            required
                            autoComplete="current-password"
-                           style={{ padding: '10px', width: '100%', maxWidth: '400px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                           style={inputStyle}
                        />
                    </div>
                    <div style={{ marginBottom: '15px' }}>
-                       <label htmlFor="newPassword" style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>New Password:</label>
+                       <label htmlFor="newPassword" style={labelStyle}>New Password:</label>
                        <input
                            type="password"
                            id="newPassword"
@@ -447,11 +650,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
                            onChange={(e) => setNewPassword(e.target.value)}
                            required
                            autoComplete="new-password"
-                           style={{ padding: '10px', width: '100%', maxWidth: '400px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                           style={inputStyle}
                        />
                    </div>
                    <div style={{ marginBottom: '20px' }}>
-                       <label htmlFor="confirmNewPassword" style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Confirm New Password:</label>
+                       <label htmlFor="confirmNewPassword" style={labelStyle}>Confirm New Password:</label>
                        <input
                            type="password"
                            id="confirmNewPassword"
@@ -459,10 +662,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
                            onChange={(e) => setConfirmNewPassword(e.target.value)}
                            required
                            autoComplete="new-password"
-                           style={{ padding: '10px', width: '100%', maxWidth: '400px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                           style={inputStyle}
                        />
                    </div>
-                   <button type="submit" disabled={passwordChangeLoading} style={{ padding: '10px 20px', cursor: 'pointer', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}>
+                   <button type="submit" disabled={passwordChangeLoading} style={passwordChangeLoading ? disabledButtonStyle : buttonStyle}>
                        {passwordChangeLoading ? 'Changing...' : 'Change Password'}
                    </button>
                    {passwordChangeError && <p style={{ color: 'red', marginTop: '10px', fontSize: '0.9em' }}>{passwordChangeError}</p>}
@@ -474,90 +677,92 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
 
       {/* API Key Management - Only show if user is admin */}
       {currentUser?.role === 'admin' && (
-          <section style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', background: '#f9f9f9' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>{t('settings_api_keys_title')}</h3>
-            <h4>Existing Keys (Sorted by Priority)</h4>
-        {loadingApiKeys && <p>Loading...</p>}
-        {fetchApiKeysError && <p style={{ color: 'red' }}>{fetchApiKeysError}</p>}
-        {!loadingApiKeys && !fetchApiKeysError && ( apiKeys.length > 0 ? (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              {apiKeys.map((key) => (
-                <li key={key._id} style={{ borderBottom: '1px solid #eee', padding: '10px 0', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ flexGrow: 1, minWidth: '250px' }}>
-                    <strong>{key.providerName}</strong>
-                    <span style={{ marginLeft: '10px', color: '#666', fontSize: '0.9em' }}> Key: *****{key.keyValue.slice(-4)} </span>
-                    <span style={{ marginLeft: '10px', color: key.isEnabled ? 'green' : 'red', fontSize: '0.9em' }}> ({key.isEnabled ? 'Enabled' : 'Disabled'}) </span>
-                    <span style={{ marginLeft: '15px', display: 'inline-block' }}>
-                        Priority: {editingApiKeyId === key._id ? (
-                            <>
-                                <input type="number" value={editPriorityValue} onChange={(e) => setEditPriorityValue(parseInt(e.target.value, 10) || 99)} min="1" style={{ width: '50px', marginLeft: '5px', marginRight: '5px', padding: '4px' }} />
-                                <button onClick={() => handleSavePriority(key._id)} disabled={apiKeyActionLoading === key._id} style={{ marginRight: '5px', padding: '4px 8px', fontSize: '0.9em' }}>Save</button>
-                                <button type="button" onClick={handleCancelEditPriority} style={{ padding: '4px 8px', fontSize: '0.9em' }}>Cancel</button>
-                            </>
-                        ) : ( <> {key.priority} <button onClick={() => handleEditPriority(key)} style={{ marginLeft: '10px', fontSize: '0.8em', cursor: 'pointer', padding: '2px 5px' }}>Edit</button> </> )}
-                    </span>
-                  </div>
-                  <div style={{ flexShrink: 0 }}>
-                    <button style={{ marginRight: '5px', padding: '6px 10px', fontSize: '0.9em' }} onClick={() => handleToggleApiKey(key)} disabled={apiKeyActionLoading === key._id || !!editingApiKeyId}> {apiKeyActionLoading === key._id ? '...' : (key.isEnabled ? 'Disable' : 'Enable')} </button>
-                    <button style={{ color: 'white', background: '#dc3545', border: 'none', padding: '6px 10px', fontSize: '0.9em', borderRadius: '4px' }} onClick={() => handleDeleteApiKey(key._id, key.providerName)} disabled={apiKeyActionLoading === key._id || !!editingApiKeyId}> {apiKeyActionLoading === key._id ? '...' : 'Delete'} </button>
-                  </div>
-                </li>
-              ))}
-            </ul> ) : <p>No API keys found.</p> )}
-         <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-            <h5>Add New API Key</h5>
-            <form onSubmit={handleAddKey} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <input type="text" placeholder="Provider Name (e.g., Anthropic)" value={newProviderName} onChange={(e) => setNewProviderName(e.target.value)} required style={{ padding: '10px', flexGrow: 1, minWidth: '150px', borderRadius: '4px', border: '1px solid #ccc' }} />
-                <input type="password" placeholder="API Key Value" value={newKeyValue} onChange={(e) => setNewKeyValue(e.target.value)} required style={{ padding: '10px', flexGrow: 1, minWidth: '200px', borderRadius: '4px', border: '1px solid #ccc' }} />
-                <button type="submit" disabled={addApiKeyLoading} style={{ padding: '10px 20px', cursor: 'pointer', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}> {addApiKeyLoading ? 'Adding...' : 'Add Key'} </button>
-            </form>
-             {addApiKeyError && <p style={{ color: 'red', marginTop: '10px' }}>{addApiKeyError}</p>}
-         </div>
-         {apiKeyActionError && <p style={{ color: 'red', marginTop: '10px' }}>{apiKeyActionError}</p>}
-      </section>
+          <section style={sectionStyle}>
+            <h3 style={h3Style}>{t('settings_api_keys_title')}</h3>
+            <h4 style={h4Style}>Existing Keys (Sorted by Priority)</h4>
+            {loadingApiKeys && <p>Loading...</p>}
+            {fetchApiKeysError && <p style={{ color: 'red' }}>{fetchApiKeysError}</p>}
+            {!loadingApiKeys && !fetchApiKeysError && ( apiKeys.length > 0 ? (
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  {apiKeys.map((key) => (
+                    <li key={key._id} style={{ borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}`, padding: '10px 0', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ flexGrow: 1, minWidth: '250px' }}>
+                        <strong style={{ color: isDarkMode ? '#e0e0e0' : 'inherit' }}>{key.providerName}</strong>
+                        <span style={{ marginLeft: '10px', color: isDarkMode ? '#aaa' : '#666', fontSize: '0.9em' }}> Key: *****{key.keyValue.slice(-4)} </span>
+                        <span style={{ marginLeft: '10px', color: key.isEnabled ? (isDarkMode ? '#77dd77' : 'green') : (isDarkMode ? '#ff6961' : 'red'), fontSize: '0.9em' }}> ({key.isEnabled ? 'Enabled' : 'Disabled'}) </span>
+                        <span style={{ marginLeft: '15px', display: 'inline-block' }}>
+                            Priority: {editingApiKeyId === key._id ? (
+                                <>
+                                    <input type="number" value={editPriorityValue} onChange={(e) => setEditPriorityValue(parseInt(e.target.value, 10) || 99)} min="1" style={smallInputStyle} />
+                                    <button onClick={() => handleSavePriority(key._id)} disabled={apiKeyActionLoading === key._id} style={apiKeyActionLoading === key._id ? {...smallSaveButtonStyle, cursor: 'not-allowed', opacity: 0.6} : smallSaveButtonStyle}>Save</button>
+                                    <button type="button" onClick={handleCancelEditPriority} style={smallSaveButtonStyle}>Cancel</button>
+                                </>
+                            ) : ( <> {key.priority} <button onClick={() => handleEditPriority(key)} style={smallEditButtonStyle}>Edit</button> </> )}
+                        </span>
+                      </div>
+                      <div style={{ flexShrink: 0 }}>
+                        <button style={apiKeyActionLoading === key._id || !!editingApiKeyId ? {...smallButtonStyle, cursor: 'not-allowed', opacity: 0.6} : smallButtonStyle} onClick={() => handleToggleApiKey(key)} disabled={apiKeyActionLoading === key._id || !!editingApiKeyId}> {apiKeyActionLoading === key._id ? '...' : (key.isEnabled ? 'Disable' : 'Enable')} </button>
+                        <button style={apiKeyActionLoading === key._id || !!editingApiKeyId ? {...deleteButtonStyle, cursor: 'not-allowed', opacity: 0.6} : deleteButtonStyle} onClick={() => handleDeleteApiKey(key._id, key.providerName)} disabled={apiKeyActionLoading === key._id || !!editingApiKeyId}> {apiKeyActionLoading === key._id ? '...' : 'Delete'} </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul> ) : <p>No API keys found.</p> )}
+             <div style={{ marginTop: '20px', borderTop: `1px solid ${isDarkMode ? '#444' : '#eee'}`, paddingTop: '15px' }}>
+                <h5 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit' }}>Add New API Key</h5>
+                <form onSubmit={handleAddKey} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <input type="text" placeholder="Provider Name (e.g., Anthropic)" value={newProviderName} onChange={(e) => setNewProviderName(e.target.value)} required style={{...inputStyle, flexGrow: 1, minWidth: '150px', maxWidth: 'none'}} />
+                    <input type="password" placeholder="API Key Value" value={newKeyValue} onChange={(e) => setNewKeyValue(e.target.value)} required style={{...inputStyle, flexGrow: 1, minWidth: '200px', maxWidth: 'none'}} />
+                    <button type="submit" disabled={addApiKeyLoading} style={addApiKeyLoading ? disabledButtonStyle : buttonStyle}> {addApiKeyLoading ? 'Adding...' : 'Add Key'} </button>
+                </form>
+                 {addApiKeyError && <p style={{ color: 'red', marginTop: '10px' }}>{addApiKeyError}</p>}
+             </div>
+             {apiKeyActionError && <p style={{ color: 'red', marginTop: '10px' }}>{apiKeyActionError}</p>}
+          </section>
       )}
 
       {/* User Management (Admin Only) */}
       {currentUser?.role === 'admin' && (
-          <section style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', background: '#f9f9f9' }}>
-              <h3 style={{ marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>{t('settings_users_title')}</h3>
+          <section style={sectionStyle}>
+              <h3 style={h3Style}>{t('settings_users_title')}</h3>
               {adminResetPwdError && <p style={{ color: 'red', marginBottom: '10px' }}>Admin Action Error: {adminResetPwdError}</p>}
               {loadingUsers && <p>Loading users...</p>}
               {fetchUsersError && <p style={{ color: 'red' }}>{fetchUsersError}</p>}
               {!loadingUsers && !fetchUsersError && ( users.length > 0 ? (
                   <ul style={{ listStyle: 'none', padding: 0 }}>
                       {users.map((user) => (
-                          <li key={user._id} style={{ borderBottom: '1px solid #eee', padding: '10px 0', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                          <li key={user._id} style={{ borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}`, padding: '10px 0', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                               {editingUserId === user._id ? (
                                   <form onSubmit={(e) => handleUpdateUser(e, user._id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', flexWrap: 'wrap' }}>
-                                      <input type="text" value={editUsername} onChange={(e) => setEditUsername(e.target.value)} required style={{ padding: '8px', flexGrow: 1, minWidth: '120px' }} />
-                                      <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} required style={{ padding: '8px', flexGrow: 1, minWidth: '150px' }} />
-                                      <select value={editRole} onChange={(e) => setEditRole(e.target.value as 'user' | 'admin')} style={{ padding: '8px' }} disabled={user.role === 'admin'}>
+                                      <input type="text" value={editUsername} onChange={(e) => setEditUsername(e.target.value)} required style={editFormInputStyle} />
+                                      <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} required style={{...editFormInputStyle, minWidth: '150px'}} />
+                                      {/* Allow role change for admins */}
+                                      <select value={editRole} onChange={(e) => setEditRole(e.target.value as 'user' | 'admin')} style={editFormSelectStyle}>
                                           <option value="user">User</option>
                                           <option value="admin">Admin</option>
                                       </select>
-                                      <button type="submit" disabled={userActionLoading === user._id} style={{ padding: '8px 12px', cursor: 'pointer' }}> {userActionLoading === user._id ? 'Saving...' : 'Save'} </button>
-                                      <button type="button" onClick={handleCancelEdit} style={{ padding: '8px 12px', cursor: 'pointer' }}>Cancel</button>
+                                      <button type="submit" disabled={userActionLoading === user._id} style={userActionLoading === user._id ? {...smallButtonStyle, cursor: 'not-allowed', opacity: 0.6} : smallButtonStyle}> {userActionLoading === user._id ? 'Saving...' : 'Save'} </button>
+                                      <button type="button" onClick={handleCancelEdit} style={smallButtonStyle}>Cancel</button>
                                       {userActionError && editingUserId === user._id && <p style={{ color: 'red', width: '100%', margin: '5px 0 0 0' }}>{userActionError}</p>}
                                   </form>
                               ) : (
                                   <>
                                       <div style={{ flexGrow: 1, minWidth: '200px' }}>
-                                          <strong>{user.username}</strong> ({user.email}) - Role: {user.role}
-                                          <span style={{ marginLeft: '10px', color: '#666', fontSize: '0.9em' }}> Joined: {new Date(user.createdAt).toLocaleDateString()} </span>
-                                          {user._id === currentUser?._id && <span style={{ marginLeft: '10px', color: 'blue', fontWeight: 'bold' }}>(You)</span>}
+                                          <strong style={{ color: isDarkMode ? '#e0e0e0' : 'inherit' }}>{user.username}</strong> ({user.email}) - Role: {user.role}
+                                          <span style={{ marginLeft: '10px', color: isDarkMode ? '#aaa' : '#666', fontSize: '0.9em' }}> Joined: {new Date(user.createdAt).toLocaleDateString()} </span>
+                                          {user._id === currentUser?._id && <span style={{ marginLeft: '10px', color: isDarkMode ? '#64b5f6' : 'blue', fontWeight: 'bold' }}>(You)</span>}
                                       </div>
                                       <div style={{ flexShrink: 0, display: 'flex', gap: '5px' }}>
                                           <button
-                                              style={{ padding: '6px 10px', fontSize: '0.9em', cursor: 'pointer' }}
+                                              style={!!editingUserId || userActionLoading === user._id ? {...smallButtonStyle, cursor: 'not-allowed', opacity: 0.6} : smallButtonStyle}
                                               onClick={() => handleEditUser(user)}
-                                              disabled={!!editingUserId || userActionLoading === user._id || (user.role === 'admin' && user._id !== currentUser?._id)}
+                                              // Allow editing other admins, only disable if someone else is being edited or this user is loading
+                                              disabled={!!editingUserId || userActionLoading === user._id}
                                           >
                                               Edit
                                           </button>
                                           {currentUser?.role === 'admin' && user.role !== 'admin' && (
                                               <button
-                                                  style={{ padding: '6px 10px', fontSize: '0.9em', background: '#ffc107', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                                  style={!!editingUserId || adminResetPwdLoading === user._id ? {...resetPwdButtonStyle, cursor: 'not-allowed', opacity: 0.6} : resetPwdButtonStyle}
                                                   onClick={() => handleAdminResetPassword(user._id, user.username)}
                                                   disabled={!!editingUserId || adminResetPwdLoading === user._id}
                                               >
@@ -565,7 +770,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
                                               </button>
                                           )}
                                           <button
-                                              style={{ color: 'white', background: '#dc3545', border: 'none', padding: '6px 10px', fontSize: '0.9em', borderRadius: '4px', cursor: 'pointer' }}
+                                              style={!!editingUserId || userActionLoading === user._id || user.role === 'admin' ? {...deleteButtonStyle, cursor: 'not-allowed', opacity: 0.6} : deleteButtonStyle}
                                               onClick={() => handleDeleteUser(user._id, user.username)}
                                               disabled={!!editingUserId || userActionLoading === user._id || user.role === 'admin'}
                                           >
@@ -578,13 +783,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
                       ))}
                   </ul>
               ) : <p>No other users found.</p> )}
-              <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                  <h5>Create New User</h5>
+              <div style={{ marginTop: '20px', borderTop: `1px solid ${isDarkMode ? '#444' : '#eee'}`, paddingTop: '15px' }}>
+                  <h5 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit' }}>Create New User</h5>
                   <form onSubmit={handleCreateUser} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      <input type="text" placeholder="Username" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required style={{ padding: '10px', flexGrow: 1, minWidth: '120px' }} />
-                      <input type="email" placeholder="Email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} required style={{ padding: '10px', flexGrow: 1, minWidth: '150px' }} />
-                      <input type="password" placeholder="Password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} required style={{ padding: '10px', flexGrow: 1, minWidth: '120px' }} />
-                      <button type="submit" disabled={userActionLoading === 'create'} style={{ padding: '10px 20px', cursor: 'pointer' }}>
+                      <input type="text" placeholder="Username" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required style={{...inputStyle, flexGrow: 1, minWidth: '120px', maxWidth: 'none'}} />
+                      <input type="email" placeholder="Email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} required style={{...inputStyle, flexGrow: 1, minWidth: '150px', maxWidth: 'none'}} />
+                      <input type="password" placeholder="Password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} required style={{...inputStyle, flexGrow: 1, minWidth: '120px', maxWidth: 'none'}} />
+                      <button type="submit" disabled={userActionLoading === 'create'} style={userActionLoading === 'create' ? disabledButtonStyle : buttonStyle}>
                           {userActionLoading === 'create' ? 'Creating...' : 'Create User'}
                       </button>
                   </form>
@@ -593,34 +798,67 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser /*, refreshCurr
           </section>
       )}
 
+      {/* Model Visibility Management (Admin Only) - ADDED Section */}
+      {currentUser?.role === 'admin' && (
+          <section style={sectionStyle}>
+              <h3 style={h3Style}>{t('settings_model_visibility_title', 'Model Visibility')}</h3>
+              {loadingModelStatuses && <p>Loading model statuses...</p>}
+              {fetchModelStatusError && <p style={{ color: 'red' }}>{fetchModelStatusError}</p>}
+              {modelActionError && <p style={{ color: 'red' }}>{modelActionError}</p>}
+              {!loadingModelStatuses && !fetchModelStatusError && ( modelStatuses.length > 0 ? (
+                  <ul style={{ listStyle: 'none', padding: 0 }}>
+                      {modelStatuses.map((model) => (
+                          <li key={model.modelName} style={{ borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}`, padding: '10px 0', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ flexGrow: 1, minWidth: '250px' }}>
+                                  <code style={{ background: isDarkMode ? '#333' : '#e9ecef', color: isDarkMode ? '#f0f0f0' : 'inherit', padding: '0.2em 0.4em', borderRadius: '3px' }}>{model.modelName}</code>
+                                  <span style={{ marginLeft: '10px', color: model.isDisabled ? (isDarkMode ? '#ff6961' : 'red') : (isDarkMode ? '#77dd77' : 'green'), fontSize: '0.9em' }}>
+                                      ({model.isDisabled ? t('settings_model_disabled', 'Disabled') : t('settings_model_enabled', 'Enabled')})
+                                  </span>
+                              </div>
+                              <div style={{ flexShrink: 0 }}>
+                                  <button
+                                      style={modelActionLoading === model.modelName ? (model.isDisabled ? {...modelToggleButtonEnableStyle, cursor: 'not-allowed', opacity: 0.6} : {...modelToggleButtonDisableStyle, cursor: 'not-allowed', opacity: 0.6}) : (model.isDisabled ? modelToggleButtonEnableStyle : modelToggleButtonDisableStyle)}
+                                      onClick={() => handleToggleModelVisibility(model.modelName, model.isDisabled)}
+                                      disabled={modelActionLoading === model.modelName}
+                                  >
+                                      {modelActionLoading === model.modelName ? '...' : (model.isDisabled ? t('settings_model_enable_button', 'Enable') : t('settings_model_disable_button', 'Disable'))}
+                                  </button>
+                              </div>
+                          </li>
+                      ))}
+                  </ul>
+              ) : <p>No models found or failed to load statuses.</p> )}
+          </section>
+      )}
+
        {/* Referral Code Management (Admin Only) */}
        {currentUser?.role === 'admin' && (
-           <section style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px', background: '#f9f9f9' }}>
-               <h3 style={{ marginTop: 0, marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>{t('settings_referral_title')}</h3>
+           <section style={sectionStyle}>
+               <h3 style={h3Style}>{t('settings_referral_title')}</h3>
                {loadingReferralCodes && <p>Loading codes...</p>}
                {fetchReferralCodesError && <p style={{ color: 'red' }}>{fetchReferralCodesError}</p>}
                {!loadingReferralCodes && !fetchReferralCodesError && ( referralCodes.length > 0 ? (
                    <ul style={{ listStyle: 'none', padding: 0 }}>
                        {referralCodes.map((refCode) => (
-                           <li key={refCode._id} style={{ borderBottom: '1px solid #eee', padding: '10px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <li key={refCode._id} style={{ borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}`, padding: '10px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                <div>
-                                   <code>{refCode.code}</code>
-                                   {refCode.description && <span style={{ marginLeft: '10px', color: '#6c757d' }}>({refCode.description})</span>}
-                                   <span style={{ marginLeft: '10px', color: '#666', fontSize: '0.9em' }}> Created: {new Date(refCode.createdAt).toLocaleDateString()} </span>
+                                   <code style={{ background: isDarkMode ? '#333' : '#e9ecef', color: isDarkMode ? '#f0f0f0' : 'inherit', padding: '0.2em 0.4em', borderRadius: '3px' }}>{refCode.code}</code>
+                                   {refCode.description && <span style={{ marginLeft: '10px', color: isDarkMode ? '#aaa' : '#6c757d' }}>({refCode.description})</span>}
+                                   <span style={{ marginLeft: '10px', color: isDarkMode ? '#aaa' : '#666', fontSize: '0.9em' }}> Created: {new Date(refCode.createdAt).toLocaleDateString()} </span>
                                </div>
-                               <button style={{ color: 'white', background: '#dc3545', border: 'none', padding: '6px 10px', fontSize: '0.9em', borderRadius: '4px' }} onClick={() => handleDeleteReferralCode(refCode._id, refCode.code)} disabled={deleteReferralCodeLoading === refCode._id}>
+                               <button style={deleteReferralCodeLoading === refCode._id ? {...deleteButtonStyle, cursor: 'not-allowed', opacity: 0.6} : deleteButtonStyle} onClick={() => handleDeleteReferralCode(refCode._id, refCode.code)} disabled={deleteReferralCodeLoading === refCode._id}>
                                    {deleteReferralCodeLoading === refCode._id ? '...' : 'Delete'}
                                </button>
                            </li>
                        ))}
                    </ul>
                ) : <p>No active referral codes.</p> )}
-               <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                   <h5>Add New Referral Code (Max: 5)</h5>
+               <div style={{ marginTop: '20px', borderTop: `1px solid ${isDarkMode ? '#444' : '#eee'}`, paddingTop: '15px' }}>
+                   <h5 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit' }}>Add New Referral Code (Max: 5)</h5>
                    <form onSubmit={handleAddReferralCode} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                       <input type="text" placeholder="New Code" value={newReferralCode} onChange={(e) => setNewReferralCode(e.target.value)} required style={{ padding: '10px', flexGrow: 1, minWidth: '150px' }} />
-                       <input type="text" placeholder="Description (Optional)" value={newReferralDescription} onChange={(e) => setNewReferralDescription(e.target.value)} style={{ padding: '10px', flexGrow: 1, minWidth: '200px' }} />
-                       <button type="submit" disabled={addReferralCodeLoading || referralCodes.length >= 5} style={{ padding: '10px 20px', cursor: 'pointer' }}>
+                       <input type="text" placeholder="New Code" value={newReferralCode} onChange={(e) => setNewReferralCode(e.target.value)} required style={{...inputStyle, flexGrow: 1, minWidth: '150px', maxWidth: 'none'}} />
+                       <input type="text" placeholder="Description (Optional)" value={newReferralDescription} onChange={(e) => setNewReferralDescription(e.target.value)} style={{...inputStyle, flexGrow: 1, minWidth: '200px', maxWidth: 'none'}} />
+                       <button type="submit" disabled={addReferralCodeLoading || referralCodes.length >= 5} style={addReferralCodeLoading || referralCodes.length >= 5 ? disabledButtonStyle : buttonStyle}>
                            {addReferralCodeLoading ? 'Adding...' : 'Add Code'}
                        </button>
                    </form>

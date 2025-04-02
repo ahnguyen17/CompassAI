@@ -109,16 +109,18 @@ function App() {
       <Navbar isLoggedIn={isLoggedIn} currentUser={currentUser} onLogout={handleLogout} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
       <Routes>
          {/* Public Routes */}
-        <Route path="/login" element={<LoginPage onLoginSuccess={handleAuthSuccess} />} />
-        <Route path="/register" element={<RegisterPage onRegisterSuccess={handleAuthSuccess} />} />
-        <Route path="/share/:shareId" element={<SharedChatPage />} />
+        <Route path="/login" element={<LoginPage onLoginSuccess={handleAuthSuccess} isDarkMode={isDarkMode} />} />
+        <Route path="/register" element={<RegisterPage onRegisterSuccess={handleAuthSuccess} isDarkMode={isDarkMode} />} />
+        <Route path="/share/:shareId" element={<SharedChatPage isDarkMode={isDarkMode} />} />
 
          {/* Protected Routes (General Login Required) */}
          <Route element={<ProtectedRoute isLoggedIn={isLoggedIn} authLoading={authLoading} />}>
-             <Route path="/" element={<ChatPage />} />
-             <Route path="/chat/:sessionId" element={<ChatPage />} />
+             {/* Pass isDarkMode prop back to ChatPage */}
+             <Route path="/" element={<ChatPage isDarkMode={isDarkMode} />} />
+             <Route path="/chat/:sessionId" element={<ChatPage isDarkMode={isDarkMode} />} />
              {/* Settings route moved here - accessible to all logged-in users */}
-             <Route path="/settings" element={<SettingsPage currentUser={currentUser} />} />
+             {/* Pass currentUser and isDarkMode to SettingsPage */}
+             <Route path="/settings" element={<SettingsPage currentUser={currentUser} isDarkMode={isDarkMode} />} />
          </Route>
 
          {/* Admin Protected Route - Can be removed if no other admin-only routes exist */}

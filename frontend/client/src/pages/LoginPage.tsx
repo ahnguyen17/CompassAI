@@ -7,9 +7,10 @@ import styles from './LoginPage.module.css'; // Revert to standard import
 // Define props interface
 interface LoginPageProps {
   onLoginSuccess: () => void;
+  isDarkMode: boolean; // Add isDarkMode prop
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, isDarkMode }) => {
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');

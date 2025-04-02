@@ -1,13 +1,13 @@
 .chatPageContainer {
     display: flex;
     height: calc(100vh - 60px); /* Assuming navbar height is 60px */
-    background-color: #f8f9fa;
+    /* background-color: #f8f9fa; */ /* Handled by inline style */
     position: relative;
     overflow: hidden; /* Prevent scrollbars caused by transitions */
 }
 
 .chatSidebar {
-    background-color: #ffffff;
+    /* background-color: #ffffff; */ /* Handled by inline style */
     border-right: 1px solid #dee2e6;
     flex-shrink: 0;
     width: 280px;
@@ -41,6 +41,7 @@
     overflow-y: auto;
     margin-bottom: 15px;
     padding: 10px;
+    /* background-color handled by inline style */
 }
 
 .inputForm {
@@ -101,7 +102,208 @@
     cursor: not-allowed;
 }
 
+/* Base Message Styling */
+.messageRow {
+    display: flex;
+    margin-bottom: 12px;
+    align-items: flex-end;
+}
+.messageRowUser {
+    justify-content: flex-end;
+}
+.messageRowAi {
+     justify-content: flex-start;
+}
+.messageBubble {
+    padding: 10px 15px;
+    border-radius: 15px;
+    max-width: 75%; /* Default max width */
+    word-wrap: break-word;
+    /* Add any other shared bubble styles */
+}
+.messageBubbleUser {
+    background-color: #007bff;
+    color: white;
+}
+.messageBubbleAi {
+     background-color: #e9ecef;
+     color: #343a40;
+}
 
+/* Sidebar List Item Base Styles (if needed) */
+.sessionListItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    background-color: transparent; /* Default */
+    color: #495057; /* Default */
+    transition: background-color 0.2s ease; /* Add transition */
+}
+.sessionListItem:hover {
+    background-color: #f1f3f5; /* Light hover */
+}
+.sessionListItemActive {
+    background-color: #e9ecef; /* Light active */
+}
+.sessionTitle {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 10px;
+}
+.deleteSessionButton {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    font-size: 1.1em;
+    padding: 0 5px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.newChatButton { /* Style for the new chat button */
+    flex-grow: 1;
+    margin-right: 10px;
+    padding: 10px 15px;
+    font-size: 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+
+/* --- Dark Mode Styles --- */
+body.dark .chatPageContainer {
+    /* background-color: #1a1a1a; */ /* Handled by inline style */
+    color: #e0e0e0;
+}
+
+body.dark .chatSidebar {
+    /* background-color: #2a2a2a; */ /* Handled by inline style */
+    border-right-color: #444;
+    color: #ccc; /* Adjust text color */
+}
+
+/* Ensure hidden sidebar is also dark */
+body.dark .chatSidebarHidden {
+     /* background-color: #2a2a2a; */ /* Handled by inline style */
+     border-right: none;
+}
+
+body.dark .chatSidebar h4 {
+    color: #e0e0e0; /* Dark mode heading color */
+}
+
+body.dark .chatSidebar li {
+    color: #ccc; /* Dark mode list item text */
+}
+
+body.dark .chatSidebar li span:hover {
+     color: #fff;
+}
+
+/* Use class for active item */
+body.dark .sessionListItemActive {
+    background-color: #3a3d41; /* Darker selection background */
+    color: #fff;
+}
+body.dark .sessionListItem:hover {
+    background-color: #343a40; /* Dark hover */
+}
+body.dark .deleteSessionButton {
+    color: #ff6b6b; /* Lighter red */
+}
+body.dark .newChatButton {
+    background-color: #0d6efd;
+}
+
+
+body.dark .mainChatArea {
+    /* Background is inherited from container */
+}
+
+body.dark .sidebarToggleButton,
+body.dark .sidebarToggleButtonHidden {
+    background: #444;
+    border-color: #666;
+    color: #eee;
+}
+
+body.dark .mainChatArea h3 {
+    color: #e0e0e0; /* Dark mode header */
+}
+
+body.dark .mainChatArea a {
+    color: #64b5f6;
+}
+
+/* Remove attribute selector for share link box - style directly if needed or add class */
+/* body.dark .mainChatArea [style*="background: rgb(240, 240, 240)"] { ... } */
+
+
+body.dark .messageList {
+    /* background: #2a2a2a; */ /* Handled by inline style */
+    border-color: #444;
+}
+
+/* Message Bubbles - Dark mode styles */
+body.dark .messageBubbleUser {
+    background-color: #0d6efd; /* Adjusted blue */
+    color: white;
+}
+body.dark .messageBubbleAi {
+    background-color: #3a3d41;
+    color: #e0e0e0;
+}
+/* Force SyntaxHighlighter background to be transparent in dark mode */
+body.dark .messageBubbleAi pre {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+
+body.dark .inputForm {
+    border-top-color: #444;
+}
+
+body.dark .inputControls label {
+    color: #bbb;
+}
+body.dark .inputControls select {
+    background-color: #3a3d41;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark .fileUploadButton {
+    background: #444;
+    border-color: #666;
+    color: #eee; /* Icon color */
+}
+body.dark .fileName {
+    color: #bbb;
+}
+body.dark .messageInput {
+    background-color: #3a3d41;
+    border-color: #555;
+    color: #e0e0e0;
+}
+body.dark .sendButton {
+     background-color: #0d6efd;
+}
+body.dark .sendButton:hover:not(:disabled) {
+    background-color: #0a58ca;
+}
+body.dark .sendButton:disabled {
+    background-color: #495057;
+}
 .sidebarToggleButton {
     /* Removed absolute positioning */
     /* top: 15px; */
@@ -189,4 +391,4 @@
     .fileUploadButton {
         padding: 8px;
     }
-}
+} /* Add missing closing brace for @media query */

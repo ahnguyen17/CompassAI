@@ -6,9 +6,10 @@ import styles from './RegisterPage.module.css';
 
 interface RegisterPageProps {
   onRegisterSuccess: () => void;
+  isDarkMode: boolean; // Add isDarkMode prop
 }
 
-const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess }) => {
+const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess, isDarkMode }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

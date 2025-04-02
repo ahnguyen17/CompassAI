@@ -1,7 +1,6 @@
 const express = require('express');
 const {
-  getUsers,
-  getUsers,
+  getUsers, // Remove duplicate
   getUser,
   createUser,
   updateUser,

@@ -6,12 +6,8 @@ const User = require('../models/User');
 // @access  Private/Admin
 exports.getUsers = async (req, res, next) => {
   try {
-    // TODO: Add authorization check (e.g., only allow admins)
-    // if (req.user.role !== 'admin') { ... }
-
-    // Exclude passwords from the result even though the model schema tries to hide it
+    // Authorization is handled by middleware
     const users = await User.find().select('-password');
-
     res.status(200).json({ success: true, count: users.length, data: users });
   } catch (error) {
     console.error("Get Users Error:", error);
@@ -24,14 +20,11 @@ exports.getUsers = async (req, res, next) => {
 // @access  Private/Admin
 exports.getUser = async (req, res, next) => {
   try {
-    // TODO: Add authorization check
-
+    // Authorization handled by middleware
     const user = await User.findById(req.params.id).select('-password');
-
     if (!user) {
       return res.status(404).json({ success: false, error: `User not found with id ${req.params.id}` });
     }
-
     res.status(200).json({ success: true, data: user });
   } catch (error) {
     console.error("Get User Error:", error);
@@ -42,26 +35,26 @@ exports.getUser = async (req, res, next) => {
   }
 };
 
-// @desc    Create user (Admin functionality, different from public registration)
+// @desc    Create user (Admin functionality)
 // @route   POST /api/v1/users
 // @access  Private/Admin
 exports.createUser = async (req, res, next) => {
   try {
-    // TODO: Add authorization check
-
-    const { username, email, password /*, role */ } = req.body; // Add role if implementing roles
+    // Authorization handled by middleware
+    const { username, email, password, role = 'user' } = req.body; // Default role to 'user'
 
      if (!username || !email || !password) {
       return res.status(400).json({ success: false, error: 'Please provide username, email, and password' });
     }
+     if (!['user', 'admin'].includes(role)) {
+         return res.status(400).json({ success: false, error: 'Invalid role specified' });
+     }
 
     // Password will be hashed by the pre-save hook
-    const user = await User.create({ username, email, password /*, role */ });
+    const user = await User.create({ username, email, password, role });
 
-    // Don't send back the password in the response
     const userResponse = { ...user._doc };
     delete userResponse.password;
-
 
     res.status(201).json({ success: true, data: userResponse });
   } catch (error) {
@@ -70,51 +63,63 @@ exports.createUser = async (req, res, next) => {
         const messages = Object.values(error.errors).map(val => val.message);
         return res.status(400).json({ success: false, error: messages });
     }
-     if (error.code === 11000) { // Handle duplicate key error (e.g., email or username)
+     if (error.code === 11000) {
          return res.status(400).json({ success: false, error: 'Duplicate field value entered (email or username likely exists)' });
      }
     res.status(500).json({ success: false, error: 'Server Error creating user' });
   }
 };
 
-// @desc    Update user details (e.g., username, email, potentially role)
+// @desc    Update user details (username, email, role) by Admin
 // @route   PUT /api/v1/users/:id
 // @access  Private/Admin
 exports.updateUser = async (req, res, next) => {
   try {
-    // TODO: Add authorization check
-
+    // Authorization handled by middleware
     const userToUpdate = await User.findById(req.params.id);
 
     if (!userToUpdate) {
       return res.status(404).json({ success: false, error: `User not found with id ${req.params.id}` });
     }
 
-    // Prevent admin from changing their own role
+    // Prevent admin from changing their own role via this route
     if (userToUpdate._id.toString() === req.user.id && req.body.role && userToUpdate.role !== req.body.role) {
-        return res.status(400).json({ success: false, error: 'Admins cannot change their own role.' });
+        return res.status(400).json({ success: false, error: 'Admins cannot change their own role via this endpoint.' });
+    }
+    // Prevent admin from changing another admin's details (except their own via /auth/updatedetails)
+    if (userToUpdate.role === 'admin' && userToUpdate._id.toString() !== req.user.id) {
+         return res.status(403).json({ success: false, error: 'Cannot modify another admin user.' });
     }
 
-    // Fields that can be updated by an admin
-    const { username, email, role /*, isActive */ } = req.body;
+
+    const { username, email, role } = req.body;
     const updateData = {};
     if (username !== undefined) updateData.username = username;
     if (email !== undefined) updateData.email = email;
-    if (role !== undefined && ['user', 'admin'].includes(role)) { // Validate role
-         updateData.role = role;
+    if (role !== undefined) {
+        if (!['user', 'admin'].includes(role)) {
+             return res.status(400).json({ success: false, error: 'Invalid role specified' });
+        }
+        updateData.role = role;
     }
-    // if (isActive !== undefined) updateData.isActive = isActive;
 
-    // Note: Password updates should go through a separate endpoint.
+    // Check for duplicate username/email if changed
+    if (username && username !== userToUpdate.username) {
+        const existingUser = await User.findOne({ username: username });
+        if (existingUser) return res.status(400).json({ success: false, error: 'Username already taken' });
+    }
+     if (email && email !== userToUpdate.email) {
+        const existingUser = await User.findOne({ email: email });
+        if (existingUser) return res.status(400).json({ success: false, error: 'Email already registered' });
+    }
+
 
     const updatedUser = await User.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     }).select('-password');
 
-    // findByIdAndUpdate doesn't return error if not found with new:false, so check updatedUser
     if (!updatedUser) {
-         // This case might be redundant due to the initial findById check, but good practice
          return res.status(404).json({ success: false, error: `User not found with id ${req.params.id}` });
     }
 
@@ -140,20 +145,21 @@ exports.updateUser = async (req, res, next) => {
 // @access  Private/Admin
 exports.deleteUser = async (req, res, next) => {
   try {
-    // TODO: Add authorization check
-
+    // Authorization handled by middleware
     const user = await User.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({ success: false, error: `User not found with id ${req.params.id}` });
     }
 
-    // TODO: Consider what happens to user's chat sessions/messages upon deletion.
-    // Maybe mark user as inactive instead of hard delete? Or cascade delete?
-    // For now, just delete the user document.
+    // Prevent admin from deleting themselves or another admin
+    if (user.role === 'admin') {
+         return res.status(403).json({ success: false, error: 'Cannot delete admin users.' });
+    }
+
     await user.deleteOne();
 
-    res.status(200).json({ success: true, data: {} }); // Indicate successful deletion
+    res.status(200).json({ success: true, data: {} });
   } catch (error) {
     console.error("Delete User Error:", error);
      if (error.name === 'CastError') {
@@ -161,4 +167,44 @@ exports.deleteUser = async (req, res, next) => {
      }
     res.status(500).json({ success: false, error: 'Server Error deleting user' });
   }
+};
+
+// @desc    Admin reset user password
+// @route   PUT /api/v1/users/:id/resetpassword
+// @access  Private/Admin
+exports.adminResetPassword = async (req, res, next) => {
+    try {
+        const { newPassword } = req.body;
+
+        if (!newPassword) {
+            return res.status(400).json({ success: false, error: 'Please provide a new password' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, error: 'New password must be at least 6 characters long' });
+        }
+
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({ success: false, error: `User not found with id ${req.params.id}` });
+        }
+
+        // Prevent admin from resetting another admin's password or their own via this route
+        if (user.role === 'admin') {
+             return res.status(403).json({ success: false, error: 'Cannot reset password for admin users via this route.' });
+        }
+
+        // Set new password (pre-save hook will hash it)
+        user.password = newPassword;
+        await user.save();
+
+        res.status(200).json({ success: true, message: `Password for user ${user.username} reset successfully.` });
+
+    } catch (error) {
+        console.error("Admin Reset Password Error:", error);
+         if (error.name === 'CastError') {
+            return res.status(404).json({ success: false, error: `User not found with id ${req.params.id}` });
+        }
+        res.status(500).json({ success: false, error: 'Server Error resetting user password' });
+    }
 };

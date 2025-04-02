@@ -1,11 +1,13 @@
 const express = require('express');
 const {
   getUsers,
+  getUsers,
   getUser,
   createUser,
   updateUser,
-  deleteUser
-} = require('../controllers/users'); // Import controller functions
+  deleteUser,
+  adminResetPassword // Import the new controller function
+} = require('../controllers/users');
 
 const router = express.Router();
 
@@ -24,7 +26,10 @@ router.route('/')
 
 router.route('/:id')
   .get(getUser)
-  .put(updateUser)
+  .put(updateUser) // Admin updates user details (role, etc.)
   .delete(deleteUser);
+
+// Route for admin to reset a user's password
+router.put('/:id/resetpassword', adminResetPassword);
 
 module.exports = router;

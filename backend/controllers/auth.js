@@ -8,17 +8,29 @@ exports.register = async (req, res, next) => {
   try {
     const { username, email, password, referralCode } = req.body; // Add referralCode
 
-    // Basic validation
+    // Basic validation - Check if referral code is required by your logic
+    // If referral code is truly required for registration:
     if (!username || !email || !password || !referralCode) {
-      return res.status(400).json({ success: false, error: 'Please provide username, email, password, and referral code' });
+       return res.status(400).json({ success: false, error: 'Please provide username, email, password, and referral code' });
     }
+    // If referral code is optional:
+    // if (!username || !email || !password) {
+    //    return res.status(400).json({ success: false, error: 'Please provide username, email, and password' });
+    // }
+
 
     // --- Referral Code Validation ---
-    const validCode = await ReferralCode.findOne({ code: referralCode.trim() });
-    if (!validCode) {
-        return res.status(400).json({ success: false, error: 'Invalid referral code.' });
+    // Only validate if a code was provided
+    if (referralCode && referralCode.trim()) {
+        const validCode = await ReferralCode.findOne({ code: referralCode.trim() });
+        if (!validCode) {
+            return res.status(400).json({ success: false, error: 'Invalid referral code.' });
+        }
+        // Optional: Implement usage limits/expiration checks here if added to the model
+    } else {
+        // Handle case where referral code is required but not provided (if applicable)
+         return res.status(400).json({ success: false, error: 'Referral code is required.' }); // Uncomment if required
     }
-    // Optional: Implement usage limits/expiration checks here if added to the model
     // --- End Referral Code Validation ---
 
 
@@ -96,11 +108,13 @@ const sendTokenResponse = (user, statusCode, res) => {
   const token = user.getSignedJwtToken();
 
   const options = {
+    // Calculate expiration based on JWT_EXPIRE (assuming it's like '30d')
     expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000 // Convert days to ms
+        Date.now() + parseInt(process.env.JWT_EXPIRE || '30d', 10) * 24 * 60 * 60 * 1000
     ),
     httpOnly: true, // Cookie cannot be accessed by client-side scripts
   };
+
 
   // Set secure flag in production
   if (process.env.NODE_ENV === 'production') {
@@ -120,11 +134,9 @@ const sendTokenResponse = (user, statusCode, res) => {
     });
 };
 
-// Placeholder for getting current logged in user (requires authentication middleware)
-// @desc    Get current logged in user
 // @desc    Get current logged in user
 // @route   GET /api/v1/auth/me
-// @access  Private
+// @access  Private (requires protect middleware)
 exports.getMe = async (req, res, next) => {
   // req.user is set by the protect middleware
   // We already fetched the user in protect, so we can just send req.user
@@ -136,4 +148,107 @@ exports.getMe = async (req, res, next) => {
     success: true,
     data: userData
    });
+};
+
+
+// @desc    Update user details (username, email) for logged-in user
+// @route   PUT /api/v1/auth/updatedetails
+// @access  Private
+exports.updateDetails = async (req, res, next) => {
+    try {
+        const { username, email } = req.body;
+        const fieldsToUpdate = {};
+
+        if (username) fieldsToUpdate.username = username;
+        if (email) fieldsToUpdate.email = email;
+
+        // Check if there's anything to update
+        if (Object.keys(fieldsToUpdate).length === 0) {
+             return res.status(400).json({ success: false, error: 'Please provide username or email to update' });
+        }
+
+        // Check if new username or email is already taken by another user
+        if (username) {
+            const existingUser = await User.findOne({ username: username });
+            if (existingUser && existingUser._id.toString() !== req.user.id) {
+                return res.status(400).json({ success: false, error: 'Username already taken' });
+            }
+        }
+        if (email) {
+            const existingUser = await User.findOne({ email: email });
+             if (existingUser && existingUser._id.toString() !== req.user.id) {
+                return res.status(400).json({ success: false, error: 'Email already registered' });
+            }
+        }
+
+        const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
+            new: true, // Return the updated document
+            runValidators: true // Run schema validators
+        });
+
+        // Ensure user exists (should always exist due to 'protect' middleware)
+        if (!user) {
+             return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        // Exclude password from response
+        const userData = { ...user._doc };
+        delete userData.password;
+
+        res.status(200).json({
+            success: true,
+            data: userData
+        });
+
+    } catch (error) {
+        console.error("Update Details Error:", error);
+         if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ success: false, error: messages });
+        }
+        res.status(500).json({ success: false, error: 'Server Error during details update' });
+    }
+};
+
+// @desc    Update password for logged-in user
+// @route   PUT /api/v1/auth/updatepassword
+// @access  Private
+exports.updatePassword = async (req, res, next) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, error: 'Please provide current and new password' });
+        }
+
+         if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, error: 'New password must be at least 6 characters long' });
+        }
+
+        // Get user from DB, ensuring password is selected
+        const user = await User.findById(req.user.id).select('+password');
+
+        // Check if user exists (should always exist due to 'protect' middleware)
+        if (!user) {
+             return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        // Check if current password matches
+        const isMatch = await user.matchPassword(currentPassword);
+
+        if (!isMatch) {
+            return res.status(401).json({ success: false, error: 'Incorrect current password' });
+        }
+
+        // Set new password (pre-save hook will hash it)
+        user.password = newPassword;
+        await user.save();
+
+        // Send back a new token (optional, but good practice after password change)
+        sendTokenResponse(user, 200, res);
+
+    } catch (error) {
+        console.error("Update Password Error:", error);
+        res.status(500).json({ success: false, error: 'Server Error during password update' });
+    }
 };

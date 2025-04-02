@@ -117,13 +117,14 @@ function App() {
          <Route element={<ProtectedRoute isLoggedIn={isLoggedIn} authLoading={authLoading} />}>
              <Route path="/" element={<ChatPage />} />
              <Route path="/chat/:sessionId" element={<ChatPage />} />
-             {/* Settings route is now nested under AdminRoute */}
-         </Route>
-
-         {/* Admin Protected Route */}
-         <Route element={<AdminRoute isLoggedIn={isLoggedIn} authLoading={authLoading} currentUser={currentUser} />}>
+             {/* Settings route moved here - accessible to all logged-in users */}
              <Route path="/settings" element={<SettingsPage currentUser={currentUser} />} />
          </Route>
+
+         {/* Admin Protected Route - Can be removed if no other admin-only routes exist */}
+         {/* <Route element={<AdminRoute isLoggedIn={isLoggedIn} authLoading={authLoading} currentUser={currentUser} />}> */}
+             {/* Add any future admin-only routes here */}
+         {/* </Route> */}
 
         {/* Catch-all for Not Found */}
         <Route path="*" element={<div>404 Not Found</div>} />

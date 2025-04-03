@@ -52,7 +52,7 @@ const resources = {
       "chat_model_select_label": "Model:",
       "chat_model_default": "Default (Auto-Select)",
       "chat_attach_file": "Attach file",
-      "chat_enable_streaming": "Enable Streaming",
+      "chat_enable_streaming": "Streaming Response",
       // Settings Page
       "settings_title": "Settings",
       "settings_general_title": "General Settings",
@@ -110,7 +110,7 @@ const resources = {
       "chat_model_select_label": "Mô hình:",
       "chat_model_default": "Mặc định (Tự động chọn)",
       "chat_attach_file": "Đính kèm tệp",
-      "chat_enable_streaming": "Bật Streaming",
+      "chat_enable_streaming": "Phản hồi Streaming",
       // Settings Page
       "settings_title": "Cài đặt",
       "settings_general_title": "Cài đặt chung",

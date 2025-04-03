@@ -28,6 +28,17 @@ const allowedOrigins = [
     'https://asianblvd.com'                     // New custom domain
 ];
 
+// --- TEMPORARY DEBUGGING --- Allow all origins
+const corsOptions = {
+    origin: '*', // Allow all origins for debugging
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+    optionsSuccessStatus: 204
+};
+console.warn("!!! CORS is temporarily allowing all origins for debugging !!!"); // Add warning log
+// --- END TEMPORARY DEBUGGING ---
+
+/* Original CORS Options:
 const corsOptions = {
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests) or from allowed origins
@@ -41,6 +52,7 @@ const corsOptions = {
     credentials: true, // Allow cookies if needed for auth later
     optionsSuccessStatus: 204 // For legacy browser support
 };
+*/
 app.use(cors(corsOptions));
 app.use(express.json()); // Parse JSON request bodies
 

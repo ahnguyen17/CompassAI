@@ -36,7 +36,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
   const [availableModels, setAvailableModels] = useState<AvailableModels>({});
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [loadingModels, setLoadingModels] = useState(true);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false); // Default to hidden
   // State for streaming response
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [streamingMessageContent, setStreamingMessageContent] = useState<string>('');
@@ -281,8 +281,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
       >
          {isSidebarVisible && (
              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <button onClick={handleNewChat} className={styles.newChatButton}>{t('chat_new_button')}</button>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '15px' }}> {/* Remove New Chat button, keep toggle */}
+                    {/* <button onClick={handleNewChat} className={styles.newChatButton}>{t('chat_new_button')}</button> */} {/* Removed */}
                     <button onClick={toggleSidebarVisibility} className={styles.sidebarToggleButton} title="Hide Sidebar" style={{ flexShrink: 0 }}>{'‹'}</button>
                 </div>
                 <h4>{t('chat_history_title')}</h4>
@@ -311,9 +311,26 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                  paddingBottom: '15px',
                  borderBottom: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
                  marginLeft: '40px',
-                 color: isDarkMode ? '#e0e0e0' : 'inherit'
+                 color: isDarkMode ? '#e0e0e0' : 'inherit',
+                 gap: '10px' // Add gap between header items
              }}>
-                 <h3 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit' }}>{currentSession.title || 'Untitled Chat'}</h3>
+                 <h3 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit', flexGrow: 1, margin: 0 }}>{currentSession.title || 'Untitled Chat'}</h3> {/* Allow title to grow */}
+                 {/* Moved New Chat Button Here */}
+                 <button 
+                    onClick={handleNewChat} 
+                    style={{
+                        padding: '6px 12px',
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                        background: isDarkMode ? '#0d6efd' : '#007bff', // Match theme
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        flexShrink: 0 // Prevent shrinking
+                    }}
+                 >
+                    {t('chat_new_button')}
+                 </button>
                  <button
                      onClick={handleToggleShare}
                      disabled={shareLoading}

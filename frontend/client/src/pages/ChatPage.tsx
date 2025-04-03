@@ -388,15 +388,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
 
              {/* Input Area */}
              <form onSubmit={handleSendMessage} className={styles.inputForm}>
-                 {!loadingModels && Object.keys(availableModels).length > 0 && (
-                      <div style={{ marginBottom: '10px' }}>
-                         <label htmlFor="model-select" style={{
-                             marginRight: '10px',
+                 {/* Model Select and Streaming Toggle Row */}
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                     {!loadingModels && Object.keys(availableModels).length > 0 && (
+                         <> {/* Use Fragment to group label and select */}
+                             <label htmlFor="model-select" style={{
+                                 marginRight: '5px', // Reduced margin
                              fontSize: '0.9em',
                              color: isDarkMode ? '#bbb' : '#6c757d'
-                         }}>{t('chat_model_select_label')}</label>
-                         <select
-                             id="model-select"
+                             }}>{t('chat_model_select_label')}</label>
+                             <select
+                                 id="model-select"
                              value={selectedModel}
                              onChange={(e) => setSelectedModel(e.target.value)}
                              style={{
@@ -407,23 +409,32 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                  color: isDarkMode ? '#e0e0e0' : 'inherit'
                              }}
                          >
-                             <option value="">{t('chat_model_default')}</option>
-                             {Object.entries(availableModels).map(([provider, models]) => ( <optgroup label={provider} key={provider}> {models.map(modelName => (<option key={modelName} value={modelName}>{modelName}</option>))} </optgroup> ))}
-                         </select>
-                     </div>
-                 )}
-                 {/* Streaming Toggle */}
-                 <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', fontSize: '0.9em', color: isDarkMode ? '#bbb' : '#6c757d' }}>
-                     <input
-                         type="checkbox"
-                         id="streaming-toggle"
-                         checked={isStreamingEnabled}
-                         onChange={(e) => setIsStreamingEnabled(e.target.checked)}
-                         style={{ marginRight: '5px' }}
-                     />
-                     <label htmlFor="streaming-toggle">{t('chat_enable_streaming')}</label>
+                                 <option value="">{t('chat_model_default')}</option>
+                                 {Object.entries(availableModels).map(([provider, models]) => ( <optgroup label={provider} key={provider}> {models.map(modelName => (<option key={modelName} value={modelName}>{modelName}</option>))} </optgroup> ))}
+                             </select>
+                         </>
+                     )}
+                     {/* Streaming Toggle Icon Button */}
+                     <button
+                         type="button" // Important: prevent form submission
+                         onClick={() => setIsStreamingEnabled(!isStreamingEnabled)}
+                         title={isStreamingEnabled ? "Streaming Enabled" : "Streaming Disabled"}
+                         style={{
+                             background: 'none',
+                             border: 'none',
+                             cursor: 'pointer',
+                             fontSize: '1.3em', // Adjust size as needed
+                             padding: '0 5px', // Minimal padding
+                             color: isStreamingEnabled ? (isDarkMode ? '#64b5f6' : '#007bff') : '#6c757d', // Indicate status with color
+                             marginLeft: 'auto' // Push to the right if space allows (optional)
+                         }}
+                     >
+                         ⚡ {/* Use a lightning bolt icon */}
+                     </button>
                  </div>
-                <div className={styles.inputControls}>
+
+                 {/* Input Controls Row */}
+                 <div className={styles.inputControls}>
                      <input type="file" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)} style={{ display: 'none' }} id="file-upload" />
                      <button
                          type="button"

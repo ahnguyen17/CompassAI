@@ -309,7 +309,17 @@ exports.addMessageToSession = async (req, res, next) => {
                     generatedTitle = await callApi(titleProvider, titleApiKey, titleModel, titleHistory, combinedContentForAI);
 
                     if (generatedTitle) {
-                        generatedTitle = generatedTitle.trim().replace(/^"|"$/g, '').replace(/\.$/, ''); // Clean up title
+                        // More robust cleanup: trim, remove quotes/periods, take first line/part, truncate
+                        let cleanedTitle = generatedTitle.trim().replace(/^"|"$/g, '').replace(/\.$/, '');
+                        // Split by newline or colon and take the first part
+                        cleanedTitle = cleanedTitle.split(/[\n:]/)[0].trim(); 
+                        // Truncate to a max length (e.g., 50 chars) as a final safety measure
+                        const maxLength = 50; 
+                        if (cleanedTitle.length > maxLength) {
+                            cleanedTitle = cleanedTitle.substring(0, maxLength) + '...';
+                        }
+                        generatedTitle = cleanedTitle; // Use the cleaned title
+
                         await ChatSession.findByIdAndUpdate(sessionId, { title: generatedTitle });
                         titleUpdated = true;
                         console.log(`Generated title using ${titleProvider}: ${generatedTitle}`);

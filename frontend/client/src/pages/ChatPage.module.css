@@ -384,11 +384,12 @@ body.dark .sendButton:disabled {
     }
     .messageInput {
         padding: 10px 12px;
+        min-width: 0; /* Allow input to shrink fully */
     }
     .sendButton {
-        padding: 8px 15px;
+        padding: 8px 12px; /* Reduce horizontal padding */
     }
     .fileUploadButton {
-        padding: 8px;
+        padding: 8px; /* Keep padding, maybe adjust size if needed */
     }
 } /* Add missing closing brace for @media query */

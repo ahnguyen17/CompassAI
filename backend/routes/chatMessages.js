@@ -12,7 +12,9 @@ const { protect } = require('../middleware/auth');
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // Save files to the 'uploads' directory
+    // Use path.join to ensure the path is resolved correctly relative to the backend root
+    const uploadPath = path.join(__dirname, '..', 'uploads'); // Assumes routes/ is one level down from backend root
+    cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
     // Create a unique filename: fieldname-timestamp.ext

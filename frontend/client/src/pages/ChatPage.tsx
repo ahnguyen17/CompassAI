@@ -302,9 +302,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                     background: isDarkMode ? '#3a3d41' : '#f0f0f0',
                     color: isDarkMode ? '#e0e0e0' : 'inherit',
                     borderRadius: '4px',
-                    marginLeft: '40px'
+                    marginLeft: '40px',
+                    display: 'flex', // Use flexbox for alignment
+                    alignItems: 'center', // Align items vertically
+                    gap: '10px' // Add space between link and button
                 }}>
-                    {t('chat_share_link')} <a href={`/share/${currentSession.shareId}`} target="_blank" rel="noopener noreferrer">{window.location.origin}/share/{currentSession.shareId}</a>
+                    <a href={`/share/${currentSession.shareId}`} target="_blank" rel="noopener noreferrer" style={{ color: isDarkMode ? '#64b5f6' : '#007bff' }}>
+                        {t('chat_share_link')} {/* Display translated text as link */}
+                    </a>
+                    <CopyButton 
+                        textToCopy={`${window.location.origin}/share/${currentSession.shareId}`} 
+                    />
                 </div>
              )}
 

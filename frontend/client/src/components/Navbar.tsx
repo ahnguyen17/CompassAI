@@ -184,7 +184,7 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
                     onClick={() => { onLogout(); setIsDropdownOpen(false); }} 
                     style={dropdownItemStyle} // Apply common style
                   >
-                    {t('nav_logout')}
+                    🚪 {t('nav_logout')} {/* Add icon */}
                   </button>
                   {/* Settings Link inside Dropdown */}
                   <Link 

@@ -326,13 +326,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                  <button
                      onClick={handleToggleShare}
                      disabled={shareLoading}
-                     style={{
-                         padding: '6px 12px',
-                         fontSize: '0.9rem',
-                         cursor: 'pointer',
-                         background: isDarkMode ? '#3a3d41' : '#f8f9fa',
-                         border: `1px solid ${isDarkMode ? '#555' : '#dee2e6'}`,
-                         color: isDarkMode ? '#e0e0e0' : 'inherit'
+                     className={styles.sendButton} // Use the send button class
+                     style={{ // Keep only necessary inline styles
+                         background: isDarkMode ? '#3a3d41' : '#f8f9fa', // Custom background
+                         color: isDarkMode ? '#e0e0e0' : 'inherit', // Custom text color
+                         border: `1px solid ${isDarkMode ? '#555' : '#dee2e6'}`, // Add border back if needed
+                         padding: '6px 12px', // Adjust padding if needed
+                         fontSize: '0.9rem' // Adjust font size if needed
                      }}
                  >
                      {shareLoading ? '...' : (currentSession.isShared ? t('chat_unshare_button') : t('chat_share_button'))}
@@ -360,7 +360,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
              )}
 
              {/* Messages */}
-             <div className={styles.messageList} ref={messagesEndRef}> {/* Add ref here */}
+             <div className={styles.messageList}> {/* Remove ref from here */}
                {loadingMessages ? <p>{t('chat_loading_messages')}</p> : messages.length > 0 ? (
                  messages.map((msg) => (
                    <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>
@@ -427,6 +427,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                  ))
                ) : <p>{t('chat_start_message')}</p>}
                 {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+                {/* Add empty div at the end for scrolling ref */}
+                <div ref={messagesEndRef} /> 
              </div>
 
              {/* Input Area */}

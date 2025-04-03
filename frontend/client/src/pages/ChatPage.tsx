@@ -425,12 +425,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                              cursor: 'pointer',
                              fontSize: '1.3em', // Adjust size as needed
                              padding: '0 5px', // Minimal padding
-                             color: isStreamingEnabled ? (isDarkMode ? '#64b5f6' : '#007bff') : '#6c757d', // Indicate status with color
+                             color: '#fff', // Use a base color, opacity will handle fading
                              marginLeft: 'auto', // Push to the right if space allows (optional)
                              opacity: isStreamingEnabled ? 1 : 0.5 // Dim when disabled
                          }}
                      >
-                         {isStreamingEnabled ? '▶️' : '🚫'} {/* Use Play/Stop icons */}
+                         ✨ {/* Use Sparkles icon */}
                      </button>
                  </div>
 

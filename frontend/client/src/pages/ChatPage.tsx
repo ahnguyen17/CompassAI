@@ -231,8 +231,42 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
   };
 
   // --- Effects ---
-  useEffect(() => { fetchSessions(); fetchAvailableModels(); }, []);
-  useEffect(() => { if (routeSessionId && routeSessionId !== currentSession?._id) { const sessionFromRoute = sessions.find(s => s._id === routeSessionId); if (sessionFromRoute) { setCurrentSession(sessionFromRoute); fetchMessages(sessionFromRoute._id); } else { console.warn(`Session ID ${routeSessionId} from URL not found.`); } } }, [routeSessionId, sessions]);
+  useEffect(() => {
+    // Fetch initial data
+    const fetchInitialData = async () => {
+        await fetchAvailableModels(); // Fetch models first
+        await fetchSessions(); // Then fetch sessions
+    };
+    fetchInitialData();
+  }, []); // Run only once on mount
+
+  // Effect to handle selecting session based on URL or loading the latest
+  useEffect(() => {
+    // Don't run if sessions haven't loaded yet
+    if (loadingSessions) return;
+
+    if (routeSessionId) {
+        // If there's a session ID in the URL, try to load it
+        if (routeSessionId !== currentSession?._id) {
+            const sessionFromRoute = sessions.find(s => s._id === routeSessionId);
+            if (sessionFromRoute) {
+                console.log("Loading session from URL:", routeSessionId);
+                setCurrentSession(sessionFromRoute);
+                fetchMessages(sessionFromRoute._id);
+            } else {
+                console.warn(`Session ID ${routeSessionId} from URL not found in fetched sessions.`);
+                // Optional: Navigate to base chat page or show error?
+                // navigate('/chat'); 
+            }
+        }
+    } else if (!currentSession && sessions.length > 0) {
+        // If no session ID in URL and no session currently selected, load the most recent one
+        // Assuming sessions are sorted by backend (or sort here if needed: [...sessions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+        const mostRecentSession = sessions[0]; // Assuming the first one is the most recent
+        console.log("No session in URL, loading most recent:", mostRecentSession._id);
+        handleSelectSession(mostRecentSession); // This will navigate and fetch messages
+    }
+  }, [routeSessionId, sessions, currentSession, loadingSessions, navigate]); // Dependencies
 
   // --- Toggle Sidebar Visibility ---
   const toggleSidebarVisibility = () => setIsSidebarVisible(!isSidebarVisible);

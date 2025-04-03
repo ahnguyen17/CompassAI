@@ -371,9 +371,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, isDarkMode /*,
            return;
       }
 
-      const updates: { username?: string; email?: string } = {};
-      // Only include fields if they have actually changed
-      if (profileUsername !== currentUser?.username) updates.username = profileUsername;
+      // Only allow email updates
+      const updates: { email?: string } = {};
+      // Only include email if it has actually changed
       if (profileEmail !== currentUser?.email) updates.email = profileEmail;
 
       if (Object.keys(updates).length === 0) {
@@ -603,9 +603,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, isDarkMode /*,
                            type="text"
                            id="profileUsername"
                            value={profileUsername}
-                           onChange={(e) => setProfileUsername(e.target.value)}
-                           required
-                           style={inputStyle}
+                           // onChange={(e) => setProfileUsername(e.target.value)} // Remove onChange
+                           readOnly // Make input read-only
+                           style={{...inputStyle, background: isDarkMode ? '#444' : '#eee', cursor: 'not-allowed'}} // Add styling for read-only
                        />
                    </div>
                    <div style={{ marginBottom: '20px' }}>

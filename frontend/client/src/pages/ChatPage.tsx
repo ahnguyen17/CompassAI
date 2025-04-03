@@ -107,7 +107,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
               // Add stream=true parameter for streaming requests
               formData.append('stream', 'true');
 
-              const response = await fetch(`/api/v1/chatsessions/${sessionId}/messages`, {
+              // Get the base URL from the same source as apiClient
+              const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+              // Use the full URL for fetch in production, or relative URL in development
+              const fetchUrl = apiBaseUrl 
+                  ? `${apiBaseUrl}/chatsessions/${sessionId}/messages` // Production: full URL without duplicate /api/v1
+                  : `/api/v1/chatsessions/${sessionId}/messages`;      // Development: relative URL with /api/v1
+              
+              console.log('Streaming fetch URL:', fetchUrl);
+              const response = await fetch(fetchUrl, {
                   method: 'POST',
                   body: formData,
                   headers: {

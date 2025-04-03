@@ -61,21 +61,6 @@ app.use('/api/v1/disabledmodels', disabledModelRoutes); // Mount disabled models
 // Define the port
 const PORT = process.env.PORT || 5000; // Use port from .env or default to 5000
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    try {
-        fs.mkdirSync(uploadsDir);
-        console.log(`Created directory: ${uploadsDir}`);
-    } catch (err) {
-        console.error(`Error creating directory ${uploadsDir}:`, err);
-        // Decide if you want to exit or continue if directory creation fails
-        // process.exit(1);
-    }
-} else {
-    console.log(`Uploads directory already exists: ${uploadsDir}`);
-}
-
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);

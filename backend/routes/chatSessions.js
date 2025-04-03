@@ -10,6 +10,12 @@ const {
 
 const router = express.Router();
 
+// Add logging middleware at the very start of this router
+router.use((req, res, next) => {
+    console.log(`>>> Request received by chatSessions router for path: ${req.originalUrl}, Method: ${req.method}`);
+    next();
+});
+
 // Import protection middleware
 const { protect } = require('../middleware/auth');
 

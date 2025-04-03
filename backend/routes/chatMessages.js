@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs-extra'); // Import fs-extra for directory creation
 const {
   getMessagesForSession,
   addMessageToSession
@@ -12,8 +13,17 @@ const { protect } = require('../middleware/auth');
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Use relative path; server.js ensures this directory exists at backend root
-    cb(null, 'uploads/');
+    // Create uploads directory on-demand if it doesn't exist
+    const uploadPath = path.join(__dirname, '..', 'uploads');
+    try {
+      // ensureDirSync creates the directory if it doesn't exist
+      fs.ensureDirSync(uploadPath);
+      console.log(`Uploads directory ensured: ${uploadPath}`);
+      cb(null, uploadPath);
+    } catch (err) {
+      console.error(`Error ensuring uploads directory: ${err.message}`);
+      cb(err);
+    }
   },
   filename: function (req, file, cb) {
     // Create a unique filename: fieldname-timestamp.ext

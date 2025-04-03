@@ -249,9 +249,16 @@ exports.addMessageToSession = async (req, res, next) => {
                 originalname: uploadedFile.originalname,
                 mimetype: uploadedFile.mimetype,
                 size: uploadedFile.size,
-                path: uploadedFile.path
+                // Store a relative path instead of absolute path for better compatibility with deployment
+                path: uploadedFile.path.replace(/^.*[\\\/]uploads[\\\/]/, 'uploads/')
             } : undefined
         };
+        
+        // Log the file path for debugging
+        if (uploadedFile) {
+            console.log('Original file path:', uploadedFile.path);
+            console.log('Stored file path:', userMessageData.fileInfo.path);
+        }
         const savedUserMessage = await ChatMessage.create(userMessageData);
         console.log("Saved user message to DB:", savedUserMessage._id);
 
@@ -261,6 +268,7 @@ exports.addMessageToSession = async (req, res, next) => {
             let fileTextContent = `[File Uploaded: ${uploadedFile.originalname} (${(uploadedFile.size / 1024).toFixed(1)} KB)]`;
             if (uploadedFile.mimetype === 'application/pdf') {
                 try {
+                    // Use the original path for reading the file
                     console.log(`Attempting to read PDF: ${uploadedFile.path}`);
                     const dataBuffer = fs.readFileSync(uploadedFile.path);
                     console.log(`Read PDF buffer, attempting to parse...`);

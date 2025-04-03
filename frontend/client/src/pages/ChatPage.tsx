@@ -413,7 +413,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                          onChange={(e) => setIsStreamingEnabled(e.target.checked)}
                          style={{ marginRight: '5px' }}
                      />
-                     <label htmlFor="streaming-toggle">Enable Streaming Response</label>
+                     <label htmlFor="streaming-toggle">{t('chat_enable_streaming')}</label>
                  </div>
                 <div className={styles.inputControls}>
                      <input type="file" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)} style={{ display: 'none' }} id="file-upload" />

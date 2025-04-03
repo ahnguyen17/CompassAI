@@ -327,12 +327,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                      onClick={handleToggleShare}
                      disabled={shareLoading}
                      className={styles.sendButton} // Use the send button class
-                     style={{ // Keep only necessary inline styles
+                     style={{ // Keep only necessary inline styles that differ from .sendButton
                          background: isDarkMode ? '#3a3d41' : '#f8f9fa', // Custom background
                          color: isDarkMode ? '#e0e0e0' : 'inherit', // Custom text color
                          border: `1px solid ${isDarkMode ? '#555' : '#dee2e6'}`, // Add border back if needed
-                         padding: '6px 12px', // Adjust padding if needed
-                         fontSize: '0.9rem' // Adjust font size if needed
+                         // Remove padding and fontSize to inherit from .sendButton
                      }}
                  >
                      {shareLoading ? '...' : (currentSession.isShared ? t('chat_unshare_button') : t('chat_share_button'))}

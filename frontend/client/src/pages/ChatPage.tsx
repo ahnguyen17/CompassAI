@@ -45,6 +45,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
   const abortControllerRef = useRef<AbortController | null>(null); // Restore AbortController ref
+  const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for the end of the messages list
 
   // --- Fetch Functions ---
   const fetchSessions = async () => { setLoadingSessions(true); setError(''); try { const response = await apiClient.get('/chatsessions'); if (response.data?.success) setSessions(response.data.data); else setError('Failed to load chat sessions.'); } catch (err: any) { setError(err.response?.data?.error || 'Error loading sessions.'); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingSessions(false); } };
@@ -268,6 +269,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
     }
   }, [routeSessionId, sessions, currentSession, loadingSessions, navigate]); // Dependencies
 
+  // Effect to scroll to bottom when messages change or loading finishes
+  useEffect(() => {
+    // Scroll to bottom smoothly after messages load or a new message is added
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loadingMessages]); // Trigger on message array change or when loading finishes
+
   // --- Toggle Sidebar Visibility ---
   const toggleSidebarVisibility = () => setIsSidebarVisible(!isSidebarVisible);
 
@@ -281,8 +288,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
       >
          {isSidebarVisible && (
              <>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '15px' }}> {/* Remove New Chat button, keep toggle */}
-                    {/* <button onClick={handleNewChat} className={styles.newChatButton}>{t('chat_new_button')}</button> */} {/* Removed */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}> {/* Restore New Chat button */}
+                    <button onClick={handleNewChat} className={styles.newChatButton}>{t('chat_new_button')}</button>
                     <button onClick={toggleSidebarVisibility} className={styles.sidebarToggleButton} title="Hide Sidebar" style={{ flexShrink: 0 }}>{'‹'}</button>
                 </div>
                 <h4>{t('chat_history_title')}</h4>
@@ -315,22 +322,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                  gap: '10px' // Add gap between header items
              }}>
                  <h3 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit', flexGrow: 1, margin: 0 }}>{currentSession.title || 'Untitled Chat'}</h3> {/* Allow title to grow */}
-                 {/* Moved New Chat Button Here */}
-                 <button 
-                    onClick={handleNewChat} 
-                    style={{
-                        padding: '6px 12px',
-                        fontSize: '0.9rem',
-                        cursor: 'pointer',
-                        background: isDarkMode ? '#0d6efd' : '#007bff', // Match theme
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        flexShrink: 0 // Prevent shrinking
-                    }}
-                 >
-                    {t('chat_new_button')}
-                 </button>
+                 {/* Removed New Chat Button from here */}
                  <button
                      onClick={handleToggleShare}
                      disabled={shareLoading}
@@ -368,7 +360,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
              )}
 
              {/* Messages */}
-             <div className={styles.messageList}>
+             <div className={styles.messageList} ref={messagesEndRef}> {/* Add ref here */}
                {loadingMessages ? <p>{t('chat_loading_messages')}</p> : messages.length > 0 ? (
                  messages.map((msg) => (
                    <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>

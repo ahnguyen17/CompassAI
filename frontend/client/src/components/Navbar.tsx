@@ -48,8 +48,14 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
 
         {isLoggedIn ? (
           <>
-            {/* Show Settings link for all logged-in users */}
-            <Link to="/settings" style={{ color: '#fff', marginRight: '15px' }}>{t('nav_settings')}</Link>
+            {/* Show Settings link as an icon */}
+            <Link 
+              to="/settings" 
+              style={{ color: '#fff', marginRight: '15px', textDecoration: 'none', fontSize: '1.2em' }} 
+              title={t('nav_settings')} // Add title for accessibility
+            >
+              ⚙️
+            </Link>
             <span style={{ marginRight: '15px', color: '#ccc' }}>{currentUser?.username || currentUser?.email}</span>
             <button onClick={onLogout} style={{ background: 'none', border: '1px solid #fff', color: '#fff', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}>{t('nav_logout')}</button>
           </>

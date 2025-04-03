@@ -67,6 +67,21 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
     };
   }, [isLangDropdownOpen]); // Re-run effect when language dropdown state changes
 
+  // Common style for dropdown items
+  const dropdownItemStyle: React.CSSProperties = {
+    background: 'none', 
+    border: 'none', 
+    color: isDarkMode ? '#eee' : '#333', 
+    padding: '8px 16px', 
+    textDecoration: 'none',
+    display: 'block',
+    width: '100%', 
+    textAlign: 'left', 
+    cursor: 'pointer',
+    fontSize: '1em', // Ensure consistent font size
+    boxSizing: 'border-box'
+  };
+
   return (
     <nav style={{ background: '#333', color: '#fff', padding: '10px 20px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <Link to="/" style={{ color: '#fff', textDecoration: 'none', fontSize: '1.2em' }}>
@@ -167,17 +182,7 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
                 }}>
                   <button 
                     onClick={() => { onLogout(); setIsDropdownOpen(false); }} 
-                    style={{ 
-                      background: 'none', 
-                      border: 'none', 
-                      color: isDarkMode ? '#eee' : '#333', 
-                      padding: '8px 16px', // Consistent padding
-                      textDecoration: 'none',
-                      display: 'block',
-                      width: '100%', // Make button fill width
-                      textAlign: 'left', // Align text left
-                      cursor: 'pointer' 
-                    }}
+                    style={dropdownItemStyle} // Apply common style
                   >
                     {t('nav_logout')}
                   </button>
@@ -185,15 +190,7 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
                   <Link 
                     to="/settings" 
                     onClick={() => setIsDropdownOpen(false)} // Close dropdown on click
-                    style={{ 
-                      color: isDarkMode ? '#eee' : '#333', 
-                      padding: '8px 16px', 
-                      textDecoration: 'none',
-                      display: 'block',
-                      width: '100%', // Make link fill width
-                      textAlign: 'left', // Align text left
-                      boxSizing: 'border-box' // Ensure padding is included in width
-                    }}
+                    style={dropdownItemStyle} // Apply common style
                   >
                     ⚙️ {t('nav_settings')} {/* Icon and Text */}
                   </Link>

@@ -275,6 +275,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loadingMessages]); // Trigger on message array change or when loading finishes
 
+  // Effect to open sidebar when no chat is selected
+  useEffect(() => {
+    if (!currentSession && !isSidebarVisible) {
+      setIsSidebarVisible(true);
+    }
+  }, [currentSession, isSidebarVisible]);
+
   // --- Toggle Sidebar Visibility ---
   const toggleSidebarVisibility = () => setIsSidebarVisible(!isSidebarVisible);
 

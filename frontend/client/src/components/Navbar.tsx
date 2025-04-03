@@ -22,8 +22,10 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDarkMode, toggleTheme }) => {
   const { t, i18n } = useTranslation(); // Get t function and i18n instance
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown
-  const dropdownRef = useRef<HTMLDivElement>(null); // Ref for dropdown container
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for user dropdown
+  const dropdownRef = useRef<HTMLDivElement>(null); // Ref for user dropdown container
+  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false); // State for language dropdown
+  const langDropdownRef = useRef<HTMLDivElement>(null); // Ref for language dropdown container
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng); // Change the language
@@ -46,7 +48,24 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isDropdownOpen]); // Re-run effect when isDropdownOpen changes
+  }, [isDropdownOpen]); // Re-run effect when user dropdown state changes
+
+  // Close language dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutsideLang = (event: MouseEvent) => {
+      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target as Node)) {
+        setIsLangDropdownOpen(false);
+      }
+    };
+    if (isLangDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutsideLang);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutsideLang);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutsideLang);
+    };
+  }, [isLangDropdownOpen]); // Re-run effect when language dropdown state changes
 
   return (
     <nav style={{ background: '#333', color: '#fff', padding: '10px 20px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -63,9 +82,66 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
             {isDarkMode ? '☀️' : '🌙'}
         </button>
 
-         {/* Language Toggle Buttons */}
-         <button onClick={() => changeLanguage('en')} disabled={i18n.language === 'en'} style={{ background: 'none', border: i18n.language === 'en' ? '1px solid #fff' : 'none', color: '#fff', cursor: 'pointer', marginRight: '5px', padding: '3px 6px', borderRadius: '3px' }}>EN</button>
-         <button onClick={() => changeLanguage('vi')} disabled={i18n.language === 'vi'} style={{ background: 'none', border: i18n.language === 'vi' ? '1px solid #fff' : 'none', color: '#fff', cursor: 'pointer', marginRight: '20px', padding: '3px 6px', borderRadius: '3px' }}>VI</button>
+        {/* Language Dropdown */}
+        <div ref={langDropdownRef} style={{ position: 'relative', display: 'inline-block', marginRight: '20px' }}>
+          <button 
+            onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+            style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.2em' }}
+            title="Change Language"
+          >
+            🌐
+          </button>
+          {isLangDropdownOpen && (
+            <div style={{
+              position: 'absolute',
+              right: 0,
+              top: '100%', 
+              backgroundColor: isDarkMode ? '#444' : '#f9f9f9',
+              minWidth: '80px', // Adjust width as needed
+              boxShadow: '0px 8px 16px 0px rgba(0,0,0,0.2)',
+              zIndex: 1,
+              borderRadius: '4px',
+              padding: '5px 0',
+            }}>
+              <button 
+                onClick={() => { changeLanguage('en'); setIsLangDropdownOpen(false); }} 
+                disabled={i18n.language === 'en'}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: isDarkMode ? '#eee' : '#333', 
+                  padding: '8px 16px', 
+                  textDecoration: 'none',
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontWeight: i18n.language === 'en' ? 'bold' : 'normal' // Highlight current language
+                }}
+              >
+                EN
+              </button>
+              <button 
+                onClick={() => { changeLanguage('vi'); setIsLangDropdownOpen(false); }} 
+                disabled={i18n.language === 'vi'}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: isDarkMode ? '#eee' : '#333', 
+                  padding: '8px 16px', 
+                  textDecoration: 'none',
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontWeight: i18n.language === 'vi' ? 'bold' : 'normal' // Highlight current language
+                }}
+              >
+                VI
+              </button>
+            </div>
+          )}
+        </div>
 
         {isLoggedIn ? (
           <>

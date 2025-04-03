@@ -145,14 +145,6 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
 
         {isLoggedIn ? (
           <>
-            {/* Show Settings link as an icon */}
-            <Link 
-              to="/settings" 
-              style={{ color: '#fff', marginRight: '15px', textDecoration: 'none', fontSize: '1.2em' }} 
-              title={t('nav_settings')} // Add title for accessibility
-            >
-              ⚙️
-            </Link>
             {/* User Dropdown */}
             <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
               <span 
@@ -189,7 +181,22 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
                   >
                     {t('nav_logout')}
                   </button>
-                  {/* Add other dropdown items here if needed */}
+                  {/* Settings Link inside Dropdown */}
+                  <Link 
+                    to="/settings" 
+                    onClick={() => setIsDropdownOpen(false)} // Close dropdown on click
+                    style={{ 
+                      color: isDarkMode ? '#eee' : '#333', 
+                      padding: '8px 16px', 
+                      textDecoration: 'none',
+                      display: 'block',
+                      width: '100%', // Make link fill width
+                      textAlign: 'left', // Align text left
+                      boxSizing: 'border-box' // Ensure padding is included in width
+                    }}
+                  >
+                    ⚙️ {t('nav_settings')} {/* Icon and Text */}
+                  </Link>
                 </div>
               )}
             </div>

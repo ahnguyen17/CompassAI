@@ -31,7 +31,11 @@ const router = express.Router({ mergeParams: true });
 
 // Add logging middleware at the very start of this router
 router.use((req, res, next) => {
-    console.log(`>>> Request received by chatMessages router for path: ${req.originalUrl}, Method: ${req.method}`);
+    // Log the request specifically for this sub-router
+    // req.originalUrl might show the full path like /api/v1/chatsessions/ID/messages
+    // req.baseUrl might show /api/v1/chatsessions/ID/messages
+    // req.path should show just '/' for routes defined here
+    console.log(`>>> chatMessages router received request. Method: ${req.method}, Path relative to sub-router: ${req.path}, Full Original URL: ${req.originalUrl}`);
     next();
 });
 
@@ -63,6 +67,8 @@ const handleMulterError = (err, req, res, next) => {
 // Define routes explicitly instead of chaining with router.route()
 router.get('/', getMessagesForSession);
 
-router.post('/', upload.single('file'), handleMulterError, addMessageToSession);
+// TEMPORARILY REMOVE MULTER MIDDLEWARE FOR DEBUGGING DEPLOYMENT 404
+router.post('/', /* upload.single('file'), handleMulterError, */ addMessageToSession);
+// router.post('/', upload.single('file'), handleMulterError, addMessageToSession); // Original line
 
 module.exports = router;

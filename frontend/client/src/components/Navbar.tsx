@@ -180,13 +180,7 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
                   borderRadius: '4px',
                   padding: '5px 0', // Add some padding
                 }}>
-                  <button 
-                    onClick={() => { onLogout(); setIsDropdownOpen(false); }} 
-                    style={dropdownItemStyle} // Apply common style
-                  >
-                    🚪 {t('nav_logout')} {/* Add icon */}
-                  </button>
-                  {/* Settings Link inside Dropdown */}
+                  {/* Settings Link inside Dropdown (Moved Up) */}
                   <Link 
                     to="/settings" 
                     onClick={() => setIsDropdownOpen(false)} // Close dropdown on click
@@ -194,6 +188,12 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
                   >
                     ⚙️ {t('nav_settings')} {/* Icon and Text */}
                   </Link>
+                   <button 
+                    onClick={() => { onLogout(); setIsDropdownOpen(false); }} 
+                    style={dropdownItemStyle} // Apply common style
+                  >
+                    🚪 {t('nav_logout')} {/* Add icon */}
+                  </button>
                 </div>
               )}
             </div>

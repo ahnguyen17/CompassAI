@@ -155,5 +155,5 @@ This guide uses **Render** for the backend and **Netlify** for the frontend as e
 ## Important Notes
 
 *   **Secrets:** Never commit `.env` files or hardcode secrets (DB URI, JWT Secret). Use hosting platform environment variables.
-*   **Uploads:** The default file upload saves to the backend server's filesystem (`backend/uploads/`). This is **not suitable for most production environments** (especially PaaS like Render free tier) as the filesystem is often temporary. For persistent uploads, integrate a cloud storage service (AWS S3, Google Cloud Storage, Cloudinary) which requires backend code changes.
+*   **Uploads:** The file upload implementation saves files to the backend server's filesystem (`backend/uploads/`). The system creates this directory on-demand when needed. While this works for both local development and the current deployment, for long-term production use on platforms with truly ephemeral filesystems, consider integrating a cloud storage service (e.g., AWS S3, Google Cloud Storage, Cloudinary).
 *   **Security:** Restrict database IP access in Atlas once your backend IP is stable. Use strong secrets. Implement rate limiting and input validation on the backend.

@@ -304,9 +304,10 @@ exports.addMessageToSession = async (req, res, next) => {
                     const titlePrompt = `Generate a very concise title (3-5 words max) for a chat that starts with this message: "${combinedContentForAI.substring(0, 100)}..."`; // Use snippet
                     const titleApiKey = successfulApiKeyEntryForTitle.keyValue;
                     // Use non-streaming callApi for title generation
-                    // Pass a minimal history (just the user prompt) for title generation
-                    const titleHistory = [{ _id: 'temp-title-user', sender: 'user', content: combinedContentForAI, timestamp: new Date().toISOString() }];
-                    generatedTitle = await callApi(titleProvider, titleApiKey, titleModel, titleHistory, combinedContentForAI);
+                    // Pass only the titlePrompt as the history/content for this specific call
+                    const titleHistory = [{ _id: 'temp-title-user', sender: 'user', content: titlePrompt, timestamp: new Date().toISOString() }];
+                    // Pass titlePrompt as the last message content argument
+                    generatedTitle = await callApi(titleProvider, titleApiKey, titleModel, titleHistory, titlePrompt); 
 
                     if (generatedTitle) {
                         // More robust cleanup: trim, remove quotes/periods, take first line/part, truncate

@@ -67,8 +67,7 @@ const handleMulterError = (err, req, res, next) => {
 // Define routes explicitly instead of chaining with router.route()
 router.get('/', getMessagesForSession);
 
-// TEMPORARILY REMOVE MULTER MIDDLEWARE FOR DEBUGGING DEPLOYMENT 404
-router.post('/', /* upload.single('file'), handleMulterError, */ addMessageToSession);
-// router.post('/', upload.single('file'), handleMulterError, addMessageToSession); // Original line
+// Restore original POST route with multer middleware
+router.post('/', upload.single('file'), handleMulterError, addMessageToSession);
 
 module.exports = router;

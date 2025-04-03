@@ -37,9 +37,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [loadingModels, setLoadingModels] = useState(true);
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  // State for streaming response
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [streamingMessageContent, setStreamingMessageContent] = useState<string>('');
+  const [isStreamingEnabled, setIsStreamingEnabled] = useState(true); // State for streaming toggle
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
+  const abortControllerRef = useRef<AbortController | null>(null); // Restore AbortController ref
 
   // --- Fetch Functions ---
   const fetchSessions = async () => { setLoadingSessions(true); setError(''); try { const response = await apiClient.get('/chatsessions'); if (response.data?.success) setSessions(response.data.data); else setError('Failed to load chat sessions.'); } catch (err: any) { setError(err.response?.data?.error || 'Error loading sessions.'); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingSessions(false); } };
@@ -49,7 +54,173 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
   const fetchMessages = async (sessionId: string) => { if (!sessionId) return; setLoadingMessages(true); setError(''); setMessages([]); try { const response = await apiClient.get(`/chatsessions/${sessionId}/messages`); if (response.data?.success) { const fetchedMessages: ChatMessage[] = response.data.data; setMessages(fetchedMessages); const lastAiMessage = [...fetchedMessages].reverse().find(m => m.sender === 'ai' && m.modelUsed); setSelectedModel(lastAiMessage?.modelUsed || ''); } else { setError('Failed to load messages for this session.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error loading messages.'); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingMessages(false); } };
   const handleSelectSession = (session: ChatSession) => { setCurrentSession(session); navigate(`/chat/${session._id}`); fetchMessages(session._id); };
   const handleNewChat = async () => { setError(''); try { const response = await apiClient.post('/chatsessions', { title: 'New Chat' }); if (response.data?.success) { const newSession: ChatSession = response.data.data; setSessions([newSession, ...sessions]); handleSelectSession(newSession); setSelectedModel(''); } else { setError('Failed to create new chat.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error creating chat.'); if (err.response?.status === 401) navigate('/login'); } };
-  const handleSendMessage = async (e?: React.FormEvent) => { if (e) e.preventDefault(); if ((!newMessage.trim() && !selectedFile) || !currentSession?._id || sendingMessage) return; const sessionId = currentSession._id; setSendingMessage(true); setError(''); const userMessageContent = newMessage; const fileToSend = selectedFile; setNewMessage(''); setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; const formData = new FormData(); formData.append('content', userMessageContent); if (fileToSend) formData.append('file', fileToSend); if (selectedModel) formData.append('model', selectedModel); const optimisticUserMessage: ChatMessage = { _id: `temp-${Date.now()}`, sender: 'user', content: userMessageContent + (fileToSend ? `\n\n[Uploading: ${fileToSend.name}]` : ''), timestamp: new Date().toISOString() }; setMessages(prev => [...prev, optimisticUserMessage]); try { const response = await apiClient.post(`/chatsessions/${sessionId}/messages`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }); if (response.data?.success) { const aiMessage = response.data.data; setMessages(prev => [...prev.filter(m => m._id !== optimisticUserMessage._id), optimisticUserMessage, aiMessage]); if (aiMessage.modelUsed) setSelectedModel(aiMessage.modelUsed); if (response.data.updatedSessionTitle && currentSession) { const newTitle = response.data.updatedSessionTitle; setCurrentSession(prev => prev ? { ...prev, title: newTitle } : null); setSessions(prevSessions => prevSessions.map(s => s._id === currentSession._id ? { ...s, title: newTitle } : s )); } } else { setError('Failed to send message or get AI response.'); setMessages(prev => prev.filter(m => m._id !== optimisticUserMessage._id)); } } catch (err: any) { setError(err.response?.data?.error || 'Error sending message.'); setMessages(prev => prev.filter(m => m._id !== optimisticUserMessage._id)); if (err.response?.status === 401) navigate('/login'); } finally { setSendingMessage(false); } };
+
+  // Combined Send Message Logic
+  const handleSendMessage = async (e?: React.FormEvent) => {
+      if (e) e.preventDefault();
+      if ((!newMessage.trim() && !selectedFile) || !currentSession?._id || sendingMessage) return;
+
+      const sessionId = currentSession._id;
+      setSendingMessage(true);
+      setError('');
+      setStreamingMessageId(null); // Reset streaming state
+      setStreamingMessageContent('');
+
+      const userMessageContent = newMessage;
+      const fileToSend = selectedFile;
+      setNewMessage('');
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+
+      const formData = new FormData();
+      formData.append('content', userMessageContent);
+      if (fileToSend) formData.append('file', fileToSend);
+      if (selectedModel) formData.append('model', selectedModel);
+
+      // Optimistic user message
+      const optimisticUserMessage: ChatMessage = {
+          _id: `temp-user-${Date.now()}`,
+          sender: 'user',
+          content: userMessageContent + (fileToSend ? `\n\n[Uploading: ${fileToSend.name}]` : ''),
+          timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, optimisticUserMessage]); // Add user message optimistically
+
+      // --- Conditional Logic: Streaming vs Non-Streaming ---
+      if (isStreamingEnabled) {
+          // --- Streaming Logic ---
+          const optimisticAiMessageId = `temp-ai-${Date.now()}`;
+          const optimisticAiMessage: ChatMessage = {
+              _id: optimisticAiMessageId,
+              sender: 'ai',
+              content: '', // Start empty
+              timestamp: new Date().toISOString(),
+              modelUsed: '...' // Placeholder
+          };
+          setMessages(prev => [...prev, optimisticAiMessage]); // Add AI placeholder AFTER user message
+          setStreamingMessageId(optimisticAiMessageId);
+
+          abortControllerRef.current = new AbortController();
+          const { signal } = abortControllerRef.current;
+
+          try {
+              // Add stream=true parameter for streaming requests
+              formData.append('stream', 'true');
+
+              const response = await fetch(`/api/v1/chatsessions/${sessionId}/messages`, {
+                  method: 'POST',
+                  body: formData,
+                  headers: {
+                      'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                      // No Content-Type needed for fetch with FormData
+                  },
+                  signal: signal
+              });
+
+              if (!response.ok) {
+                  let errorMsg = `HTTP error! status: ${response.status}`;
+                  try { const errorData = await response.json(); errorMsg = errorData?.error || JSON.stringify(errorData); } catch (parseError) { console.error("Failed to parse error response as JSON:", parseError); try { const errorText = await response.text(); console.error("Raw error response text:", errorText); errorMsg = `Failed to parse error response (status: ${response.status}). Raw text: ${errorText.substring(0, 100)}...`; } catch (textError) { console.error("Failed to get raw error text:", textError); errorMsg = `HTTP error! status: ${response.status} (Could not parse error response)`; } }
+                  throw new Error(errorMsg);
+              }
+              if (!response.body) throw new Error('Response body is null.');
+
+              const reader = response.body.getReader();
+              const decoder = new TextDecoder();
+              let buffer = '';
+              let finalContent = '';
+
+              while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  buffer += decoder.decode(value, { stream: true });
+                  const lines = buffer.split('\n');
+                  buffer = lines.pop() || '';
+                  for (const line of lines) {
+                      if (line.startsWith('data: ')) {
+                          try {
+                              const jsonData = JSON.parse(line.substring(6));
+                              if (jsonData.type === 'chunk') {
+                                  setStreamingMessageContent(prev => prev + jsonData.content);
+                                  finalContent += jsonData.content;
+                              } else if (jsonData.type === 'model_info') {
+                                  setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, modelUsed: jsonData.modelUsed || 'unknown' } : msg));
+                              } else if (jsonData.type === 'title_update' && currentSession) {
+                                  setCurrentSession(prev => prev ? { ...prev, title: jsonData.title } : null);
+                                  setSessions(prevSessions => prevSessions.map(s => s._id === currentSession._id ? { ...s, title: jsonData.title } : s ));
+                              } else if (jsonData.type === 'error') {
+                                  setError(`AI Error: ${jsonData.message}`); console.error('SSE Error Event:', jsonData.message); setStreamingMessageId(null); setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, content: `[Error: ${jsonData.message}]`, modelUsed: 'error' } : msg)); reader.cancel(); return;
+                              } else if (jsonData.type === 'done') {
+                                  console.log('Stream finished.'); setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, content: finalContent } : msg)); setStreamingMessageId(null); setStreamingMessageContent(''); return;
+                              }
+                          } catch (e) { console.error('Failed to parse SSE data:', e, 'Line:', line); }
+                      }
+                  }
+              }
+              console.log('Stream ended without done event.'); setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, content: finalContent } : msg)); setStreamingMessageId(null); setStreamingMessageContent('');
+
+          } catch (err: any) {
+              if (err.name === 'AbortError') { console.log('Fetch aborted'); setError('Message sending cancelled.'); } else { console.error('Fetch error:', err); setError(err.message || 'Error sending message or processing stream.'); }
+              // Remove only the AI placeholder on error, keep the user message
+              setMessages(prev => prev.filter(m => m._id !== optimisticAiMessageId));
+              setStreamingMessageId(null); setStreamingMessageContent(''); if (err.response?.status === 401) navigate('/login');
+          } finally {
+              // Ensure sendingMessage is set to false even if streaming continues in background
+              setSendingMessage(false);
+              // Don't clear abortControllerRef here if you want to allow cancellation during streaming
+              // abortControllerRef.current = null;
+          }
+
+      } else {
+          // --- Non-Streaming Logic ---
+          // Add AI placeholder for non-streaming as well, to show loading
+          const optimisticAiMessageId = `temp-ai-${Date.now()}`;
+          const optimisticAiMessage: ChatMessage = {
+              _id: optimisticAiMessageId,
+              sender: 'ai',
+              content: '...', // Loading indicator
+              timestamp: new Date().toISOString(),
+              modelUsed: '...'
+          };
+          setMessages(prev => [...prev, optimisticAiMessage]); // Add AI placeholder
+
+          try {
+              // Use apiClient.post (expects single JSON response with AI message)
+              // Add a parameter to tell the backend *not* to stream
+              formData.append('stream', 'false'); // Explicitly disable streaming
+
+              const response = await apiClient.post(`/chatsessions/${sessionId}/messages`, formData, {
+                  headers: {
+                      // Axios handles FormData Content-Type automatically
+                      'Content-Type': 'multipart/form-data',
+                  }
+              });
+
+              if (response.data?.success) {
+                  const aiMessage = response.data.data; // Expecting the AI message directly
+                  // Replace AI placeholder with the actual message
+                  setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? aiMessage : msg));
+                  if (aiMessage.modelUsed) setSelectedModel(aiMessage.modelUsed);
+                  if (response.data.updatedSessionTitle && currentSession) {
+                      const newTitle = response.data.updatedSessionTitle;
+                      setCurrentSession(prev => prev ? { ...prev, title: newTitle } : null);
+                      setSessions(prevSessions => prevSessions.map(s => s._id === currentSession._id ? { ...s, title: newTitle } : s ));
+                  }
+              } else {
+                  setError(response.data?.error || 'Failed to send message or get AI response.');
+                  // Remove AI placeholder on failure
+                  setMessages(prev => prev.filter(m => m._id !== optimisticAiMessageId));
+              }
+          } catch (err: any) {
+              console.error("Send Message Error (apiClient):", err);
+              setError(err.response?.data?.error || 'Error sending message.');
+              // Remove AI placeholder on failure
+              setMessages(prev => prev.filter(m => m._id !== optimisticAiMessageId));
+              if (err.response?.status === 401) navigate('/login');
+          } finally {
+              setSendingMessage(false);
+          }
+      }
+  };
 
   // --- Effects ---
   useEffect(() => { fetchSessions(); fetchAvailableModels(); }, []);
@@ -60,9 +231,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
 
   // --- Render ---
   return (
-    <div className={styles.chatPageContainer}>
+    <div className={styles.chatPageContainer} style={{ backgroundColor: isDarkMode ? '#1a1a1a' : '#f8f9fa' }}> {/* Apply container background */}
       {/* Sidebar */}
-      <div className={`${styles.chatSidebar} ${isSidebarVisible ? styles.chatSidebarVisible : styles.chatSidebarHidden}`}>
+      <div
+        className={`${styles.chatSidebar} ${isSidebarVisible ? styles.chatSidebarVisible : styles.chatSidebarHidden}`}
+        style={{ backgroundColor: isDarkMode ? '#2a2a2a' : '#ffffff' }} // Apply opaque background directly
+      >
          {isSidebarVisible && (
              <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
@@ -87,43 +261,43 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
          {currentSession ? (
            <>
              {/* Header */}
-             <div style={{ 
-                 display: 'flex', 
-                 justifyContent: 'space-between', 
-                 alignItems: 'center', 
-                 marginBottom: '15px', 
-                 paddingBottom: '15px', 
-                 borderBottom: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`, 
+             <div style={{
+                 display: 'flex',
+                 justifyContent: 'space-between',
+                 alignItems: 'center',
+                 marginBottom: '15px',
+                 paddingBottom: '15px',
+                 borderBottom: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
                  marginLeft: '40px',
                  color: isDarkMode ? '#e0e0e0' : 'inherit'
              }}>
                  <h3 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit' }}>{currentSession.title || 'Untitled Chat'}</h3>
-                 <button 
-                     onClick={handleToggleShare} 
-                     disabled={shareLoading} 
-                     style={{ 
-                         padding: '6px 12px', 
-                         fontSize: '0.9rem', 
+                 <button
+                     onClick={handleToggleShare}
+                     disabled={shareLoading}
+                     style={{
+                         padding: '6px 12px',
+                         fontSize: '0.9rem',
                          cursor: 'pointer',
                          background: isDarkMode ? '#3a3d41' : '#f8f9fa',
                          border: `1px solid ${isDarkMode ? '#555' : '#dee2e6'}`,
                          color: isDarkMode ? '#e0e0e0' : 'inherit'
                      }}
-                 > 
-                     {shareLoading ? '...' : (currentSession.isShared ? t('chat_unshare_button') : t('chat_share_button'))} 
+                 >
+                     {shareLoading ? '...' : (currentSession.isShared ? t('chat_unshare_button') : t('chat_share_button'))}
                  </button>
              </div>
-             {currentSession.isShared && currentSession.shareId && ( 
-                <div style={{ 
-                    marginBottom: '10px', 
-                    padding: '5px', 
-                    background: isDarkMode ? '#3a3d41' : '#f0f0f0', 
+             {currentSession.isShared && currentSession.shareId && (
+                <div style={{
+                    marginBottom: '10px',
+                    padding: '5px',
+                    background: isDarkMode ? '#3a3d41' : '#f0f0f0',
                     color: isDarkMode ? '#e0e0e0' : 'inherit',
-                    borderRadius: '4px', 
-                    marginLeft: '40px' 
-                }}> 
-                    {t('chat_share_link')} <a href={`/share/${currentSession.shareId}`} target="_blank" rel="noopener noreferrer">{window.location.origin}/share/{currentSession.shareId}</a> 
-                </div> 
+                    borderRadius: '4px',
+                    marginLeft: '40px'
+                }}>
+                    {t('chat_share_link')} <a href={`/share/${currentSession.shareId}`} target="_blank" rel="noopener noreferrer">{window.location.origin}/share/{currentSession.shareId}</a>
+                </div>
              )}
 
              {/* Messages */}
@@ -132,14 +306,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                  messages.map((msg) => (
                    <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>
                        {msg.sender === 'ai' && <CopyButton textToCopy={msg.content} />}
-                       <div 
+                       <div
                            className={`${styles.messageBubble}`}
                            style={{
-                               background: msg.sender === 'user' 
-                                   ? (isDarkMode ? '#0d6efd' : '#007bff') 
+                               background: msg.sender === 'user'
+                                   ? (isDarkMode ? '#0d6efd' : '#007bff')
                                    : (isDarkMode ? '#3a3d41' : '#e9ecef'),
-                               color: msg.sender === 'user' 
-                                   ? 'white' 
+                               color: msg.sender === 'user'
+                                   ? 'white'
                                    : (isDarkMode ? '#e0e0e0' : '#343a40'),
                            }}
                        >
@@ -181,8 +355,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                            );
                                        }
                                    }}
-                               >{msg.content}</ReactMarkdown>
-                           ) : ( <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div> )}
+                               >
+                                   {/* Render streaming content if this is the streaming message, otherwise render final content */}
+                                   {streamingMessageId === msg._id ? streamingMessageContent : msg.content}
+                               </ReactMarkdown>
+                           ) : (
+                               <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                           )}
                        </div>
                         {msg.sender === 'user' && <CopyButton textToCopy={msg.content} />}
                    </div>
@@ -195,18 +374,18 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
              <form onSubmit={handleSendMessage} className={styles.inputForm}>
                  {!loadingModels && Object.keys(availableModels).length > 0 && (
                       <div style={{ marginBottom: '10px' }}>
-                         <label htmlFor="model-select" style={{ 
-                             marginRight: '10px', 
-                             fontSize: '0.9em', 
-                             color: isDarkMode ? '#bbb' : '#6c757d' 
+                         <label htmlFor="model-select" style={{
+                             marginRight: '10px',
+                             fontSize: '0.9em',
+                             color: isDarkMode ? '#bbb' : '#6c757d'
                          }}>{t('chat_model_select_label')}</label>
-                         <select 
-                             id="model-select" 
-                             value={selectedModel} 
-                             onChange={(e) => setSelectedModel(e.target.value)} 
-                             style={{ 
-                                 padding: '5px 8px', 
-                                 borderRadius: '4px', 
+                         <select
+                             id="model-select"
+                             value={selectedModel}
+                             onChange={(e) => setSelectedModel(e.target.value)}
+                             style={{
+                                 padding: '5px 8px',
+                                 borderRadius: '4px',
                                  border: `1px solid ${isDarkMode ? '#555' : '#ced4da'}`,
                                  background: isDarkMode ? '#3a3d41' : 'white',
                                  color: isDarkMode ? '#e0e0e0' : 'inherit'
@@ -217,13 +396,24 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                          </select>
                      </div>
                  )}
+                 {/* Streaming Toggle */}
+                 <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', fontSize: '0.9em', color: isDarkMode ? '#bbb' : '#6c757d' }}>
+                     <input
+                         type="checkbox"
+                         id="streaming-toggle"
+                         checked={isStreamingEnabled}
+                         onChange={(e) => setIsStreamingEnabled(e.target.checked)}
+                         style={{ marginRight: '5px' }}
+                     />
+                     <label htmlFor="streaming-toggle">Enable Streaming Response</label>
+                 </div>
                 <div className={styles.inputControls}>
                      <input type="file" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)} style={{ display: 'none' }} id="file-upload" />
-                     <button 
-                         type="button" 
-                         onClick={() => fileInputRef.current?.click()} 
-                         disabled={sendingMessage || loadingMessages || !currentSession} 
-                         className={styles.fileUploadButton} 
+                     <button
+                         type="button"
+                         onClick={() => fileInputRef.current?.click()}
+                         disabled={sendingMessage || loadingMessages || !currentSession}
+                         className={styles.fileUploadButton}
                          style={{
                              background: isDarkMode ? '#444' : '#eee',
                              border: `1px solid ${isDarkMode ? '#666' : '#ccc'}`,
@@ -234,19 +424,19 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                          📎
                      </button>
                      {selectedFile && (
-                         <span 
+                         <span
                              className={styles.fileName}
                              style={{ color: isDarkMode ? '#bbb' : '#6c757d' }}
                          >
                              {selectedFile.name}
                          </span>
                      )}
-                     <input 
-                         type="text" 
-                         value={newMessage} 
-                         onChange={(e) => setNewMessage(e.target.value)} 
-                         placeholder={t('chat_input_placeholder')} 
-                         disabled={sendingMessage || loadingMessages || !currentSession} 
+                     <input
+                         type="text"
+                         value={newMessage}
+                         onChange={(e) => setNewMessage(e.target.value)}
+                         placeholder={t('chat_input_placeholder')}
+                         disabled={sendingMessage || loadingMessages || !currentSession}
                          className={styles.messageInput}
                          style={{
                              background: isDarkMode ? '#3a3d41' : 'white',
@@ -254,21 +444,21 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                              color: isDarkMode ? '#e0e0e0' : 'inherit'
                          }}
                      />
-                     <button 
-                         type="submit" 
-                         disabled={sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)} 
+                     <button
+                         type="submit"
+                         disabled={sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)}
                          className={styles.sendButton}
                          style={{
-                             background: isDarkMode 
-                                 ? (sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile) 
-                                     ? '#495057' 
-                                     : '#0d6efd') 
-                                 : (sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile) 
-                                     ? '#6c757d' 
+                             background: isDarkMode
+                                 ? (sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)
+                                     ? '#495057'
+                                     : '#0d6efd')
+                                 : (sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)
+                                     ? '#6c757d'
                                      : '#007bff')
                          }}
-                     > 
-                         {sendingMessage ? t('chat_sending_button') : t('chat_send_button')} 
+                     >
+                         {sendingMessage ? t('chat_sending_button') : t('chat_send_button')}
                      </button>
                 </div>
              </form>

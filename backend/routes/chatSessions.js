@@ -16,16 +16,17 @@ const { protect } = require('../middleware/auth');
 // Import nested message router
 const messageRouter = require('./chatMessages');
 
-// Public route for shared sessions - must come before routes with :id parameter
+// Public route for shared sessions - must come before protected routes
 router.route('/shared/:shareId').get(getSharedChatSession);
 
 // Re-route requests to /:sessionId/messages to the message router
 router.use('/:sessionId/messages', messageRouter);
 
-// Apply protect middleware to all routes below this point for the logged-in user's sessions
+// Apply protect middleware globally for other session routes below this point
 router.use(protect);
 
-router.route('/')
+// --- Session CRUD routes (now protected by the router.use(protect) above) ---
+router.route('/') // Corresponds to /api/v1/chatsessions
   .get(getChatSessions)
   .post(createChatSession);
 

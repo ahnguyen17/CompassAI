@@ -26,6 +26,10 @@ const AVAILABLE_MODELS = {
         "gemini-1.5-flash-8b",
         "gemini-1.0-pro",
     ],
+    'DeepSeek': [ // Added DeepSeek
+        "deepseek-chat",
+        "deepseek-coder"
+    ]
 };
 
 // @desc    Get all disabled model names

@@ -29,7 +29,10 @@ const AVAILABLE_MODELS = {
         "gemini-1.5-flash-8b",         // Added per request (Note: Size specifiers usually aren't in model names)
         "gemini-1.0-pro",
     ],
-    // Add DeepSeek models here if implementing
+    'DeepSeek': [ // Added DeepSeek
+        "deepseek-chat",
+        "deepseek-coder"
+    ]
 };
 
 // @desc    Get available models for enabled providers

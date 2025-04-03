@@ -14,7 +14,7 @@ const ChatMessageSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: true,
+    required: false, // Allow messages with only files
     trim: true,
   },
   timestamp: {

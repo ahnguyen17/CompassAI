@@ -28,13 +28,40 @@ const upload = multer({ storage: storage /*, fileFilter: fileFilter */ });
 // Create router with mergeParams: true to access :sessionId from parent router
 const router = express.Router({ mergeParams: true });
 
+// Add logging middleware at the very start of this router
+router.use((req, res, next) => {
+    console.log(`>>> Request received by chatMessages router for path: ${req.originalUrl}, Method: ${req.method}`);
+    next();
+});
+
 // Apply protect middleware to all routes in this file
 router.use(protect);
 
 // Define routes relative to /api/v1/chatsessions/:sessionId/messages
-router.route('/')
-  .get(getMessagesForSession)
-  // Use multer middleware for the POST route to handle single file upload on field 'file'
-  .post(upload.single('file'), addMessageToSession);
+// Custom Multer error handler middleware
+const handleMulterError = (err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        console.error("Multer Error:", err);
+        let message = 'File upload error.';
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            message = 'File is too large.'; // Add size limit info if configured
+        } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+            message = 'Unexpected file field.';
+        }
+        // Add more specific Multer error codes as needed
+        return res.status(400).json({ success: false, error: message });
+    } else if (err) {
+        // Handle other potential errors during upload if necessary
+        console.error("Non-Multer Upload Error:", err);
+        return res.status(500).json({ success: false, error: 'Error processing upload.' });
+    }
+    // If no error or not a Multer error, proceed
+    next();
+};
+
+// Define routes explicitly instead of chaining with router.route()
+router.get('/', getMessagesForSession);
+
+router.post('/', upload.single('file'), handleMulterError, addMessageToSession);
 
 module.exports = router;

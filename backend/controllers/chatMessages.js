@@ -472,10 +472,17 @@ exports.addMessageToSession = async (req, res, next) => {
                         // Only add reasoningContent if it's not empty
                         ...(finalReasoningContent && { reasoningContent: finalReasoningContent }) 
                     };
-                    await ChatMessage.create(messageToSave);
-                    console.log("Successfully saved final AI message to DB (streaming).");
-                } catch (dbError) { console.error("Error saving final AI message to DB (streaming):", dbError); }
-            } else if (!streamError && finalAiContent === null) { console.warn("Streaming finished, but final AI content was null. Not saving to DB."); }
+                    console.log("Attempting to save AI message (streaming):", JSON.stringify(messageToSave, null, 2)); // Log message details
+                    const savedMessage = await ChatMessage.create(messageToSave);
+                    console.log("Successfully saved final AI message to DB (streaming). ID:", savedMessage._id); // Log success and ID
+                } catch (dbError) { 
+                    console.error("!!! Error saving final AI message to DB (streaming):", dbError); // Make error more prominent
+                }
+            } else if (!streamError && finalAiContent === null) { 
+                console.warn("Streaming finished, but final AI content was null. Not saving to DB."); 
+            } else if (streamError) {
+                 console.warn("Stream ended with error, not saving AI message to DB.");
+            }
 
         } else {
             // --- Non-Streaming Logic ---

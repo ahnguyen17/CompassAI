@@ -379,10 +379,29 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                {loadingMessages ? <p>{t('chat_loading_messages')}</p> : messages.length > 0 ? (
                  messages.map((msg) => (
                    <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>
-                       {msg.sender === 'ai' && <CopyButton textToCopy={msg.content} />}
-                       <div
-                           className={`${styles.messageBubble}`}
-                           style={{
+                        {/* Display Reasoning Steps if available and toggled on (Moved Above Bubble) */}
+                        {msg.sender === 'ai' && showReasoning && reasoningSteps[msg._id] && (
+                            <details style={{ marginBottom: '5px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
+                                <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
+                                <pre style={{ 
+                                    background: isDarkMode ? '#2a2a2a' : '#f0f0f0', 
+                                    padding: '8px', 
+                                    borderRadius: '4px', 
+                                    whiteSpace: 'pre-wrap', 
+                                    wordBreak: 'break-all',
+                                    maxHeight: '200px', // Limit height
+                                    overflowY: 'auto' // Allow scrolling
+                                }}>
+                                    {/* Display accumulated reasoning string */}
+                                    {reasoningSteps[msg._id]} 
+                                </pre>
+                            </details>
+                        )}
+                        {/* AI Message Bubble */}
+                        {msg.sender === 'ai' && <CopyButton textToCopy={msg.content} />}
+                        <div
+                            className={`${styles.messageBubble}`}
+                            style={{
                                background: msg.sender === 'user'
                                    ? (isDarkMode ? '#0d6efd' : '#007bff')
                                    : (isDarkMode ? '#3a3d41' : '#e9ecef'),
@@ -436,27 +455,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                            ) : (
                                <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                            )}
-                       </div>
+                        </div>
                         {msg.sender === 'user' && <CopyButton textToCopy={msg.content} />}
-                       {/* Display Reasoning Steps if available and toggled on */}
-                       {msg.sender === 'ai' && showReasoning && reasoningSteps[msg._id] && (
-                           <details style={{ marginTop: '5px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
-                               <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
-                               <pre style={{ 
-                                   background: isDarkMode ? '#2a2a2a' : '#f0f0f0', 
-                                   padding: '8px', 
-                                   borderRadius: '4px', 
-                                   whiteSpace: 'pre-wrap', 
-                                   wordBreak: 'break-all',
-                                   maxHeight: '200px', // Limit height
-                                   overflowY: 'auto' // Allow scrolling
-                               }}>
-                                   {/* Display accumulated reasoning string */}
-                                   {reasoningSteps[msg._id]} 
-                               </pre>
-                           </details>
-                       )}
-                   </div>
+                        {/* Reasoning steps moved above the bubble */}
+                    </div>
                  ))
                ) : <p>{t('chat_start_message')}</p>}
                 {error && <p style={{ color: 'red' }}>Error: {error}</p>}

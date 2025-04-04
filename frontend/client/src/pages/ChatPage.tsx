@@ -99,8 +99,30 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
           setLoadingMessages(false); 
       } 
   };
-  const handleSelectSession = (session: ChatSession) => { setCurrentSession(session); navigate(`/chat/${session._id}`); fetchMessages(session._id); };
-  const handleNewChat = async () => { setError(''); try { const response = await apiClient.post('/chatsessions', { title: 'New Chat' }); if (response.data?.success) { const newSession: ChatSession = response.data.data; setSessions([newSession, ...sessions]); handleSelectSession(newSession); setSelectedModel(''); } else { setError('Failed to create new chat.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error creating chat.'); if (err.response?.status === 401) navigate('/login'); } };
+  const handleSelectSession = (session: ChatSession) => { 
+      setCurrentSession(session); 
+      navigate(`/chat/${session._id}`); 
+      fetchMessages(session._id); 
+      setIsSidebarVisible(false); // Collapse sidebar on selection
+  };
+  const handleNewChat = async () => { 
+      setError(''); 
+      try { 
+          const response = await apiClient.post('/chatsessions', { title: 'New Chat' }); 
+          if (response.data?.success) { 
+              const newSession: ChatSession = response.data.data; 
+              setSessions([newSession, ...sessions]); 
+              handleSelectSession(newSession); // This will select and fetch messages
+              setSelectedModel(''); 
+              setIsSidebarVisible(false); // Collapse sidebar on new chat
+          } else { 
+              setError('Failed to create new chat.'); 
+          } 
+      } catch (err: any) { 
+          setError(err.response?.data?.error || 'Error creating chat.'); 
+          if (err.response?.status === 401) navigate('/login'); 
+      } 
+  };
 
   // Combined Send Message Logic
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -329,12 +351,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loadingMessages]); // Trigger on message array change or when loading finishes
 
-  // Effect to open sidebar when no chat is selected
-  useEffect(() => {
-    if (!currentSession && !isSidebarVisible) {
-      setIsSidebarVisible(true);
-    }
-  }, [currentSession, isSidebarVisible]);
+  // REMOVED: Effect to open sidebar when no chat is selected (Keep default collapsed)
+  // useEffect(() => {
+  //   if (!currentSession && !isSidebarVisible) {
+  //     setIsSidebarVisible(true);
+  //   }
+  // }, [currentSession, isSidebarVisible]);
 
   // --- Toggle Sidebar Visibility ---
   const toggleSidebarVisibility = () => setIsSidebarVisible(!isSidebarVisible);
@@ -448,7 +470,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                     </details>
                                 )}
                                 {/* AI Bubble + Button Wrapper */}
-                                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-end' }}> {/* Align items to bottom */}
                                     <CopyButton textToCopy={msg.content} /> {/* Button before bubble */}
                                     <div
                                     className={`${styles.messageBubble}`}

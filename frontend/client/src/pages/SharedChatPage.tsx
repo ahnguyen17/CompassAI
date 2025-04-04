@@ -130,7 +130,7 @@ const SharedChatPage: React.FC<SharedChatPageProps> = ({ isDarkMode }) => {
           >
               {/* --- Render Reasoning Steps First if AI and content exists --- */}
               {msg.sender === 'ai' && msg.reasoningContent && (
-                   <details open style={{ marginBottom: '10px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8, color: isDarkMode ? '#ccc' : '#555' }}>
+                   <details style={{ marginBottom: '10px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8, color: isDarkMode ? '#ccc' : '#555' }}>
                        <summary style={{ cursor: 'pointer' }}>Reasoning Steps</summary>
                        <pre style={{ 
                            background: isDarkMode ? '#2a2a2a' : '#f0f0f0', 

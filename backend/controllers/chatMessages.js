@@ -181,11 +181,11 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
                  } else if (chunk.choices[0]?.finish_reason) {
                       console.log("Stream Chunk Finish Reason:", chunk.choices[0].finish_reason);
                  }
-                 // Check for tool_calls (often used for reasoning steps)
-                 if (delta?.tool_calls) { 
-                    console.log("Stream Chunk Tool Calls:", JSON.stringify(delta.tool_calls, null, 2));
-                    // Send tool calls as reasoning steps
-                    sendSse({ type: 'reasoning_step', data: delta.tool_calls }); 
+                 // Check for reasoning_content
+                 if (delta?.reasoning_content) { 
+                    console.log("Stream Chunk Reasoning Content:", delta.reasoning_content);
+                    // Send reasoning content chunk
+                    sendSse({ type: 'reasoning_chunk', content: delta.reasoning_content }); 
                  }
              }
          }

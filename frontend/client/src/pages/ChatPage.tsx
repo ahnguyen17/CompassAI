@@ -41,6 +41,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [streamingMessageContent, setStreamingMessageContent] = useState<string>('');
   const [reasoningSteps, setReasoningSteps] = useState<{ [messageId: string]: any[] }>({}); // State for reasoning steps
+  const [showReasoning, setShowReasoning] = useState(false); // State for showing/hiding reasoning
   const [isStreamingEnabled, setIsStreamingEnabled] = useState(true); // State for streaming toggle
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -154,6 +155,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                   finalContent += jsonData.content;
                               } else if (jsonData.type === 'model_info') {
                                   setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, modelUsed: jsonData.modelUsed || 'unknown' } : msg));
+                              } else if (jsonData.type === 'reasoning_step') { // Handle reasoning steps
+                                  console.log('Received reasoning step:', jsonData.data);
+                                  setReasoningSteps(prev => ({
+                                      ...prev,
+                                      [optimisticAiMessageId]: [...(prev[optimisticAiMessageId] || []), jsonData.data] 
+                                  }));
                               } else if (jsonData.type === 'title_update' && currentSession) {
                                   setCurrentSession(prev => prev ? { ...prev, title: jsonData.title } : null);
                                   setSessions(prevSessions => prevSessions.map(s => s._id === currentSession._id ? { ...s, title: jsonData.title } : s ));
@@ -430,6 +437,23 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                            )}
                        </div>
                         {msg.sender === 'user' && <CopyButton textToCopy={msg.content} />}
+                       {/* Display Reasoning Steps if available and toggled on */}
+                       {msg.sender === 'ai' && showReasoning && reasoningSteps[msg._id] && (
+                           <details style={{ marginTop: '5px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
+                               <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
+                               <pre style={{ 
+                                   background: isDarkMode ? '#2a2a2a' : '#f0f0f0', 
+                                   padding: '8px', 
+                                   borderRadius: '4px', 
+                                   whiteSpace: 'pre-wrap', 
+                                   wordBreak: 'break-all',
+                                   maxHeight: '200px', // Limit height
+                                   overflowY: 'auto' // Allow scrolling
+                               }}>
+                                   {JSON.stringify(reasoningSteps[msg._id], null, 2)}
+                               </pre>
+                           </details>
+                       )}
                    </div>
                  ))
                ) : <p>{t('chat_start_message')}</p>}
@@ -483,6 +507,23 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                          }}
                      >
                          ✨ {/* Use Sparkles icon */}
+                     </button>
+                     {/* Reasoning Toggle Icon Button */}
+                     <button
+                         type="button"
+                         onClick={() => setShowReasoning(!showReasoning)}
+                         title={showReasoning ? "Hide Reasoning Steps" : "Show Reasoning Steps"}
+                         style={{
+                             background: 'none',
+                             border: 'none',
+                             cursor: 'pointer',
+                             fontSize: '1.3em',
+                             padding: '0 5px',
+                             color: '#fff', // Base color
+                             opacity: showReasoning ? 1 : 0.5 // Indicate status with opacity
+                         }}
+                     >
+                         🧠 {/* Brain icon */}
                      </button>
                  </div>
 

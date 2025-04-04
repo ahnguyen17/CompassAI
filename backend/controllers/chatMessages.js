@@ -66,10 +66,11 @@ const formatMessagesForProvider = (providerName, history, combinedContentForAI) 
 
     let formattedMessages = historyForProvider;
 
-    // Gemini specific formatting: remove leading assistant message, ensure alternating roles
-    if (providerName === 'Gemini') {
-        if (formattedMessages.length > 0 && formattedMessages[0].role === 'model') {
-            formattedMessages.shift();
+    // Gemini and DeepSeek specific formatting: remove leading assistant/model message, ensure alternating roles
+    if (providerName === 'Gemini' || providerName === 'DeepSeek') {
+        const assistantRole = providerName === 'Gemini' ? 'model' : 'assistant';
+        if (formattedMessages.length > 0 && formattedMessages[0].role === assistantRole) {
+            formattedMessages.shift(); // Remove leading assistant/model message
         }
         formattedMessages = formattedMessages.filter((item, index, arr) =>
             index === 0 || item.role !== arr[index - 1].role);

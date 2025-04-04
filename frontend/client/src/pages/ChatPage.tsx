@@ -443,9 +443,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                             </details>
                             // Removed <br/>
                         )}
-                        {/* Wrap Bubble and Copy Button */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start' }}> 
-                            {msg.sender === 'ai' && <CopyButton textToCopy={msg.content} />}
+                        {/* Wrap Bubble and Copy Button - AI */}
+                        {/* Apply column direction and alignment to the wrapper */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}> 
                             <div
                             className={`${styles.messageBubble}`}
                             style={{
@@ -503,8 +503,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                            )}
                             </div>
+                            {/* Wrap AI CopyButton in a div and apply margin */}
+                            {msg.sender === 'ai' && 
+                                <div style={{ marginTop: '5px', marginLeft: '10px' }}> {/* Wrapper div for margin */}
+                                    <CopyButton textToCopy={msg.content} />
+                                </div>
+                            }
                         </div>
-                        {/* Revert user bubble structure (remove wrapper) */}
+                        {/* User Bubble + Button (No Wrapper, handled by CSS) */}
                         {msg.sender === 'user' && 
                             <>
                                 <div
@@ -516,7 +522,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                 >
                                     <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div> {/* User content */}
                                 </div>
-                                <CopyButton textToCopy={msg.content} /> 
+                                {/* Wrap user CopyButton in a div and apply margin */}
+                                <div style={{ marginTop: '5px' }}> {/* Wrapper div for margin */}
+                                    <CopyButton textToCopy={msg.content} /> 
+                                </div>
                             </>
                         }
                         {/* Reasoning steps moved above the bubble */}

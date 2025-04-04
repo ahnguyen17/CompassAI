@@ -446,7 +446,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                     </details>
                                 )}
                                 {/* AI Bubble + Button Wrapper */}
-                                <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                                     <CopyButton textToCopy={msg.content} /> {/* Button before bubble */}
                                     <div
                                     className={`${styles.messageBubble}`}
@@ -645,3 +645,26 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
  };
 
  export default ChatPage;
+</final_file_content>
+
+IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.
+
+<environment_details>
+# VSCode Visible Files
+frontend/client/src/pages/ChatPage.tsx
+
+# VSCode Open Tabs
+backend/controllers/providers.js
+backend/.env
+frontend/client/src/services/api.ts
+backend/models/ChatMessage.js
+backend/controllers/chatMessages.js
+frontend/client/src/pages/ChatPage.module.css
+frontend/client/src/pages/ChatPage.tsx
+
+# Current Time
+4/4/2025, 12:19:13 PM (America/Los_Angeles, UTC-7:00)
+
+# Current Mode
+ACT MODE
+</environment_details>

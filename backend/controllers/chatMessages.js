@@ -174,17 +174,21 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
 
                 if (contentChunk) {
                     fullResponseContent += contentChunk;
-                    sendSse({ type: 'chunk', content: contentChunk });
-                } else if (delta && Object.keys(delta).length > 0) { 
-                    // Log if delta exists but has no 'content' (might be tool calls, finish reason, etc.)
-                    console.log("Stream Chunk Delta (No Content):", JSON.stringify(delta, null, 2));
-                } else if (chunk.choices[0]?.finish_reason) {
-                     console.log("Stream Chunk Finish Reason:", chunk.choices[0].finish_reason);
-                }
-                // Potentially check for tool_calls here if DeepSeek uses them for reasoning
-                // if (delta?.tool_calls) { ... sendSse({ type: 'reasoning_step', data: delta.tool_calls }) ... }
-            }
-        }
+                     sendSse({ type: 'chunk', content: contentChunk });
+                 } else if (delta && Object.keys(delta).length > 0) {
+                     // Log the full delta object if it exists but has no 'content'
+                     console.log("Stream Chunk Delta (FULL):", JSON.stringify(delta, null, 2)); 
+                 } else if (chunk.choices[0]?.finish_reason) {
+                      console.log("Stream Chunk Finish Reason:", chunk.choices[0].finish_reason);
+                 }
+                 // Check for tool_calls (often used for reasoning steps)
+                 if (delta?.tool_calls) { 
+                    console.log("Stream Chunk Tool Calls:", JSON.stringify(delta.tool_calls, null, 2));
+                    // Send tool calls as reasoning steps
+                    sendSse({ type: 'reasoning_step', data: delta.tool_calls }); 
+                 }
+             }
+         }
         else if (providerName === 'Gemini') {
             const genAI = new GoogleGenerativeAI(apiKey);
             const model = genAI.getGenerativeModel({ model: modelToUse });

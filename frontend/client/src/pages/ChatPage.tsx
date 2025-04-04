@@ -50,8 +50,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [streamingMessageContent, setStreamingMessageContent] = useState<string>('');
   const [reasoningSteps, setReasoningSteps] = useState<{ [messageId: string]: any[] }>({}); // State for reasoning steps
-  const [showReasoning, setShowReasoning] = useState(false); // State for showing/hiding reasoning
-  const [isStreamingEnabled, setIsStreamingEnabled] = useState(true); // State for streaming toggle
+  const [showReasoning, setShowReasoning] = useState(false); // State for showing/hiding reasoning AND enabling streaming
+  // const [isStreamingEnabled, setIsStreamingEnabled] = useState(true); // REMOVED - Merged with showReasoning
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
@@ -133,9 +133,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
       };
       setMessages(prev => [...prev, optimisticUserMessage]); // Add user message optimistically
 
-      // --- Conditional Logic: Streaming vs Non-Streaming ---
-      if (isStreamingEnabled) {
+      // --- Conditional Logic: Stream if showReasoning is true ---
+      if (showReasoning) { // Use showReasoning to control streaming
           // --- Streaming Logic ---
+          console.log("Streaming enabled via reasoning toggle."); // Add log
           const optimisticAiMessageId = `temp-ai-${Date.now()}`;
           const optimisticAiMessage: ChatMessage = {
               _id: optimisticAiMessageId,
@@ -152,7 +153,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
 
           try {
               // Add stream=true parameter for streaming requests
-              formData.append('stream', 'true');
+              formData.append('stream', 'true'); 
 
               // Get the base URL from the same source as apiClient
               const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
@@ -247,8 +248,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
 
           try {
               // Use apiClient.post (expects single JSON response with AI message)
-              // Add a parameter to tell the backend *not* to stream
-              formData.append('stream', 'false'); // Explicitly disable streaming
+              // Add stream=false parameter for non-streaming requests
+              formData.append('stream', 'false'); 
 
               const response = await apiClient.post(`/chatsessions/${sessionId}/messages`, formData, {
                   headers: {
@@ -429,7 +430,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                             <>
                                 {/* Reasoning Steps (conditionally rendered first) */}
                                 {showReasoning && reasoningSteps[msg._id] && (
-                                    <details open={showReasoning} style={{ marginBottom: '10px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
+                                    /* Remove open={showReasoning} to default to closed */
+                                    <details style={{ marginBottom: '10px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
                                         <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
                                         <pre style={{ 
                                             background: isDarkMode ? '#2a2a2a' : '#f0f0f0', 
@@ -544,30 +546,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                              </select>
                          </>
                      )}
-                     {/* Streaming Toggle Icon Button */}
-                     <button
-                         type="button" // Important: prevent form submission
-                         onClick={() => setIsStreamingEnabled(!isStreamingEnabled)}
-                         title={isStreamingEnabled ? "Streaming Enabled" : "Streaming Disabled"}
-                         style={{
-                             background: 'none',
-                             border: 'none',
-                             cursor: 'pointer',
-                             fontSize: '1.3em', // Adjust size as needed
-                             padding: '0 5px', // Minimal padding
-                             color: '#fff', // Use a base color, opacity will handle fading
-                             marginLeft: 'auto', // Push to the right if space allows (optional)
-                             opacity: isStreamingEnabled ? 1 : 0.5 // Dim when disabled
-                         }}
-                     >
-                         ✨ {/* Use Sparkles icon */}
-                     </button>
-                     {/* Reasoning Toggle Icon Button */}
+                     {/* REMOVED Streaming Toggle Icon Button */}
+                     
+                     {/* Reasoning Toggle Icon Button (Now also controls streaming) */}
                      <button
                          type="button"
+                         // style={{ marginLeft: 'auto' }} // Removed duplicate style attribute
                          onClick={() => setShowReasoning(!showReasoning)}
                          title={showReasoning ? "Hide Reasoning Steps" : "Show Reasoning Steps"}
-                         style={{
+                         style={{ // Merged styles
+                             marginLeft: 'auto', // Push reasoning button to the right
                              background: 'none',
                              border: 'none',
                              cursor: 'pointer',

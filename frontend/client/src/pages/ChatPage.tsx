@@ -381,7 +381,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                    <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>
                         {/* Display Reasoning Steps if available and toggled on (Moved Above Bubble) */}
                         {msg.sender === 'ai' && showReasoning && reasoningSteps[msg._id] && (
-                            {/* Add the 'open' attribute based on showReasoning state */}
                             <details open={showReasoning} style={{ marginBottom: '5px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
                                 <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
                                 <pre style={{ 

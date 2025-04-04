@@ -367,6 +367,7 @@ exports.addMessageToSession = async (req, res, next) => {
             let providerUsed = null;
             let actualModelUsed = null;
             let finalAiContent = null;
+            let finalReasoningContent = ''; // Declare here to keep in scope
             let streamError = false;
 
             // --- SSE Setup ---
@@ -402,7 +403,7 @@ exports.addMessageToSession = async (req, res, next) => {
                     } else { console.warn(`Streaming: Requested model ${requestedModel} not found. Falling back...`); }
                 }
 
-                let finalReasoningContent = ''; // Variable to hold final reasoning content
+                // Removed declaration from here: let finalReasoningContent = ''; 
                 // 2. Attempt API call (or fallback if needed)
                 if (providerToTry && modelToTry && apiKeyToUse) {
                     const result = await callApiStream(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI, sendSse);

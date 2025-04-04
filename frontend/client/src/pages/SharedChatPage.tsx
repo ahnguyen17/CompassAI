@@ -12,8 +12,8 @@ interface Message {
   sender: 'user' | 'ai';
   content: string;
   timestamp: string;
-  // Add modelUsed if you want to display it (optional)
   modelUsed?: string | null;
+  reasoningContent?: string | null; // Add reasoningContent field
 }
 
 interface SharedChatData {
@@ -120,29 +120,49 @@ const SharedChatPage: React.FC<SharedChatPageProps> = ({ isDarkMode }) => {
               key={msg._id}
               style={{
                   display: 'flex',
+                  // Make AI rows stack vertically if reasoning is present
+                  flexDirection: (msg.sender === 'ai' && msg.reasoningContent) ? 'column' : 'row', 
                   justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start',
                   marginBottom: '12px',
-                  alignItems: 'flex-end',
+                  // Align items based on sender for non-column layout
+                  alignItems: (msg.sender === 'ai' && msg.reasoningContent) ? 'stretch' : 'flex-end', 
               }}
           >
-              {msg.sender === 'ai' && <CopyButton textToCopy={msg.content} />}
-              <div style={{
-                  padding: '10px 15px',
-                  borderRadius: '15px',
-                  background: msg.sender === 'user' 
-                    ? (isDarkMode ? '#0d6efd' : '#007bff') 
-                    : (isDarkMode ? '#3a3d41' : '#e9ecef'),
-                  color: msg.sender === 'user' 
-                    ? 'white' 
-                    : (isDarkMode ? '#e0e0e0' : '#343a40'),
-                  maxWidth: '75%',
-                  wordWrap: 'break-word',
-              }}>
-                  {/* Use ReactMarkdown for AI messages */}
-                  {msg.sender === 'ai' ? (
-                      <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={{
+              {/* --- Render Reasoning Steps First if AI and content exists --- */}
+              {msg.sender === 'ai' && msg.reasoningContent && (
+                   <details open style={{ marginBottom: '10px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8, color: isDarkMode ? '#ccc' : '#555' }}>
+                       <summary style={{ cursor: 'pointer' }}>Reasoning Steps</summary>
+                       <pre style={{ 
+                           background: isDarkMode ? '#2a2a2a' : '#f0f0f0', 
+                           padding: '8px', 
+                           borderRadius: '4px', 
+                           whiteSpace: 'pre-wrap', 
+                           wordBreak: 'break-all',
+                           maxHeight: '200px',
+                           overflowY: 'auto'
+                       }}>
+                           {msg.reasoningContent} 
+                       </pre>
+                   </details>
+              )}
+
+              {/* --- Render Bubble and Button --- */}
+              {/* Wrap AI bubble/button for correct alignment */}
+              {msg.sender === 'ai' && (
+                  <div style={{ display: 'flex', alignItems: 'flex-end', width: '100%' }}> 
+                      <CopyButton textToCopy={msg.content} />
+                      <div style={{
+                          padding: '10px 15px',
+                          borderRadius: '15px',
+                          background: isDarkMode ? '#3a3d41' : '#e9ecef', // AI Background
+                          color: isDarkMode ? '#e0e0e0' : '#343a40', // AI Text Color
+                          maxWidth: '75%',
+                          wordWrap: 'break-word',
+                          marginLeft: '5px', // Add space between button and bubble
+                      }}>
+                          <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
                               code({ className, children, ...props }: { className?: string; children?: React.ReactNode }) {
                                   const match = /language-(\w+)/.exec(className || '');
                                   // Create a custom style by overriding the background
@@ -171,18 +191,32 @@ const SharedChatPage: React.FC<SharedChatPageProps> = ({ isDarkMode }) => {
                                       </SyntaxHighlighter>
                                   ) : (
                                       <code className={className} {...props}>
-                                          {children}
-                                      </code>
-                                  );
-                              }
-                          }}
-                      >{msg.content}</ReactMarkdown>
-                  ) : (
-                      // Keep plain div for user messages
-                      <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
-                  )}
-              </div>
-              {msg.sender === 'user' && <CopyButton textToCopy={msg.content} />}
+                                              {children}
+                                          </code>
+                                      );
+                                  }
+                              }}
+                          >{msg.content}</ReactMarkdown>
+                      </div>
+                  </div>
+              )}
+              {/* Render User Bubble + Button */}
+              {msg.sender === 'user' && (
+                  <>
+                      <div style={{
+                          padding: '10px 15px',
+                          borderRadius: '15px',
+                          background: isDarkMode ? '#0d6efd' : '#007bff', // User Background
+                          color: 'white', // User Text Color
+                          maxWidth: '75%',
+                          wordWrap: 'break-word',
+                          marginRight: '5px', // Add space between bubble and button
+                      }}>
+                          <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                      </div>
+                      <CopyButton textToCopy={msg.content} />
+                  </>
+              )}
           </div>
         ))}
       </div>

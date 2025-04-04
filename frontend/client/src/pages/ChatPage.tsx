@@ -155,11 +155,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                   finalContent += jsonData.content;
                               } else if (jsonData.type === 'model_info') {
                                   setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, modelUsed: jsonData.modelUsed || 'unknown' } : msg));
-                              } else if (jsonData.type === 'reasoning_step') { // Handle reasoning steps
-                                  console.log('Received reasoning step:', jsonData.data);
+                              } else if (jsonData.type === 'reasoning_chunk') { // Handle reasoning chunks
+                                  console.log('Received reasoning chunk:', jsonData.content);
+                                  // Accumulate reasoning content as a string
                                   setReasoningSteps(prev => ({
                                       ...prev,
-                                      [optimisticAiMessageId]: [...(prev[optimisticAiMessageId] || []), jsonData.data] 
+                                      [optimisticAiMessageId]: (prev[optimisticAiMessageId] || '') + jsonData.content 
                                   }));
                               } else if (jsonData.type === 'title_update' && currentSession) {
                                   setCurrentSession(prev => prev ? { ...prev, title: jsonData.title } : null);
@@ -450,7 +451,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                    maxHeight: '200px', // Limit height
                                    overflowY: 'auto' // Allow scrolling
                                }}>
-                                   {JSON.stringify(reasoningSteps[msg._id], null, 2)}
+                                   {/* Display accumulated reasoning string */}
+                                   {reasoningSteps[msg._id]} 
                                </pre>
                            </details>
                        )}

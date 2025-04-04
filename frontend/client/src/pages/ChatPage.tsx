@@ -13,7 +13,16 @@ import styles from './ChatPage.module.css'; // Import CSS Module
 // Interfaces
 interface AvailableModels { [provider: string]: string[]; }
 interface ChatSession { _id: string; title: string; createdAt: string; isShared?: boolean; shareId?: string; }
-interface ChatMessage { _id: string; sender: 'user' | 'ai'; content: string; timestamp: string; modelUsed?: string | null; fileInfo?: { filename: string; originalname: string; mimetype: string; size: number; path: string; } }
+// Update ChatMessage interface to include optional reasoningContent
+interface ChatMessage { 
+    _id: string; 
+    sender: 'user' | 'ai'; 
+    content: string; 
+    timestamp: string; 
+    modelUsed?: string | null; 
+    reasoningContent?: string | null; // Add optional reasoning content
+    fileInfo?: { filename: string; originalname: string; mimetype: string; size: number; path: string; } 
+}
 
 // Define props for ChatPage
 interface ChatPageProps {
@@ -54,7 +63,42 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
   const fetchAvailableModels = async () => { setLoadingModels(true); try { const response = await apiClient.get('/providers/models'); if (response.data?.success) setAvailableModels(response.data.data); else console.error("Failed to fetch available models"); } catch (err: any) { console.error("Error fetching available models:", err); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingModels(false); } };
   const handleDeleteSession = async (sessionId: string, sessionTitle: string) => { if (!window.confirm(`Are you sure you want to delete the chat "${sessionTitle || 'Untitled Chat'}"?`)) return; setDeleteLoading(sessionId); setError(''); try { const response = await apiClient.delete(`/chatsessions/${sessionId}`); if (response.data?.success) { setSessions(prev => prev.filter(s => s._id !== sessionId)); if (currentSession?._id === sessionId) { setCurrentSession(null); setMessages([]); navigate('/'); } } else { setError('Failed to delete chat session.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error deleting session.'); if (err.response?.status === 401) navigate('/login'); } finally { setDeleteLoading(null); } };
   const handleToggleShare = async () => { if (!currentSession) return; setShareLoading(true); setError(''); const newShareStatus = !currentSession.isShared; try { const response = await apiClient.put(`/chatsessions/${currentSession._id}`, { isShared: newShareStatus }); if (response.data?.success) { const updatedSession = response.data.data; setCurrentSession(updatedSession); setSessions(prev => prev.map(s => s._id === updatedSession._id ? updatedSession : s)); } else { setError('Failed to update sharing status.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error updating sharing status.'); if (err.response?.status === 401) navigate('/login'); } finally { setShareLoading(false); } };
-  const fetchMessages = async (sessionId: string) => { if (!sessionId) return; setLoadingMessages(true); setError(''); setMessages([]); try { const response = await apiClient.get(`/chatsessions/${sessionId}/messages`); if (response.data?.success) { const fetchedMessages: ChatMessage[] = response.data.data; setMessages(fetchedMessages); const lastAiMessage = [...fetchedMessages].reverse().find(m => m.sender === 'ai' && m.modelUsed); setSelectedModel(lastAiMessage?.modelUsed || ''); } else { setError('Failed to load messages for this session.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error loading messages.'); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingMessages(false); } };
+  const fetchMessages = async (sessionId: string) => { 
+      if (!sessionId) return; 
+      setLoadingMessages(true); 
+      setError(''); 
+      setMessages([]); 
+      setReasoningSteps({}); // Clear old reasoning steps when fetching new messages
+      try { 
+          const response = await apiClient.get(`/chatsessions/${sessionId}/messages`); 
+          if (response.data?.success) { 
+              const fetchedMessages: ChatMessage[] = response.data.data; 
+              setMessages(fetchedMessages); 
+              
+              // Populate reasoningSteps state from fetched messages
+              const initialReasoningSteps: { [messageId: string]: any[] } = {};
+              fetchedMessages.forEach(msg => {
+                  if (msg.sender === 'ai' && msg.reasoningContent) {
+                      // Assuming reasoningContent is stored as a string, 
+                      // place it directly into the state for the corresponding message ID.
+                      // If it were stored as JSON/Array, you might need JSON.parse here.
+                      initialReasoningSteps[msg._id] = msg.reasoningContent as any; // Cast needed if type mismatch
+                  }
+              });
+              setReasoningSteps(initialReasoningSteps);
+
+              const lastAiMessage = [...fetchedMessages].reverse().find(m => m.sender === 'ai' && m.modelUsed); 
+              setSelectedModel(lastAiMessage?.modelUsed || ''); 
+          } else { 
+              setError('Failed to load messages for this session.'); 
+          } 
+      } catch (err: any) { 
+          setError(err.response?.data?.error || 'Error loading messages.'); 
+          if (err.response?.status === 401) navigate('/login'); 
+      } finally { 
+          setLoadingMessages(false); 
+      } 
+  };
   const handleSelectSession = (session: ChatSession) => { setCurrentSession(session); navigate(`/chat/${session._id}`); fetchMessages(session._id); };
   const handleNewChat = async () => { setError(''); try { const response = await apiClient.post('/chatsessions', { title: 'New Chat' }); if (response.data?.success) { const newSession: ChatSession = response.data.data; setSessions([newSession, ...sessions]); handleSelectSession(newSession); setSelectedModel(''); } else { setError('Failed to create new chat.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error creating chat.'); if (err.response?.status === 401) navigate('/login'); } };
 
@@ -381,7 +425,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                    <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>
                         {/* Display Reasoning Steps if available and toggled on (Moved Above Bubble) */}
                         {msg.sender === 'ai' && showReasoning && reasoningSteps[msg._id] && (
-                            <details open={showReasoning} style={{ marginBottom: '10px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
+                            <details open={showReasoning} style={{ marginBottom: '20px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
                                 <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
                                 <pre style={{ 
                                     background: isDarkMode ? '#2a2a2a' : '#f0f0f0', 

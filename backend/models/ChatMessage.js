@@ -35,6 +35,10 @@ const ChatMessageSchema = new mongoose.Schema({
       type: String,
       required: false // Only applicable for AI messages
   },
+  reasoningContent: { // Add field for reasoning steps/content
+      type: String,
+      required: false
+  },
   // Optional: Add fields for feedback, ratings, etc.
   // rating: {
   //   type: Number, // e.g., 1-5 stars

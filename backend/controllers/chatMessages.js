@@ -129,6 +129,7 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
 // Helper function for streaming API calls
 const callApiStream = async (providerName, apiKey, modelToUse, history, combinedContentForAI, sendSse) => {
     let fullResponseContent = ''; // Accumulate full response
+    let fullReasoningContent = ''; // Accumulate reasoning content
     let errorOccurred = false;
     // Pass the *full* history including the latest user message for formatting
     const formattedMessages = formatMessagesForProvider(providerName, history, combinedContentForAI);
@@ -182,10 +183,12 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
                       console.log("Stream Chunk Finish Reason:", chunk.choices[0].finish_reason);
                  }
                  // Check for reasoning_content
-                 if (delta?.reasoning_content) { 
-                    console.log("Stream Chunk Reasoning Content:", delta.reasoning_content);
+                 if (delta?.reasoning_content) {
+                    const reasoningChunk = delta.reasoning_content;
+                    console.log("Stream Chunk Reasoning Content:", reasoningChunk);
+                    fullReasoningContent += reasoningChunk; // Accumulate reasoning
                     // Send reasoning content chunk
-                    sendSse({ type: 'reasoning_chunk', content: delta.reasoning_content }); 
+                    sendSse({ type: 'reasoning_chunk', content: reasoningChunk }); 
                  }
              }
          }
@@ -211,7 +214,8 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
         sendSse({ type: 'error', message: `Error from ${providerName}: ${apiError.message || 'API Error'}` });
     }
 
-    return { fullResponseContent, errorOccurred }; // Return full content and error status
+    // Return accumulated content and error status
+    return { fullResponseContent, fullReasoningContent, errorOccurred }; 
 };
 
 // @desc    Get all messages for a specific chat session
@@ -398,18 +402,19 @@ exports.addMessageToSession = async (req, res, next) => {
                     } else { console.warn(`Streaming: Requested model ${requestedModel} not found. Falling back...`); }
                 }
 
+                let finalReasoningContent = ''; // Variable to hold final reasoning content
                 // 2. Attempt API call (or fallback if needed)
                 if (providerToTry && modelToTry && apiKeyToUse) {
                     const result = await callApiStream(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI, sendSse);
                     if (!result.errorOccurred) {
-                        providerUsed = providerToTry; actualModelUsed = modelToTry; finalAiContent = result.fullResponseContent;
+                        providerUsed = providerToTry; actualModelUsed = modelToTry; finalAiContent = result.fullResponseContent; finalReasoningContent = result.fullReasoningContent; // Capture reasoning
                     } else {
                         console.warn(`Streaming: Initial attempt ${providerToTry}/${modelToTry} failed. Trying default...`);
                         const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
                         if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
                             const defaultResult = await callApiStream(providerToTry, apiKeyToUse, defaultModelForProvider, history, combinedContentForAI, sendSse);
                             if (!defaultResult.errorOccurred) {
-                                providerUsed = providerToTry; actualModelUsed = defaultModelForProvider; finalAiContent = defaultResult.fullResponseContent;
+                                providerUsed = providerToTry; actualModelUsed = defaultModelForProvider; finalAiContent = defaultResult.fullResponseContent; finalReasoningContent = defaultResult.fullReasoningContent; // Capture reasoning
                             } else { console.warn(`Streaming: Default model ${defaultModelForProvider} for ${providerToTry} also failed. Falling back...`); }
                         } else { console.warn(`Streaming: No different default model for ${providerToTry}. Falling back...`); }
                     }
@@ -430,7 +435,7 @@ exports.addMessageToSession = async (req, res, next) => {
                             if (!fallbackModel) continue;
                             const fallbackResult = await callApiStream(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, combinedContentForAI, sendSse);
                             if (!fallbackResult.errorOccurred) {
-                                providerUsed = fallbackProvider; actualModelUsed = fallbackModel; finalAiContent = fallbackResult.fullResponseContent;
+                                providerUsed = fallbackProvider; actualModelUsed = fallbackModel; finalAiContent = fallbackResult.fullResponseContent; finalReasoningContent = fallbackResult.fullReasoningContent; // Capture reasoning
                                 console.log(`Streaming Fallback successful: ${providerUsed}/${actualModelUsed}.`);
                                 break;
                             } else { console.warn(`Streaming Fallback failed for ${fallbackProvider}.`); }
@@ -459,7 +464,15 @@ exports.addMessageToSession = async (req, res, next) => {
             // 6. Save final AI message to DB *after* streaming
             if (!streamError && finalAiContent !== null && actualModelUsed) {
                 try {
-                    await ChatMessage.create({ session: sessionId, sender: 'ai', content: finalAiContent, modelUsed: actualModelUsed });
+                    const messageToSave = { 
+                        session: sessionId, 
+                        sender: 'ai', 
+                        content: finalAiContent, 
+                        modelUsed: actualModelUsed,
+                        // Only add reasoningContent if it's not empty
+                        ...(finalReasoningContent && { reasoningContent: finalReasoningContent }) 
+                    };
+                    await ChatMessage.create(messageToSave);
                     console.log("Successfully saved final AI message to DB (streaming).");
                 } catch (dbError) { console.error("Error saving final AI message to DB (streaming):", dbError); }
             } else if (!streamError && finalAiContent === null) { console.warn("Streaming finished, but final AI content was null. Not saving to DB."); }

@@ -504,9 +504,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                            )}
                             </div>
                         </div>
-                        {/* Correctly wrapped user bubble */}
+                        {/* Revert user bubble structure (remove wrapper) */}
                         {msg.sender === 'user' && 
-                            <div style={{ display: 'flex', alignItems: 'flex-start' }}> {/* Wrapper */}
+                            <>
                                 <div
                                     className={`${styles.messageBubble}`}
                                     style={{ // Actual user bubble styles
@@ -517,7 +517,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                     <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div> {/* User content */}
                                 </div>
                                 <CopyButton textToCopy={msg.content} /> 
-                            </div>
+                            </>
                         }
                         {/* Reasoning steps moved above the bubble */}
                     </div>

@@ -40,6 +40,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
   // State for streaming response
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [streamingMessageContent, setStreamingMessageContent] = useState<string>('');
+  const [reasoningSteps, setReasoningSteps] = useState<{ [messageId: string]: any[] }>({}); // State for reasoning steps
   const [isStreamingEnabled, setIsStreamingEnabled] = useState(true); // State for streaming toggle
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -329,7 +330,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                  gap: '10px' // Add gap between header items
              }}>
                  <h3 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit', flexGrow: 1, margin: 0 }}>{currentSession.title || 'Untitled Chat'}</h3> {/* Allow title to grow */}
-                 {/* Removed New Chat Button from here */}
+                 {/* Ensure New Chat Button is removed from here */}
                  <button
                      onClick={handleToggleShare}
                      disabled={shareLoading}
@@ -366,7 +367,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
              )}
 
              {/* Messages */}
-             <div className={styles.messageList}> {/* Remove ref from here */}
+             <div className={styles.messageList}> {/* Keep ref removed from here */}
                {loadingMessages ? <p>{t('chat_loading_messages')}</p> : messages.length > 0 ? (
                  messages.map((msg) => (
                    <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>

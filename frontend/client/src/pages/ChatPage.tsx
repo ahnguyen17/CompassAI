@@ -446,7 +446,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                     </details>
                                 )}
                                 {/* AI Bubble + Button Wrapper */}
-                                <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                                     <CopyButton textToCopy={msg.content} /> {/* Button before bubble */}
                                     <div
                                     className={`${styles.messageBubble}`}

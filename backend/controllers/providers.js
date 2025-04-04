@@ -31,7 +31,8 @@ const AVAILABLE_MODELS = {
     ],
     'DeepSeek': [ // Added DeepSeek
         "deepseek-chat",
-        "deepseek-coder"
+        "deepseek-coder",
+        "deepseek-reasoner" // Added new model
     ]
 };
 

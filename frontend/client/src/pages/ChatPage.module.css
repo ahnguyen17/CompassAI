@@ -113,6 +113,9 @@
 }
 .messageRowAi {
      justify-content: flex-start;
+     /* Add vertical stacking and adjust alignment for AI rows */
+     flex-direction: column;
+     align-items: stretch; /* Stretch items like details/bubble wrapper */
 }
 .messageBubble {
     padding: 10px 15px;

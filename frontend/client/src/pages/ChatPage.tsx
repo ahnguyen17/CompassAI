@@ -425,8 +425,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                    <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>
                         {/* Display Reasoning Steps if available and toggled on (Moved Above Bubble) */}
                         {msg.sender === 'ai' && showReasoning && reasoningSteps[msg._id] && (
-                            <> {/* Wrap in fragment to add sibling <br/> */}
-                            <details open={showReasoning} style={{ /* Removed marginBottom */ marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
+                            // No fragment needed now
+                            <details open={showReasoning} style={{ marginBottom: '10px', /* Re-add margin */ marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
                                 <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
                                 <pre style={{ 
                                     background: isDarkMode ? '#2a2a2a' : '#f0f0f0', 
@@ -441,12 +441,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                     {reasoningSteps[msg._id]} 
                                 </pre>
                             </details>
-                            <br /> {/* Add explicit line break */}
-                            </>
+                            // Removed <br/>
                         )}
-                        {/* AI Message Bubble */}
-                        {msg.sender === 'ai' && <CopyButton textToCopy={msg.content} />}
-                        <div
+                        {/* Wrap Bubble and Copy Button */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start' }}> 
+                            {msg.sender === 'ai' && <CopyButton textToCopy={msg.content} />}
+                            <div
                             className={`${styles.messageBubble}`}
                             style={{
                                background: msg.sender === 'user'
@@ -502,8 +502,23 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                            ) : (
                                <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                            )}
+                            </div>
                         </div>
-                        {msg.sender === 'user' && <CopyButton textToCopy={msg.content} />}
+                        {/* Correctly wrapped user bubble */}
+                        {msg.sender === 'user' && 
+                            <div style={{ display: 'flex', alignItems: 'flex-start' }}> {/* Wrapper */}
+                                <div
+                                    className={`${styles.messageBubble}`}
+                                    style={{ // Actual user bubble styles
+                                        background: isDarkMode ? '#0d6efd' : '#007bff',
+                                        color: 'white',
+                                    }}
+                                >
+                                    <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div> {/* User content */}
+                                </div>
+                                <CopyButton textToCopy={msg.content} /> 
+                            </div>
+                        }
                         {/* Reasoning steps moved above the bubble */}
                     </div>
                  ))

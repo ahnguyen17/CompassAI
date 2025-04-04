@@ -166,11 +166,23 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
             });
 
             for await (const chunk of stream) {
-                const contentChunk = chunk.choices[0]?.delta?.content || '';
+                // Log the entire chunk structure for inspection
+                // console.log("Stream Chunk:", JSON.stringify(chunk, null, 2)); 
+                
+                const delta = chunk.choices[0]?.delta;
+                const contentChunk = delta?.content || '';
+
                 if (contentChunk) {
                     fullResponseContent += contentChunk;
                     sendSse({ type: 'chunk', content: contentChunk });
+                } else if (delta && Object.keys(delta).length > 0) { 
+                    // Log if delta exists but has no 'content' (might be tool calls, finish reason, etc.)
+                    console.log("Stream Chunk Delta (No Content):", JSON.stringify(delta, null, 2));
+                } else if (chunk.choices[0]?.finish_reason) {
+                     console.log("Stream Chunk Finish Reason:", chunk.choices[0].finish_reason);
                 }
+                // Potentially check for tool_calls here if DeepSeek uses them for reasoning
+                // if (delta?.tool_calls) { ... sendSse({ type: 'reasoning_step', data: delta.tool_calls }) ... }
             }
         }
         else if (providerName === 'Gemini') {

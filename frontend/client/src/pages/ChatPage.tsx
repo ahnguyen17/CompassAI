@@ -423,112 +423,91 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                {loadingMessages ? <p>{t('chat_loading_messages')}</p> : messages.length > 0 ? (
                  messages.map((msg) => (
                    <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>
-                        {/* Display Reasoning Steps if available and toggled on (Moved Above Bubble) */}
-                        {msg.sender === 'ai' && showReasoning && reasoningSteps[msg._id] && (
-                            // No fragment needed now
-                            <details open={showReasoning} style={{ marginBottom: '10px', /* Re-add margin */ marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
-                                <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
-                                <pre style={{ 
-                                    background: isDarkMode ? '#2a2a2a' : '#f0f0f0', 
+                        
+                        {/* --- AI MESSAGE --- */}
+                        {msg.sender === 'ai' && (
+                            <>
+                                {/* Reasoning Steps (conditionally rendered first) */}
+                                {showReasoning && reasoningSteps[msg._id] && (
+                                    <details open={showReasoning} style={{ marginBottom: '10px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
+                                        <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
+                                        <pre style={{ 
+                                            background: isDarkMode ? '#2a2a2a' : '#f0f0f0', 
                                     padding: '8px', 
                                     borderRadius: '4px', 
-                                    whiteSpace: 'pre-wrap', 
-                                    wordBreak: 'break-all',
-                                    maxHeight: '200px', // Limit height
-                                    overflowY: 'auto' // Allow scrolling
-                                }}>
-                                    {/* Display accumulated reasoning string */}
-                                    {reasoningSteps[msg._id]} 
-                                </pre>
-                            </details>
-                            // Removed <br/>
-                        )}
-                        {/* Wrap Bubble and Copy Button - AI */}
-                        {/* Apply column direction and alignment to the wrapper */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}> 
-                            <div
-                            className={`${styles.messageBubble}`}
-                            style={{
-                               background: msg.sender === 'user'
-                                   ? (isDarkMode ? '#0d6efd' : '#007bff')
-                                   : (isDarkMode ? '#3a3d41' : '#e9ecef'),
-                               color: msg.sender === 'user'
-                                   ? 'white'
-                                   : (isDarkMode ? '#e0e0e0' : '#343a40'),
-                           }}
-                       >
-                           {msg.sender === 'ai' ? (
-                               <ReactMarkdown
-                                   remarkPlugins={[remarkGfm]}
-                                   components={{
-                                       code({ className, children, ...props }: { className?: string; children?: React.ReactNode }) {
-                                           const match = /language-(\w+)/.exec(className || '');
-                                           // Choose base theme based on dark mode
-                                           const baseTheme = isDarkMode ? okaidia : prism;
-                                           // Create a custom style by overriding the background
-                                           const customSyntaxTheme = {
-                                               ...baseTheme,
-                                               'pre[class*="language-"]': {
-                                                   ...(baseTheme['pre[class*="language-"]'] || {}),
-                                                   background: 'transparent',
-                                                   backgroundColor: 'transparent',
-                                               },
-                                                'code[class*="language-"]': {
-                                                    ...(baseTheme['code[class*="language-"]'] || {}),
-                                                    background: 'transparent',
-                                                    backgroundColor: 'transparent',
-                                                }
-                                           };
-
-                                           return match ? (
-                                               <SyntaxHighlighter
-                                                   style={customSyntaxTheme as any} // Apply custom theme
-                                                   language={match[1]}
-                                                   useInlineStyles={true} // Ensure inline styles are used
-                                                >
-                                                   {String(children).replace(/\n$/, '')}
-                                               </SyntaxHighlighter>
-                                           ) : (
-                                               <code className={className} {...props}>
-                                                   {children}
-                                               </code>
-                                           );
-                                       }
-                                   }}
-                               >
-                                   {/* Render streaming content if this is the streaming message, otherwise render final content */}
-                                   {streamingMessageId === msg._id ? streamingMessageContent : msg.content}
-                               </ReactMarkdown>
-                           ) : (
-                               <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
-                           )}
-                            </div>
-                            {/* Wrap AI CopyButton in a div and apply margin */}
-                            {msg.sender === 'ai' && 
-                                <div style={{ marginTop: '5px', marginLeft: '10px' }}> {/* Wrapper div for margin */}
-                                    <CopyButton textToCopy={msg.content} />
-                                </div>
-                            }
-                        </div>
-                        {/* User Bubble + Button (No Wrapper, handled by CSS) */}
-                        {msg.sender === 'user' && 
-                            <>
-                                <div
+                                            whiteSpace: 'pre-wrap', 
+                                            wordBreak: 'break-all',
+                                            maxHeight: '200px', // Limit height
+                                            overflowY: 'auto' // Allow scrolling
+                                        }}>
+                                            {/* Display accumulated reasoning string */}
+                                            {reasoningSteps[msg._id]} 
+                                        </pre>
+                                    </details>
+                                )}
+                                {/* AI Bubble + Button Wrapper */}
+                                <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                                    <CopyButton textToCopy={msg.content} /> {/* Button before bubble */}
+                                    <div
                                     className={`${styles.messageBubble}`}
-                                    style={{ // Actual user bubble styles
-                                        background: isDarkMode ? '#0d6efd' : '#007bff',
-                                        color: 'white',
+                                    style={{
+                                        background: isDarkMode ? '#3a3d41' : '#e9ecef', // AI Background
+                                        color: isDarkMode ? '#e0e0e0' : '#343a40', // AI Text Color
                                     }}
                                 >
-                                    <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div> {/* User content */}
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                            code({ className, children, ...props }: { className?: string; children?: React.ReactNode }) {
+                                                const match = /language-(\w+)/.exec(className || '');
+                                                const baseTheme = isDarkMode ? okaidia : prism;
+                                                const customSyntaxTheme = {
+                                                    ...baseTheme,
+                                                    'pre[class*="language-"]': {
+                                                        ...(baseTheme['pre[class*="language-"]'] || {}),
+                                                        background: 'transparent',
+                                                        backgroundColor: 'transparent',
+                                                    },
+                                                    'code[class*="language-"]': {
+                                                        ...(baseTheme['code[class*="language-"]'] || {}),
+                                                        background: 'transparent',
+                                                        backgroundColor: 'transparent',
+                                                    }
+                                                };
+                                                return match ? (
+                                                    <SyntaxHighlighter style={customSyntaxTheme as any} language={match[1]} useInlineStyles={true}>
+                                                        {String(children).replace(/\n$/, '')}
+                                                    </SyntaxHighlighter>
+                                                ) : (
+                                                    <code className={className} {...props}>{children}</code>
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        {streamingMessageId === msg._id ? streamingMessageContent : msg.content}
+                                    </ReactMarkdown>
                                 </div>
-                                {/* Wrap user CopyButton in a div and apply margin */}
-                                <div style={{ marginTop: '5px' }}> {/* Wrapper div for margin */}
-                                    <CopyButton textToCopy={msg.content} /> 
-                                </div>
-                            </>
-                        }
-                        {/* Reasoning steps moved above the bubble */}
+                            </div>
+                        </>
+                    )}
+
+                    {/* --- USER MESSAGE --- */}
+                    {msg.sender === 'user' && (
+                        <>
+                            {/* User Bubble */}
+                            <div
+                                className={`${styles.messageBubble}`}
+                                style={{ // User bubble styles
+                                    background: isDarkMode ? '#0d6efd' : '#007bff',
+                                    color: 'white',
+                                }}
+                            >
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                            </div>
+                            {/* User Button */}
+                            <CopyButton textToCopy={msg.content} />
+                        </>
+                    )}
                     </div>
                  ))
                ) : <p>{t('chat_start_message')}</p>}

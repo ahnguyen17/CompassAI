@@ -683,9 +683,12 @@ exports.addMessageToSession = async (req, res, next) => {
                         ? actualModelUsed.substring('perplexity/'.length) 
                         : actualModelUsed;
                     
+                    // Format messages for the API call
+                    const messagesForCitations = formatMessagesForProvider(providerUsed, history, combinedContentForAI);
+                    
                     const fullResponse = await client.chat.completions.create({
                         model: actualModelName,
-                        messages: formattedMessages
+                        messages: messagesForCitations
                     });
                     
                     if (fullResponse.choices?.[0]?.message?.citations) {

@@ -70,3 +70,20 @@ exports.getAvailableModels = async (req, res, next) => {
         res.status(500).json({ success: false, error: 'Server Error fetching models' });
     }
 };
+
+// @desc    Get ALL potentially available models (unfiltered)
+// @route   GET /api/v1/providers/all-models
+// @access  Private 
+// This sends the raw hardcoded list, used for settings page model visibility toggles
+exports.getAllModels = async (req, res, next) => {
+    try {
+        // Simply return the hardcoded constant
+        res.status(200).json({
+            success: true,
+            data: AVAILABLE_MODELS 
+        });
+    } catch (error) {
+        console.error("Error fetching all models:", error);
+        res.status(500).json({ success: false, error: 'Server Error fetching all models' });
+    }
+};

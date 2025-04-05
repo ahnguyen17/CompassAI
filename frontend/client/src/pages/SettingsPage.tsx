@@ -162,9 +162,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, isDarkMode /*,
   
             if (allModelsResponse.data?.success && disabledModelsResponse.data?.success) {
                 const allModelsData: { [provider: string]: string[] } = allModelsResponse.data.data;
-                const disabledModelDocs: { _id: string, modelName: string }[] = disabledModelsResponse.data.data;
-                const disabledModelNames = new Set(disabledModelDocs.map(doc => doc.modelName));
-  
+                // Correctly type the response data as an array of strings
+                const disabledModelNamesArray: string[] = disabledModelsResponse.data.data;
+                // Create the Set directly from the array of strings
+                const disabledModelNames = new Set(disabledModelNamesArray);
+
                 const statuses: ModelStatus[] = [];
                 // Iterate through all available models from the backend constant
                 for (const provider in allModelsData) {

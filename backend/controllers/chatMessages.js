@@ -119,8 +119,15 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
                 clientOptions.baseURL = 'https://api.perplexity.ai';
             }
             const client = new OpenAI(clientOptions);
+            // For Perplexity, strip the "perplexity/" prefix from the model name
+            const actualModelName = providerName === 'Perplexity' && modelToUse.startsWith('perplexity/') 
+                ? modelToUse.substring('perplexity/'.length) 
+                : modelToUse;
+            
+            console.log(`Using model name for ${providerName} API: ${actualModelName}`);
+            
             const completion = await client.chat.completions.create({
-                model: modelToUse,
+                model: actualModelName,
                 messages: formattedMessages
             });
             if (completion.choices?.[0]?.message?.content)
@@ -179,8 +186,15 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
             }
 
             const client = new OpenAI(clientOptions);
+            // For Perplexity, strip the "perplexity/" prefix from the model name
+            const actualModelName = providerName === 'Perplexity' && modelToUse.startsWith('perplexity/') 
+                ? modelToUse.substring('perplexity/'.length) 
+                : modelToUse;
+            
+            console.log(`Using model name for ${providerName} API streaming: ${actualModelName}`);
+            
             const stream = await client.chat.completions.create({
-                model: modelToUse,
+                model: actualModelName,
                 messages: formattedMessages,
                 stream: true
             });

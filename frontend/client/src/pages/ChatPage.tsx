@@ -242,6 +242,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                   finalContent += jsonData.content;
                               } else if (jsonData.type === 'model_info') {
                                   setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, modelUsed: jsonData.modelUsed || 'unknown' } : msg));
+                              } else if (jsonData.type === 'citations') {
+                                  console.log('Received citations:', jsonData.citations);
+                                  // Store citations in the message
+                                  setMessages(prev => prev.map(msg => 
+                                      msg._id === optimisticAiMessageId 
+                                          ? { ...msg, citations: jsonData.citations } 
+                                          : msg
+                                  ));
                               } else if (jsonData.type === 'reasoning_chunk') { // Handle reasoning chunks
                                   console.log('Received reasoning chunk:', jsonData.content);
                                   // Accumulate reasoning content as a string

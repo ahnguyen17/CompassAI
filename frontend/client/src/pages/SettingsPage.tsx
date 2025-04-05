@@ -149,27 +149,49 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, isDarkMode /*,
       } finally { setLoadingReferralCodes(false); }
   };
 
-  // --- Fetch Model Statuses (Admin) ---
-  const fetchModelStatuses = async () => {
-      if (currentUser?.role !== 'admin') return;
-      setLoadingModelStatuses(true); setFetchModelStatusError('');
-      try {
-          const response = await apiClient.get('/disabledmodels/status');
-          if (response.data?.success) {
-              // Sort models alphabetically for consistent display
-              setModelStatuses(response.data.data.sort((a: ModelStatus, b: ModelStatus) => a.modelName.localeCompare(b.modelName)));
-          } else {
-              setFetchModelStatusError('Failed to load model statuses.');
-          }
-      } catch (err: any) {
-          setFetchModelStatusError(err.response?.data?.error || 'Error loading model statuses.');
-          if (err.response?.status === 401) setFetchModelStatusError('Unauthorized.');
-          if (err.response?.status === 403) setFetchModelStatusError('Forbidden.');
-      } finally {
-          setLoadingModelStatuses(false);
-      }
-  };
-
+    // --- Fetch Model Statuses (Admin) ---
+    const fetchModelStatuses = async () => {
+        if (currentUser?.role !== 'admin') return;
+        setLoadingModelStatuses(true); setFetchModelStatusError('');
+        try {
+            // Fetch ALL models and the list of DISABLED models concurrently
+            const [allModelsResponse, disabledModelsResponse] = await Promise.all([
+                apiClient.get('/providers/all-models'), // Use the new endpoint
+                apiClient.get('/disabledmodels')        // Fetch just the names of disabled models
+            ]);
+  
+            if (allModelsResponse.data?.success && disabledModelsResponse.data?.success) {
+                const allModelsData: { [provider: string]: string[] } = allModelsResponse.data.data;
+                const disabledModelDocs: { _id: string, modelName: string }[] = disabledModelsResponse.data.data;
+                const disabledModelNames = new Set(disabledModelDocs.map(doc => doc.modelName));
+  
+                const statuses: ModelStatus[] = [];
+                // Iterate through all available models from the backend constant
+                for (const provider in allModelsData) {
+                    allModelsData[provider].forEach(modelName => {
+                        statuses.push({
+                            modelName: modelName,
+                            isDisabled: disabledModelNames.has(modelName) // Check if this model is in the disabled list
+                        });
+                    });
+                }
+  
+                // Sort models alphabetically for consistent display
+                setModelStatuses(statuses.sort((a, b) => a.modelName.localeCompare(b.modelName)));
+            } else {
+                setFetchModelStatusError('Failed to load model statuses or disabled models.');
+            }
+        } catch (err: any) {
+            setFetchModelStatusError(err.response?.data?.error || 'Error loading model statuses.');
+            if (err.response?.status === 401) setFetchModelStatusError('Unauthorized.');
+            if (err.response?.status === 403) setFetchModelStatusError('Forbidden.');
+        } finally {
+            setLoadingModelStatuses(false);
+        }
+    };
+  
+  
+  
   // Initial data fetching
   useEffect(() => {
     fetchApiKeys(); // All users need API keys

@@ -26,6 +26,14 @@ const AVAILABLE_MODELS = {
         "deepseek-chat",
         "deepseek-coder",
         "deepseek-reasoner" // Added new model
+    ],
+    'Perplexity': [ // Added Perplexity to match providers.js
+        "perplexity/sonar-deep-research",
+        "perplexity/sonar-reasoning-pro",
+        "perplexity/sonar-reasoning",
+        "perplexity/sonar-pro",
+        "perplexity/sonar",
+        "perplexity/r1-1776"
     ]
 };
 
@@ -40,12 +48,13 @@ const DEFAULT_MODELS = {
 
 // Helper function to find provider for a given model
 const findProviderForModel = (modelName) => {
+    // Now that Perplexity is in AVAILABLE_MODELS, the explicit checks below are redundant but harmless
     for (const [provider, models] of Object.entries(AVAILABLE_MODELS)) {
         if (models.includes(modelName)) return provider;
     }
-    // Check DeepSeek and Perplexity explicitly if not found above
-    if (AVAILABLE_MODELS['DeepSeek']?.includes(modelName)) return 'DeepSeek';
-    if (AVAILABLE_MODELS['Perplexity']?.includes(modelName)) return 'Perplexity';
+    // Explicit checks (now redundant but kept for safety/clarity)
+    // if (AVAILABLE_MODELS['DeepSeek']?.includes(modelName)) return 'DeepSeek'; // Already covered by loop
+    // if (AVAILABLE_MODELS['Perplexity']?.includes(modelName)) return 'Perplexity'; // Already covered by loop
     return null;
 };
 

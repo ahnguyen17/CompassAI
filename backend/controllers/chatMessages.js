@@ -309,8 +309,8 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
         sendSse({ type: 'error', message: `Error from ${providerName}: ${apiError.message || 'API Error'}` });
     }
 
-    // Return accumulated content and error status
-    return { fullResponseContent, fullReasoningContent, errorOccurred }; 
+    // Return accumulated content, reasoning, citations and error status
+    return { fullResponseContent, fullReasoningContent, fullCitations, errorOccurred }; 
 };
 
 // @desc    Get all messages for a specific chat session
@@ -463,6 +463,7 @@ exports.addMessageToSession = async (req, res, next) => {
             let actualModelUsed = null;
             let finalAiContent = null;
             let finalReasoningContent = ''; // Declare here to keep in scope
+            let fullCitations = []; // Declare here to keep in scope
             let streamError = false;
 
             // --- SSE Setup ---
@@ -503,14 +504,22 @@ exports.addMessageToSession = async (req, res, next) => {
                 if (providerToTry && modelToTry && apiKeyToUse) {
                     const result = await callApiStream(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI, sendSse);
                     if (!result.errorOccurred) {
-                        providerUsed = providerToTry; actualModelUsed = modelToTry; finalAiContent = result.fullResponseContent; finalReasoningContent = result.fullReasoningContent; // Capture reasoning
+                        providerUsed = providerToTry; 
+                        actualModelUsed = modelToTry; 
+                        finalAiContent = result.fullResponseContent; 
+                        finalReasoningContent = result.fullReasoningContent;
+                        fullCitations = result.fullCitations; // Capture citations
                     } else {
                         console.warn(`Streaming: Initial attempt ${providerToTry}/${modelToTry} failed. Trying default...`);
                         const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
                         if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
                             const defaultResult = await callApiStream(providerToTry, apiKeyToUse, defaultModelForProvider, history, combinedContentForAI, sendSse);
                             if (!defaultResult.errorOccurred) {
-                                providerUsed = providerToTry; actualModelUsed = defaultModelForProvider; finalAiContent = defaultResult.fullResponseContent; finalReasoningContent = defaultResult.fullReasoningContent; // Capture reasoning
+                                providerUsed = providerToTry; 
+                                actualModelUsed = defaultModelForProvider; 
+                                finalAiContent = defaultResult.fullResponseContent; 
+                                finalReasoningContent = defaultResult.fullReasoningContent;
+                                fullCitations = defaultResult.fullCitations; // Capture citations
                             } else { console.warn(`Streaming: Default model ${defaultModelForProvider} for ${providerToTry} also failed. Falling back...`); }
                         } else { console.warn(`Streaming: No different default model for ${providerToTry}. Falling back...`); }
                     }
@@ -531,7 +540,11 @@ exports.addMessageToSession = async (req, res, next) => {
                             if (!fallbackModel) continue;
                             const fallbackResult = await callApiStream(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, combinedContentForAI, sendSse);
                             if (!fallbackResult.errorOccurred) {
-                                providerUsed = fallbackProvider; actualModelUsed = fallbackModel; finalAiContent = fallbackResult.fullResponseContent; finalReasoningContent = fallbackResult.fullReasoningContent; // Capture reasoning
+                                providerUsed = fallbackProvider; 
+                                actualModelUsed = fallbackModel; 
+                                finalAiContent = fallbackResult.fullResponseContent; 
+                                finalReasoningContent = fallbackResult.fullReasoningContent;
+                                fullCitations = fallbackResult.fullCitations; // Capture citations
                                 console.log(`Streaming Fallback successful: ${providerUsed}/${actualModelUsed}.`);
                                 break;
                             } else { console.warn(`Streaming Fallback failed for ${fallbackProvider}.`); }

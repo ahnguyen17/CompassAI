@@ -10,7 +10,15 @@ import CopyButton from '../components/CopyButton';
 import { useTranslation } from 'react-i18next';
 import styles from './ChatPage.module.css'; // Import CSS Module
 
-// Interfaces
+// --- Constants ---
+// Perplexity models known to potentially include <think> tags
+const PERPLEXITY_REASONING_MODELS = [
+    "perplexity/sonar-reasoning-pro",
+    "perplexity/sonar-reasoning",
+    "perplexity/r1-1776"
+];
+
+// --- Interfaces ---
 interface AvailableModels { [provider: string]: string[]; }
 interface ChatSession { _id: string; title: string; createdAt: string; isShared?: boolean; shareId?: string; }
 // Update ChatMessage interface to include optional reasoningContent
@@ -57,6 +65,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
   const abortControllerRef = useRef<AbortController | null>(null); // Restore AbortController ref
   const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for the end of the messages list
+
+  // --- Helper Function for Parsing Perplexity Content ---
+  const parsePerplexityContent = (content: string): { reasoning: string | null; mainContent: string } => {
+      const reasoningMatch = content.match(/<think>([\s\S]*?)<\/think>/);
+      if (reasoningMatch && reasoningMatch[1]) {
+          const reasoning = reasoningMatch[1].trim();
+          const mainContent = content.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+          return { reasoning, mainContent };
+      }
+      return { reasoning: null, mainContent: content };
+  };
 
   // --- Fetch Functions ---
   const fetchSessions = async () => { setLoadingSessions(true); setError(''); try { const response = await apiClient.get('/chatsessions'); if (response.data?.success) setSessions(response.data.data); else setError('Failed to load chat sessions.'); } catch (err: any) { setError(err.response?.data?.error || 'Error loading sessions.'); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingSessions(false); } };
@@ -450,13 +469,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                         {/* --- AI MESSAGE --- */}
                         {msg.sender === 'ai' && (
                             <>
-                                {/* Reasoning Steps (conditionally rendered first) */}
-                                {showReasoning && reasoningSteps[msg._id] && (
-                                    /* Auto-open only if this message is actively streaming */
+                                {/* --- Reasoning Section --- */}
+                                {/* Render if showReasoning is true AND (it's Deepseek with steps OR it's a PPLX reasoning model with parsed steps) */}
+                                {showReasoning && (reasoningSteps[msg._id] || (PERPLEXITY_REASONING_MODELS.includes(msg.modelUsed || '') && parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).reasoning)) && (
                                     <details open={streamingMessageId === msg._id} style={{ marginBottom: '10px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
                                         <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
-                                        <pre style={{ 
-                                            background: isDarkMode ? '#2a2a2a' : '#f0f0f0', 
+                                        <pre style={{
+                                            background: isDarkMode ? '#2a2a2a' : '#f0f0f0',
                                     padding: '8px', 
                                     borderRadius: '4px', 
                                             whiteSpace: 'pre-wrap', 
@@ -464,14 +483,19 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                             maxHeight: '200px', // Limit height
                                             overflowY: 'auto' // Allow scrolling
                                         }}>
-                                            {/* Display accumulated reasoning string */}
-                                            {reasoningSteps[msg._id]} 
+                                            {/* Display Deepseek reasoning OR parsed Perplexity reasoning */}
+                                            {PERPLEXITY_REASONING_MODELS.includes(msg.modelUsed || '')
+                                                ? parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).reasoning
+                                                : reasoningSteps[msg._id]
+                                            }
                                         </pre>
                                     </details>
                                 )}
-                                {/* AI Bubble + Button Wrapper */}
-                                <div style={{ display: 'flex', alignItems: 'flex-end' }}> {/* Align items to bottom */}
-                                    <CopyButton textToCopy={msg.content} /> {/* Button before bubble */}
+
+                                {/* --- AI Bubble + Button Wrapper --- */}
+                                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                    {/* Pass original/full content to copy button */}
+                                    <CopyButton textToCopy={streamingMessageId === msg._id ? streamingMessageContent : msg.content} /> 
                                     <div
                                     className={`${styles.messageBubble}`}
                                     style={{
@@ -508,7 +532,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                             }
                                         }}
                                     >
-                                        {streamingMessageId === msg._id ? streamingMessageContent : msg.content}
+                                        {/* Render parsed main content for PPLX reasoning models, otherwise full content */}
+                                        {PERPLEXITY_REASONING_MODELS.includes(msg.modelUsed || '')
+                                            ? parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).mainContent
+                                            : (streamingMessageId === msg._id ? streamingMessageContent : msg.content)
+                                        }
                                     </ReactMarkdown>
                                 </div>
                             </div>

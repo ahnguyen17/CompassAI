@@ -39,6 +39,10 @@ const ChatMessageSchema = new mongoose.Schema({
       type: String,
       required: false
   },
+  citations: { // Add field for storing citation sources from Perplexity
+      type: Array,
+      required: false
+  },
   // Optional: Add fields for feedback, ratings, etc.
   // rating: {
   //   type: Number, // e.g., 1-5 stars

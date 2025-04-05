@@ -130,8 +130,28 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
                 model: actualModelName,
                 messages: formattedMessages
             });
-            if (completion.choices?.[0]?.message?.content)
-                aiResponseContent = completion.choices[0].message.content;
+            if (completion.choices?.[0]?.message) {
+                // Extract content
+                aiResponseContent = completion.choices[0].message.content || '';
+                
+                // Extract citations if this is a Perplexity response
+                if (providerName === 'Perplexity' && completion.choices[0].message.citations) {
+                    // Log the citations for debugging
+                    console.log('Perplexity citations:', JSON.stringify(completion.choices[0].message.citations, null, 2));
+                    
+                    // Process citations and append them to the response
+                    const citations = completion.choices[0].message.citations;
+                    if (citations && citations.length > 0) {
+                        // Add a section for citations at the end of the response
+                        aiResponseContent += '\n\n**Sources:**\n';
+                        citations.forEach((citation, index) => {
+                            const title = citation.title || 'Source';
+                            const url = citation.url || '#';
+                            aiResponseContent += `${index + 1}. [${title}](${url})\n`;
+                        });
+                    }
+                }
+            }
         } else if (providerName === 'Gemini') {
             const genAI = new GoogleGenerativeAI(apiKey);
             const model = genAI.getGenerativeModel({ model: modelToUse });
@@ -154,6 +174,7 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
 const callApiStream = async (providerName, apiKey, modelToUse, history, combinedContentForAI, sendSse) => {
     let fullResponseContent = ''; // Accumulate full response
     let fullReasoningContent = ''; // Accumulate reasoning content
+    let fullCitations = []; // Store citations for later use
     let errorOccurred = false;
     // Pass the *full* history including the latest user message for formatting
     const formattedMessages = formatMessagesForProvider(providerName, history, combinedContentForAI);
@@ -208,13 +229,54 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
 
                 if (contentChunk) {
                     fullResponseContent += contentChunk;
-                     sendSse({ type: 'chunk', content: contentChunk });
-                 } else if (delta && Object.keys(delta).length > 0) {
-                     // Log the full delta object if it exists but has no 'content'
-                     console.log("Stream Chunk Delta (FULL):", JSON.stringify(delta, null, 2)); 
-                 } else if (chunk.choices[0]?.finish_reason) {
-                      console.log("Stream Chunk Finish Reason:", chunk.choices[0].finish_reason);
-                 }
+                    sendSse({ type: 'chunk', content: contentChunk });
+                } else if (delta && Object.keys(delta).length > 0) {
+                    // Log the full delta object if it exists but has no 'content'
+                    console.log("Stream Chunk Delta (FULL):", JSON.stringify(delta, null, 2)); 
+                } else if (chunk.choices[0]?.finish_reason) {
+                    console.log("Stream Chunk Finish Reason:", chunk.choices[0].finish_reason);
+                    
+                    // If this is the end of a Perplexity response, check for citations
+                    if (providerName === 'Perplexity' && chunk.choices[0].finish_reason === 'stop') {
+                        try {
+                            // Make a separate API call to get the full response with citations
+                            const fullResponse = await client.chat.completions.create({
+                                model: actualModelName,
+                                messages: formattedMessages
+                            });
+                            
+                            if (fullResponse.choices?.[0]?.message?.citations) {
+                                const citations = fullResponse.choices[0].message.citations;
+                                console.log('Perplexity citations from streaming response:', JSON.stringify(citations, null, 2));
+                                
+                                if (citations && citations.length > 0) {
+                                    // Add a section for citations
+                                    const citationsText = '\n\n**Sources:**\n' + 
+                                        citations.map((citation, index) => {
+                                            const title = citation.title || 'Source';
+                                            const url = citation.url || '#';
+                                            return `${index + 1}. [${title}](${url})`;
+                                        }).join('\n');
+                                    
+                                    // Send citations as a separate chunk
+                                    fullResponseContent += citationsText;
+                                    sendSse({ type: 'chunk', content: citationsText });
+                                    
+                                    // Also send the raw citations data for the frontend to use
+                                    sendSse({ 
+                                        type: 'citations', 
+                                        citations: citations 
+                                    });
+                                    
+                                    // Store citations for later use when saving to DB
+                                    fullCitations = citations;
+                                }
+                            }
+                        } catch (citationError) {
+                            console.error('Error fetching citations:', citationError);
+                        }
+                    }
+                }
                  // Check for reasoning_content
                  if (delta?.reasoning_content) {
                     const reasoningChunk = delta.reasoning_content;
@@ -504,7 +566,9 @@ exports.addMessageToSession = async (req, res, next) => {
                         content: finalAiContent, 
                         modelUsed: actualModelUsed,
                         // Only add reasoningContent if it's not empty
-                        ...(finalReasoningContent && { reasoningContent: finalReasoningContent }) 
+                        ...(finalReasoningContent && { reasoningContent: finalReasoningContent }),
+                        // Add citations if this is a Perplexity response and we have citations
+                        ...(providerUsed === 'Perplexity' && fullCitations.length > 0 && { citations: fullCitations })
                     };
                     console.log("Attempting to save AI message (streaming):", JSON.stringify(messageToSave, null, 2)); // Log message details
                     const savedMessage = await ChatMessage.create(messageToSave);
@@ -591,11 +655,41 @@ exports.addMessageToSession = async (req, res, next) => {
             }
 
             // 5. Save the AI's response message
+            let citations = [];
+            
+            // Extract citations if this is a Perplexity response
+            if (providerUsed === 'Perplexity') {
+                try {
+                    // Make a separate API call to get the full response with citations
+                    const clientOptions = { apiKey: apiKeyToUse };
+                    clientOptions.baseURL = 'https://api.perplexity.ai';
+                    const client = new OpenAI(clientOptions);
+                    
+                    // For Perplexity, strip the "perplexity/" prefix from the model name
+                    const actualModelName = actualModelUsed.startsWith('perplexity/') 
+                        ? actualModelUsed.substring('perplexity/'.length) 
+                        : actualModelUsed;
+                    
+                    const fullResponse = await client.chat.completions.create({
+                        model: actualModelName,
+                        messages: formattedMessages
+                    });
+                    
+                    if (fullResponse.choices?.[0]?.message?.citations) {
+                        citations = fullResponse.choices[0].message.citations;
+                        console.log('Perplexity citations from non-streaming response:', JSON.stringify(citations, null, 2));
+                    }
+                } catch (citationError) {
+                    console.error('Error fetching citations for non-streaming response:', citationError);
+                }
+            }
+            
             const aiMessage = await ChatMessage.create({
                 session: sessionId,
                 sender: 'ai',
                 content: aiResponseContent, // Save the complete response content
-                modelUsed: actualModelUsed
+                modelUsed: actualModelUsed,
+                ...(providerUsed === 'Perplexity' && citations.length > 0 && { citations })
             });
             console.log("Successfully saved final AI message to DB (non-streaming).");
 

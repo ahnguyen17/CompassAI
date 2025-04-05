@@ -35,7 +35,7 @@ const DEFAULT_MODELS = {
     'OpenAI': 'gpt-3.5-turbo',
     'Gemini': 'gemini-1.5-flash-latest',
     'DeepSeek': 'deepseek-chat', // Added DeepSeek default
-    'Perplexity': 'sonar' // Updated Perplexity default
+    'Perplexity': 'perplexity/sonar' // Updated Perplexity default with prefix
 };
 
 // Helper function to find provider for a given model

@@ -34,13 +34,13 @@ const AVAILABLE_MODELS = {
         "deepseek-coder",
         "deepseek-reasoner" // Added new model
     ],
-    'Perplexity': [ // Added Perplexity
-        "sonar-deep-research",
-        "sonar-reasoning-pro",
-        "sonar-reasoning",
-        "sonar-pro",
-        "sonar",
-        "r1-1776"
+    'Perplexity': [ // Added Perplexity with prefix
+        "perplexity/sonar-deep-research",
+        "perplexity/sonar-reasoning-pro",
+        "perplexity/sonar-reasoning",
+        "perplexity/sonar-pro",
+        "perplexity/sonar",
+        "perplexity/r1-1776"
     ]
 };
 

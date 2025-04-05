@@ -29,6 +29,7 @@ interface ChatMessage {
     timestamp: string; 
     modelUsed?: string | null; 
     reasoningContent?: string | null; // Add optional reasoning content
+    citations?: any[]; // Add optional citations array
     fileInfo?: { filename: string; originalname: string; mimetype: string; size: number; path: string; } 
 }
 
@@ -492,17 +493,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                     </details>
                                 )}
 
-                                {/* --- AI Bubble + Button Wrapper --- */}
-                                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                                    {/* Pass original/full content to copy button */}
-                                    <CopyButton textToCopy={streamingMessageId === msg._id ? streamingMessageContent : msg.content} /> 
-                                    <div
-                                    className={`${styles.messageBubble}`}
-                                    style={{
-                                        background: isDarkMode ? '#3a3d41' : '#e9ecef', // AI Background
-                                        color: isDarkMode ? '#e0e0e0' : '#343a40', // AI Text Color
-                                    }}
-                                >
+                                    {/* --- AI Bubble + Button Wrapper --- */}
+                                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                        {/* Pass original/full content to copy button */}
+                                        <CopyButton textToCopy={streamingMessageId === msg._id ? streamingMessageContent : msg.content} /> 
+                                        <div
+                                        className={`${styles.messageBubble}`}
+                                        style={{
+                                            background: isDarkMode ? '#3a3d41' : '#e9ecef', // AI Background
+                                            color: isDarkMode ? '#e0e0e0' : '#343a40', // AI Text Color
+                                        }}
+                                    >
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm]}
                                         components={{
@@ -540,6 +541,40 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                                     </ReactMarkdown>
                                 </div>
                             </div>
+
+                            {/* Citations Bubble (if available) */}
+                            {msg.citations && msg.citations.length > 0 && (
+                                <div style={{ display: 'flex', alignItems: 'flex-end', marginTop: '8px' }}>
+                                    <div className={`${styles.messageBubble}`} style={{
+                                        background: isDarkMode ? '#2a2a2a' : '#f0f0f0', // Slightly different background
+                                        color: isDarkMode ? '#e0e0e0' : '#343a40',
+                                        fontSize: '0.9em',
+                                        marginLeft: '30px' // Indent the citations bubble
+                                    }}>
+                                        <div style={{ marginBottom: '5px', fontWeight: 'bold' }}>Sources:</div>
+                                        {msg.citations.map((citation, index) => (
+                                            <div key={index} style={{ marginBottom: '8px' }}>
+                                                <div style={{ fontWeight: 'bold' }}>{index + 1}. {citation.title || 'Source'}</div>
+                                                {citation.url && (
+                                                    <a 
+                                                        href={citation.url} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        style={{ color: isDarkMode ? '#64b5f6' : '#007bff', wordBreak: 'break-all' }}
+                                                    >
+                                                        {citation.url}
+                                                    </a>
+                                                )}
+                                                {citation.snippet && (
+                                                    <div style={{ marginTop: '4px', fontStyle: 'italic', opacity: 0.8 }}>
+                                                        "{citation.snippet}"
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
 

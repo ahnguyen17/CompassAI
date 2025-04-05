@@ -34,7 +34,8 @@ const DEFAULT_MODELS = {
     'Anthropic': 'claude-3-haiku-20240307',
     'OpenAI': 'gpt-3.5-turbo',
     'Gemini': 'gemini-1.5-flash-latest',
-    'DeepSeek': 'deepseek-chat' // Added DeepSeek default
+    'DeepSeek': 'deepseek-chat', // Added DeepSeek default
+    'Perplexity': 'llama-3.1-sonar-small-128k-chat' // Added Perplexity default
 };
 
 // Helper function to find provider for a given model
@@ -42,7 +43,9 @@ const findProviderForModel = (modelName) => {
     for (const [provider, models] of Object.entries(AVAILABLE_MODELS)) {
         if (models.includes(modelName)) return provider;
     }
+    // Check DeepSeek and Perplexity explicitly if not found above
     if (AVAILABLE_MODELS['DeepSeek']?.includes(modelName)) return 'DeepSeek';
+    if (AVAILABLE_MODELS['Perplexity']?.includes(modelName)) return 'Perplexity';
     return null;
 };
 
@@ -56,8 +59,8 @@ const formatMessagesForProvider = (providerName, history, combinedContentForAI) 
         // Skip empty messages unless it's the last user message (which might just be a file)
         if (!messageContent && !isLastUserMessage) return null;
 
-        // DeepSeek uses OpenAI format
-        if (providerName === 'Anthropic' || providerName === 'OpenAI' || providerName === 'DeepSeek')
+        // DeepSeek and Perplexity use OpenAI format
+        if (providerName === 'Anthropic' || providerName === 'OpenAI' || providerName === 'DeepSeek' || providerName === 'Perplexity')
             return { role: msg.sender === 'user' ? 'user' : 'assistant', content: messageContent || "" }; // Ensure content is at least ""
         if (providerName === 'Gemini')
             return { role: msg.sender === 'user' ? 'user' : 'model', parts: [{ text: messageContent || "" }] }; // Ensure text is at least ""
@@ -66,9 +69,9 @@ const formatMessagesForProvider = (providerName, history, combinedContentForAI) 
 
     let formattedMessages = historyForProvider;
 
-    // Gemini and DeepSeek specific formatting: remove leading assistant/model message, ensure alternating roles
-    if (providerName === 'Gemini' || providerName === 'DeepSeek') {
-        const assistantRole = providerName === 'Gemini' ? 'model' : 'assistant';
+    // Gemini, DeepSeek, Perplexity specific formatting: remove leading assistant/model message, ensure alternating roles
+    if (providerName === 'Gemini' || providerName === 'DeepSeek' || providerName === 'Perplexity') {
+        const assistantRole = providerName === 'Gemini' ? 'model' : 'assistant'; // Perplexity uses 'assistant' like OpenAI
         if (formattedMessages.length > 0 && formattedMessages[0].role === assistantRole) {
             formattedMessages.shift(); // Remove leading assistant/model message
         }
@@ -96,10 +99,12 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
                 messages: formattedMessages
             });
             if (msg.content?.[0]?.type === 'text') aiResponseContent = msg.content[0].text;
-        } else if (providerName === 'OpenAI' || providerName === 'DeepSeek') { // Combined OpenAI and DeepSeek
+        } else if (providerName === 'OpenAI' || providerName === 'DeepSeek' || providerName === 'Perplexity') { // Combined OpenAI, DeepSeek, Perplexity
             const clientOptions = { apiKey };
             if (providerName === 'DeepSeek') {
                 clientOptions.baseURL = 'https://api.deepseek.com/v1';
+            } else if (providerName === 'Perplexity') {
+                clientOptions.baseURL = 'https://api.perplexity.ai';
             }
             const client = new OpenAI(clientOptions);
             const completion = await client.chat.completions.create({
@@ -153,10 +158,12 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
                 }
             }
         }
-        else if (providerName === 'OpenAI' || providerName === 'DeepSeek') {
+        else if (providerName === 'OpenAI' || providerName === 'DeepSeek' || providerName === 'Perplexity') { // Add Perplexity
             const clientOptions = { apiKey };
             if (providerName === 'DeepSeek') {
                 clientOptions.baseURL = 'https://api.deepseek.com/v1';
+            } else if (providerName === 'Perplexity') {
+                clientOptions.baseURL = 'https://api.perplexity.ai';
             }
 
             const client = new OpenAI(clientOptions);

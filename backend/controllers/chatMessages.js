@@ -48,13 +48,16 @@ const DEFAULT_MODELS = {
 
 // Helper function to find provider for a given model
 const findProviderForModel = (modelName) => {
-    // Now that Perplexity is in AVAILABLE_MODELS, the explicit checks below are redundant but harmless
+    // Special case for Perplexity models which include the "perplexity/" prefix
+    if (modelName.startsWith('perplexity/')) {
+        return 'Perplexity';
+    }
+    
+    // Standard check for other providers
     for (const [provider, models] of Object.entries(AVAILABLE_MODELS)) {
         if (models.includes(modelName)) return provider;
     }
-    // Explicit checks (now redundant but kept for safety/clarity)
-    // if (AVAILABLE_MODELS['DeepSeek']?.includes(modelName)) return 'DeepSeek'; // Already covered by loop
-    // if (AVAILABLE_MODELS['Perplexity']?.includes(modelName)) return 'Perplexity'; // Already covered by loop
+    
     return null;
 };
 

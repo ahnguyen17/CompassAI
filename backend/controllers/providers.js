@@ -35,12 +35,12 @@ const AVAILABLE_MODELS = {
         "deepseek-reasoner" // Added new model
     ],
     'Perplexity': [ // Added Perplexity
-        "llama-3.1-sonar-small-128k-online",
-        "llama-3.1-sonar-large-128k-online",
-        "llama-3.1-sonar-small-128k-chat",
-        "llama-3.1-sonar-large-128k-chat",
-        "llama-3.1-8b-instruct",
-        "llama-3.1-70b-instruct"
+        "sonar-deep-research",
+        "sonar-reasoning-pro",
+        "sonar-reasoning",
+        "sonar-pro",
+        "sonar",
+        "r1-1776"
     ]
 };
 

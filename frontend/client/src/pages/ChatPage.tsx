@@ -269,7 +269,13 @@ const ChatPage: React.FC = () => { // Removed props
                                   const finalReasoning = accumulatedReasoning || null;
                                   setMessages(prev => prev.map(msg =>
                                       msg._id === optimisticAiMessageId
-                                          ? { ...msg, content: finalContent, reasoningContent: finalReasoning } // Add reasoningContent here
+                                          ? { 
+                                              ...msg, 
+                                              content: finalContent, 
+                                              reasoningContent: finalReasoning,
+                                              // Preserve citations that were set earlier
+                                              // This ensures citations are not lost when the message is updated
+                                            } 
                                           : msg
                                   ));
                                   setStreamingMessageId(null);
@@ -291,7 +297,12 @@ const ChatPage: React.FC = () => { // Removed props
               const finalReasoningOnEnd = accumulatedReasoning || null;
               setMessages(prev => prev.map(msg =>
                   msg._id === optimisticAiMessageId
-                      ? { ...msg, content: finalContent, reasoningContent: finalReasoningOnEnd }
+                      ? { 
+                          ...msg, 
+                          content: finalContent, 
+                          reasoningContent: finalReasoningOnEnd
+                          // Preserve citations that were set earlier
+                        }
                       : msg
               ));
               setStreamingMessageId(null);

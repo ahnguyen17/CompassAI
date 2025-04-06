@@ -587,8 +587,11 @@ const ChatPage: React.FC = () => { // Removed props
                             </div>
 
                             {/* Citations Bubble (if available) */}
-                            {msg.citations && msg.citations.length > 0 && (
-                                <div style={{ display: 'flex', alignItems: 'flex-end', marginTop: '8px' }}>
+                            {(() => {
+                                // Debug log for citations
+                                console.log(`Message ${msg._id} citations:`, msg.citations);
+                                return msg.citations && msg.citations.length > 0 && (
+                                    <div style={{ display: 'flex', alignItems: 'flex-end', marginTop: '8px' }}>
                                     <div className={`${styles.messageBubble}`} style={{
                                         background: isDarkMode ? '#2a2a2a' : '#f0f0f0', // Slightly different background
                                         color: isDarkMode ? '#e0e0e0' : '#343a40',
@@ -618,7 +621,8 @@ const ChatPage: React.FC = () => { // Removed props
                                         ))}
                                     </div>
                                 </div>
-                            )}
+                                );
+                            })()}
                         </>
                     )}
 

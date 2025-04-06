@@ -140,6 +140,8 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
                 if (providerName === 'Perplexity' && completion.choices[0].message.citations) {
                     extractedCitations = completion.choices[0].message.citations; // Store raw citations
                     console.log('Perplexity citations (non-streaming):', JSON.stringify(extractedCitations, null, 2));
+                    console.log('Citations type:', typeof extractedCitations);
+                    console.log('Citations length:', extractedCitations.length);
                     // DO NOT append formatted citations to aiResponseContent here anymore
                     // The frontend will handle rendering from the 'citations' field
                 }
@@ -674,9 +676,22 @@ exports.addMessageToSession = async (req, res, next) => {
                 // Add citations if they exist in the result object
                 ...(apiResult.citations && apiResult.citations.length > 0 && { citations: apiResult.citations })
             };
+            
+            // Debug log the message data before saving
+            console.log('Saving AI message with data:', JSON.stringify({
+                content: apiResult.content?.substring(0, 100) + '...',
+                modelUsed: actualModelUsed,
+                hasCitations: apiResult.citations && apiResult.citations.length > 0,
+                citationsCount: apiResult.citations?.length || 0
+            }, null, 2));
 
             const aiMessage = await ChatMessage.create(aiMessageData);
             console.log("Successfully saved final AI message to DB (non-streaming).");
+            
+            // Debug log the saved message to verify citations were saved
+            console.log('Saved message ID:', aiMessage._id);
+            console.log('Saved message has citations:', !!aiMessage.citations);
+            console.log('Saved citations count:', aiMessage.citations?.length || 0);
 
             // 6. Send back the single AI response
             res.status(201).json({

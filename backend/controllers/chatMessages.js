@@ -52,12 +52,12 @@ const findProviderForModel = (modelName) => {
     if (modelName.startsWith('perplexity/')) {
         return 'Perplexity';
     }
-    
+
     // Standard check for other providers
     for (const [provider, models] of Object.entries(AVAILABLE_MODELS)) {
         if (models.includes(modelName)) return provider;
     }
-    
+
     return null;
 };
 
@@ -96,8 +96,10 @@ const formatMessagesForProvider = (providerName, history, combinedContentForAI) 
 
 
 // Helper function for non-streaming API calls (used for title generation AND non-streaming responses)
+// Returns an object { content: string | null, citations: Array | null }
 const callApi = async (providerName, apiKey, modelToUse, history, combinedContentForAI) => {
     let aiResponseContent = null;
+    let extractedCitations = null; // Initialize citations as null
     // Pass the *full* history including the latest user message for formatting
     const formattedMessages = formatMessagesForProvider(providerName, history, combinedContentForAI);
 
@@ -120,12 +122,12 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
             }
             const client = new OpenAI(clientOptions);
             // For Perplexity, strip the "perplexity/" prefix from the model name
-            const actualModelName = providerName === 'Perplexity' && modelToUse.startsWith('perplexity/') 
-                ? modelToUse.substring('perplexity/'.length) 
+            const actualModelName = providerName === 'Perplexity' && modelToUse.startsWith('perplexity/')
+                ? modelToUse.substring('perplexity/'.length)
                 : modelToUse;
-            
+
             console.log(`Using model name for ${providerName} API: ${actualModelName}`);
-            
+
             const completion = await client.chat.completions.create({
                 model: actualModelName,
                 messages: formattedMessages
@@ -133,23 +135,13 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
             if (completion.choices?.[0]?.message) {
                 // Extract content
                 aiResponseContent = completion.choices[0].message.content || '';
-                
+
                 // Extract citations if this is a Perplexity response
                 if (providerName === 'Perplexity' && completion.choices[0].message.citations) {
-                    // Log the citations for debugging
-                    console.log('Perplexity citations:', JSON.stringify(completion.choices[0].message.citations, null, 2));
-                    
-                    // Process citations and append them to the response
-                    const citations = completion.choices[0].message.citations;
-                    if (citations && citations.length > 0) {
-                        // Add a section for citations at the end of the response
-                        aiResponseContent += '\n\n**Sources:**\n';
-                        citations.forEach((citation, index) => {
-                            const title = citation.title || 'Source';
-                            const url = citation.url || '#';
-                            aiResponseContent += `${index + 1}. [${title}](${url})\n`;
-                        });
-                    }
+                    extractedCitations = completion.choices[0].message.citations; // Store raw citations
+                    console.log('Perplexity citations (non-streaming):', JSON.stringify(extractedCitations, null, 2));
+                    // DO NOT append formatted citations to aiResponseContent here anymore
+                    // The frontend will handle rendering from the 'citations' field
                 }
             }
         } else if (providerName === 'Gemini') {
@@ -162,12 +154,18 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
             const result = await chat.sendMessage(lastUserMessageParts);
             if (result.response?.text) aiResponseContent = result.response.text();
         }
-        if (!aiResponseContent) console.error(`Unexpected ${providerName} API response structure.`);
+        // Add more specific logging if aiResponseContent is null after try block
+        if (aiResponseContent === null) {
+             console.error(`Failed to extract content from ${providerName} API response for model ${modelToUse}. Response structure might be unexpected or content was empty.`);
+        }
     } catch (apiError) {
-        console.error(`${providerName} API Error (Non-Streaming) using model ${modelToUse}:`, apiError.message || apiError);
+        // Log the full error object for more details
+        console.error(`${providerName} API Error (Non-Streaming) using model ${modelToUse}:`, apiError);
         aiResponseContent = null; // Ensure null is returned on error
+        extractedCitations = null; // Ensure citations are null on error too
     }
-    return aiResponseContent;
+    // Return both content and citations
+    return { content: aiResponseContent, citations: extractedCitations };
 };
 
 // Helper function for streaming API calls
@@ -208,12 +206,12 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
 
             const client = new OpenAI(clientOptions);
             // For Perplexity, strip the "perplexity/" prefix from the model name
-            const actualModelName = providerName === 'Perplexity' && modelToUse.startsWith('perplexity/') 
-                ? modelToUse.substring('perplexity/'.length) 
+            const actualModelName = providerName === 'Perplexity' && modelToUse.startsWith('perplexity/')
+                ? modelToUse.substring('perplexity/'.length)
                 : modelToUse;
-            
+
             console.log(`Using model name for ${providerName} API streaming: ${actualModelName}`);
-            
+
             const stream = await client.chat.completions.create({
                 model: actualModelName,
                 messages: formattedMessages,
@@ -222,8 +220,8 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
 
             for await (const chunk of stream) {
                 // Log the entire chunk structure for inspection
-                // console.log("Stream Chunk:", JSON.stringify(chunk, null, 2)); 
-                
+                // console.log("Stream Chunk:", JSON.stringify(chunk, null, 2));
+
                 const delta = chunk.choices[0]?.delta;
                 const contentChunk = delta?.content || '';
 
@@ -232,10 +230,10 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
                     sendSse({ type: 'chunk', content: contentChunk });
                 } else if (delta && Object.keys(delta).length > 0) {
                     // Log the full delta object if it exists but has no 'content'
-                    console.log("Stream Chunk Delta (FULL):", JSON.stringify(delta, null, 2)); 
+                    console.log("Stream Chunk Delta (FULL):", JSON.stringify(delta, null, 2));
                 } else if (chunk.choices[0]?.finish_reason) {
                     console.log("Stream Chunk Finish Reason:", chunk.choices[0].finish_reason);
-                    
+
                     // If this is the end of a Perplexity response, check for citations
                     if (providerName === 'Perplexity' && chunk.choices[0].finish_reason === 'stop') {
                         try {
@@ -244,36 +242,25 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
                                 model: actualModelName,
                                 messages: formattedMessages
                             });
-                            
+
                             if (fullResponse.choices?.[0]?.message?.citations) {
                                 const citations = fullResponse.choices[0].message.citations;
                                 console.log('Perplexity citations from streaming response:', JSON.stringify(citations, null, 2));
-                                
+
                                 if (citations && citations.length > 0) {
-                                    // Add a section for citations
-                                    const citationsText = '\n\n**Sources:**\n' + 
-                                        citations.map((citation, index) => {
-                                            const title = citation.title || 'Source';
-                                            const url = citation.url || '#';
-                                            return `${index + 1}. [${title}](${url})`;
-                                        }).join('\n');
-                                    
-                                    // Send citations as a separate chunk
-                                    fullResponseContent += citationsText;
-                                    sendSse({ type: 'chunk', content: citationsText });
-                                    
-                                    // Also send the raw citations data for the frontend to use
-                                    sendSse({ 
-                                        type: 'citations', 
-                                        citations: citations 
+                                    // DO NOT append formatted citations to content here
+                                    // Send the raw citations data for the frontend to use
+                                    sendSse({
+                                        type: 'citations',
+                                        citations: citations
                                     });
-                                    
+
                                     // Store citations for later use when saving to DB
                                     fullCitations = citations;
                                 }
                             }
                         } catch (citationError) {
-                            console.error('Error fetching citations:', citationError);
+                            console.error('Error fetching citations during stream end:', citationError);
                         }
                     }
                 }
@@ -283,7 +270,7 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
                     console.log("Stream Chunk Reasoning Content:", reasoningChunk);
                     fullReasoningContent += reasoningChunk; // Accumulate reasoning
                     // Send reasoning content chunk
-                    sendSse({ type: 'reasoning_chunk', content: reasoningChunk }); 
+                    sendSse({ type: 'reasoning_chunk', content: reasoningChunk });
                  }
              }
          }
@@ -310,7 +297,7 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
     }
 
     // Return accumulated content, reasoning, citations and error status
-    return { fullResponseContent, fullReasoningContent, fullCitations, errorOccurred }; 
+    return { fullResponseContent, fullReasoningContent, fullCitations, errorOccurred };
 };
 
 // @desc    Get all messages for a specific chat session
@@ -370,7 +357,7 @@ exports.addMessageToSession = async (req, res, next) => {
                 path: uploadedFile.path.replace(/^.*[\\\/]uploads[\\\/]/, 'uploads/')
             } : undefined
         };
-        
+
         // Log the file path for debugging
         if (uploadedFile) {
             console.log('Original file path:', uploadedFile.path);
@@ -424,15 +411,17 @@ exports.addMessageToSession = async (req, res, next) => {
                     // Pass only the titlePrompt as the history/content for this specific call
                     const titleHistory = [{ _id: 'temp-title-user', sender: 'user', content: titlePrompt, timestamp: new Date().toISOString() }];
                     // Pass titlePrompt as the last message content argument
-                    generatedTitle = await callApi(titleProvider, titleApiKey, titleModel, titleHistory, titlePrompt); 
+                    // callApi now returns an object { content, citations }
+                    const titleResult = await callApi(titleProvider, titleApiKey, titleModel, titleHistory, titlePrompt);
+                    generatedTitle = titleResult.content; // Extract content for title
 
                     if (generatedTitle) {
                         // More robust cleanup: trim, remove quotes/periods, take first line/part, truncate
                         let cleanedTitle = generatedTitle.trim().replace(/^"|"$/g, '').replace(/\.$/, '');
                         // Split by newline or colon and take the first part
-                        cleanedTitle = cleanedTitle.split(/[\n:]/)[0].trim(); 
+                        cleanedTitle = cleanedTitle.split(/[\n:]/)[0].trim();
                         // Truncate to a max length (e.g., 50 chars) as a final safety measure
-                        const maxLength = 50; 
+                        const maxLength = 50;
                         if (cleanedTitle.length > maxLength) {
                             cleanedTitle = cleanedTitle.substring(0, maxLength) + '...';
                         }
@@ -499,14 +488,13 @@ exports.addMessageToSession = async (req, res, next) => {
                     } else { console.warn(`Streaming: Requested model ${requestedModel} not found. Falling back...`); }
                 }
 
-                // Removed declaration from here: let finalReasoningContent = ''; 
                 // 2. Attempt API call (or fallback if needed)
                 if (providerToTry && modelToTry && apiKeyToUse) {
                     const result = await callApiStream(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI, sendSse);
                     if (!result.errorOccurred) {
-                        providerUsed = providerToTry; 
-                        actualModelUsed = modelToTry; 
-                        finalAiContent = result.fullResponseContent; 
+                        providerUsed = providerToTry;
+                        actualModelUsed = modelToTry;
+                        finalAiContent = result.fullResponseContent;
                         finalReasoningContent = result.fullReasoningContent;
                         fullCitations = result.fullCitations; // Capture citations
                     } else {
@@ -515,9 +503,9 @@ exports.addMessageToSession = async (req, res, next) => {
                         if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
                             const defaultResult = await callApiStream(providerToTry, apiKeyToUse, defaultModelForProvider, history, combinedContentForAI, sendSse);
                             if (!defaultResult.errorOccurred) {
-                                providerUsed = providerToTry; 
-                                actualModelUsed = defaultModelForProvider; 
-                                finalAiContent = defaultResult.fullResponseContent; 
+                                providerUsed = providerToTry;
+                                actualModelUsed = defaultModelForProvider;
+                                finalAiContent = defaultResult.fullResponseContent;
                                 finalReasoningContent = defaultResult.fullReasoningContent;
                                 fullCitations = defaultResult.fullCitations; // Capture citations
                             } else { console.warn(`Streaming: Default model ${defaultModelForProvider} for ${providerToTry} also failed. Falling back...`); }
@@ -540,9 +528,9 @@ exports.addMessageToSession = async (req, res, next) => {
                             if (!fallbackModel) continue;
                             const fallbackResult = await callApiStream(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, combinedContentForAI, sendSse);
                             if (!fallbackResult.errorOccurred) {
-                                providerUsed = fallbackProvider; 
-                                actualModelUsed = fallbackModel; 
-                                finalAiContent = fallbackResult.fullResponseContent; 
+                                providerUsed = fallbackProvider;
+                                actualModelUsed = fallbackModel;
+                                finalAiContent = fallbackResult.fullResponseContent;
                                 finalReasoningContent = fallbackResult.fullReasoningContent;
                                 fullCitations = fallbackResult.fullCitations; // Capture citations
                                 console.log(`Streaming Fallback successful: ${providerUsed}/${actualModelUsed}.`);
@@ -573,10 +561,10 @@ exports.addMessageToSession = async (req, res, next) => {
             // 6. Save final AI message to DB *after* streaming
             if (!streamError && finalAiContent !== null && actualModelUsed) {
                 try {
-                    const messageToSave = { 
-                        session: sessionId, 
-                        sender: 'ai', 
-                        content: finalAiContent, 
+                    const messageToSave = {
+                        session: sessionId,
+                        sender: 'ai',
+                        content: finalAiContent,
                         modelUsed: actualModelUsed,
                         // Only add reasoningContent if it's not empty
                         ...(finalReasoningContent && { reasoningContent: finalReasoningContent }),
@@ -586,11 +574,11 @@ exports.addMessageToSession = async (req, res, next) => {
                     console.log("Attempting to save AI message (streaming):", JSON.stringify(messageToSave, null, 2)); // Log message details
                     const savedMessage = await ChatMessage.create(messageToSave);
                     console.log("Successfully saved final AI message to DB (streaming). ID:", savedMessage._id); // Log success and ID
-                } catch (dbError) { 
+                } catch (dbError) {
                     console.error("!!! Error saving final AI message to DB (streaming):", dbError); // Make error more prominent
                 }
-            } else if (!streamError && finalAiContent === null) { 
-                console.warn("Streaming finished, but final AI content was null. Not saving to DB."); 
+            } else if (!streamError && finalAiContent === null) {
+                console.warn("Streaming finished, but final AI content was null. Not saving to DB.");
             } else if (streamError) {
                  console.warn("Stream ended with error, not saving AI message to DB.");
             }
@@ -598,7 +586,7 @@ exports.addMessageToSession = async (req, res, next) => {
         } else {
             // --- Non-Streaming Logic ---
             console.log("Processing request with streaming disabled.");
-            let aiResponseContent = null;
+            let apiResult = null; // Will hold { content, citations }
             let providerUsed = null;
             let actualModelUsed = null;
 
@@ -621,16 +609,16 @@ exports.addMessageToSession = async (req, res, next) => {
 
             // 2. Attempt API call (or fallback if needed)
             if (providerToTry && modelToTry && apiKeyToUse) {
-                aiResponseContent = await callApi(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI);
-                if (aiResponseContent !== null) {
+                apiResult = await callApi(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI);
+                if (apiResult && apiResult.content !== null) {
                     providerUsed = providerToTry; actualModelUsed = modelToTry;
                     console.log(`Non-Streaming: Success ${providerUsed}/${actualModelUsed}`);
                 } else {
                     console.warn(`Non-Streaming: Initial attempt ${providerToTry}/${modelToTry} failed. Trying default...`);
                     const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
                     if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
-                        aiResponseContent = await callApi(providerToTry, apiKeyToUse, defaultModelForProvider, history, combinedContentForAI);
-                        if (aiResponseContent !== null) {
+                        apiResult = await callApi(providerToTry, apiKeyToUse, defaultModelForProvider, history, combinedContentForAI);
+                        if (apiResult && apiResult.content !== null) {
                             providerUsed = providerToTry; actualModelUsed = defaultModelForProvider;
                             console.log(`Non-Streaming: Success ${providerUsed}/DEFAULT ${actualModelUsed}`);
                         } else { console.warn(`Non-Streaming: Default model ${defaultModelForProvider} for ${providerToTry} also failed. Falling back...`); }
@@ -643,7 +631,8 @@ exports.addMessageToSession = async (req, res, next) => {
                 console.log("Non-Streaming: Attempting sequential provider fallback...");
                 const enabledKeysSorted = await ApiKey.find({ isEnabled: true }).sort({ priority: 1 });
                 if (!enabledKeysSorted || enabledKeysSorted.length === 0) {
-                    console.error("Non-Streaming: No enabled API keys for fallback."); aiResponseContent = 'Sorry, no API providers are available.';
+                    console.error("Non-Streaming: No enabled API keys for fallback.");
+                    apiResult = { content: 'Sorry, no API providers are available.', citations: null }; // Provide default error content
                 } else {
                     for (const apiKeyEntry of enabledKeysSorted) {
                         const fallbackProvider = apiKeyEntry.providerName;
@@ -651,8 +640,8 @@ exports.addMessageToSession = async (req, res, next) => {
                         console.log(`Non-Streaming Fallback: Trying ${fallbackProvider} (Priority: ${apiKeyEntry.priority})`);
                         const fallbackModel = DEFAULT_MODELS[fallbackProvider];
                         if (!fallbackModel) continue;
-                        aiResponseContent = await callApi(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, combinedContentForAI);
-                        if (aiResponseContent !== null) {
+                        apiResult = await callApi(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, combinedContentForAI);
+                        if (apiResult && apiResult.content !== null) {
                             providerUsed = fallbackProvider; actualModelUsed = fallbackModel;
                             console.log(`Non-Streaming Fallback successful: ${providerUsed}/${actualModelUsed}.`);
                             break;
@@ -664,49 +653,29 @@ exports.addMessageToSession = async (req, res, next) => {
             // 4. Handle final failure
             if (!providerUsed) {
                 console.error("Non-Streaming: Failed to get response from any provider.");
-                aiResponseContent = aiResponseContent || 'Sorry, I could not process that request.';
+                // Ensure apiResult has a default error content if it's still null
+                if (!apiResult || apiResult.content === null) {
+                    apiResult = { content: 'Sorry, I could not process that request.', citations: null };
+                }
+            }
+
+            // Check if we got a valid response content
+            if (!apiResult || apiResult.content === null) {
+                 console.error("Non-Streaming: Final AI response content is null. Sending error response.");
+                 return res.status(500).json({ success: false, error: 'Failed to get AI response' });
             }
 
             // 5. Save the AI's response message
-            let citations = [];
-            
-            // Extract citations if this is a Perplexity response
-            if (providerUsed === 'Perplexity') {
-                try {
-                    // Make a separate API call to get the full response with citations
-                    const clientOptions = { apiKey: apiKeyToUse };
-                    clientOptions.baseURL = 'https://api.perplexity.ai';
-                    const client = new OpenAI(clientOptions);
-                    
-                    // For Perplexity, strip the "perplexity/" prefix from the model name
-                    const actualModelName = actualModelUsed.startsWith('perplexity/') 
-                        ? actualModelUsed.substring('perplexity/'.length) 
-                        : actualModelUsed;
-                    
-                    // Format messages for the API call
-                    const messagesForCitations = formatMessagesForProvider(providerUsed, history, combinedContentForAI);
-                    
-                    const fullResponse = await client.chat.completions.create({
-                        model: actualModelName,
-                        messages: messagesForCitations
-                    });
-                    
-                    if (fullResponse.choices?.[0]?.message?.citations) {
-                        citations = fullResponse.choices[0].message.citations;
-                        console.log('Perplexity citations from non-streaming response:', JSON.stringify(citations, null, 2));
-                    }
-                } catch (citationError) {
-                    console.error('Error fetching citations for non-streaming response:', citationError);
-                }
-            }
-            
-            const aiMessage = await ChatMessage.create({
+            const aiMessageData = {
                 session: sessionId,
                 sender: 'ai',
-                content: aiResponseContent, // Save the complete response content
+                content: apiResult.content, // Use content from the result object
                 modelUsed: actualModelUsed,
-                ...(providerUsed === 'Perplexity' && citations.length > 0 && { citations })
-            });
+                // Add citations if they exist in the result object
+                ...(apiResult.citations && apiResult.citations.length > 0 && { citations: apiResult.citations })
+            };
+
+            const aiMessage = await ChatMessage.create(aiMessageData);
             console.log("Successfully saved final AI message to DB (non-streaming).");
 
             // 6. Send back the single AI response

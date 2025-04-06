@@ -12,11 +12,12 @@ import { useTranslation } from 'react-i18next';
 import styles from './ChatPage.module.css'; // Import CSS Module
 
 // --- Constants ---
-// Perplexity models known to potentially include <think> tags
-const PERPLEXITY_REASONING_MODELS = [
+// Models known to potentially include reasoning steps (<think> tags or similar)
+const REASONING_MODELS = [
     "perplexity/sonar-reasoning-pro",
     "perplexity/sonar-reasoning",
-    "perplexity/r1-1776"
+    "perplexity/r1-1776",
+    "deepseek-reasoner" // Added Deepseek Reasoner
 ];
 
 // --- Interfaces ---
@@ -479,7 +480,8 @@ const ChatPage: React.FC = () => { // Removed props
                             <>
                                 {/* --- Reasoning Section --- */}
                                 {/* Render if showReasoning is true AND (it's Deepseek with steps OR it's a PPLX reasoning model with parsed steps) */}
-                                {showReasoning && (reasoningSteps[msg._id] || (PERPLEXITY_REASONING_MODELS.includes(msg.modelUsed || '') && parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).reasoning)) && (
+                                {/* Render if showReasoning is true AND (it's Deepseek with steps OR it's a known reasoning model with parsed steps) */}
+                                {showReasoning && (reasoningSteps[msg._id] || (REASONING_MODELS.includes(msg.modelUsed || '') && parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).reasoning)) && (
                                     <details open={streamingMessageId === msg._id} style={{ marginBottom: '10px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
                                         <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
                                         <pre style={{
@@ -491,10 +493,10 @@ const ChatPage: React.FC = () => { // Removed props
                                             maxHeight: '200px', // Limit height
                                             overflowY: 'auto' // Allow scrolling
                                         }}>
-                                            {/* Display Deepseek reasoning OR parsed Perplexity reasoning */}
-                                            {PERPLEXITY_REASONING_MODELS.includes(msg.modelUsed || '')
+                                            {/* Display Deepseek reasoning OR parsed reasoning from other models */}
+                                            {REASONING_MODELS.includes(msg.modelUsed || '')
                                                 ? parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).reasoning
-                                                : reasoningSteps[msg._id]
+                                                : reasoningSteps[msg._id] // Assuming Deepseek reasoning is stored here if not parsed
                                             }
                                         </pre>
                                     </details>
@@ -540,8 +542,8 @@ const ChatPage: React.FC = () => { // Removed props
                                             }
                                         }}
                                     >
-                                        {/* Render parsed main content for PPLX reasoning models, otherwise full content */}
-                                        {PERPLEXITY_REASONING_MODELS.includes(msg.modelUsed || '')
+                                        {/* Render parsed main content for known reasoning models, otherwise full content */}
+                                        {REASONING_MODELS.includes(msg.modelUsed || '')
                                             ? parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).mainContent
                                             : (streamingMessageId === msg._id ? streamingMessageContent : msg.content)
                                         }
@@ -628,7 +630,7 @@ const ChatPage: React.FC = () => { // Removed props
                                   const newModel = e.target.value;
                                   setSelectedModel(newModel);
                                   // Automatically enable reasoning/streaming if a known reasoning model is selected
-                                  if (PERPLEXITY_REASONING_MODELS.includes(newModel)) {
+                                  if (REASONING_MODELS.includes(newModel)) {
                                       setShowReasoning(true);
                                   }
                               }}

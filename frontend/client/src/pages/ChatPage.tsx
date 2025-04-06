@@ -12,27 +12,34 @@ import { useTranslation } from 'react-i18next';
 import styles from './ChatPage.module.css'; // Import CSS Module
 
 // --- Constants ---
-// Models known to potentially include reasoning steps (<think> tags or similar)
+// Models known to potentially include reasoning steps (for auto-toggle)
 const REASONING_MODELS = [
     "perplexity/sonar-reasoning-pro",
     "perplexity/sonar-reasoning",
     "perplexity/r1-1776",
-    "deepseek-reasoner" // Added Deepseek Reasoner
+    "deepseek-reasoner"
+];
+
+// Models known to embed reasoning in <think> tags within main content
+const THINK_TAG_MODELS = [
+    "perplexity/sonar-reasoning-pro",
+    "perplexity/sonar-reasoning",
+    "perplexity/r1-1776"
 ];
 
 // --- Interfaces ---
 interface AvailableModels { [provider: string]: string[]; }
 interface ChatSession { _id: string; title: string; createdAt: string; isShared?: boolean; shareId?: string; }
 // Update ChatMessage interface to include optional reasoningContent
-interface ChatMessage { 
-    _id: string; 
-    sender: 'user' | 'ai'; 
-    content: string; 
-    timestamp: string; 
-    modelUsed?: string | null; 
+interface ChatMessage {
+    _id: string;
+    sender: 'user' | 'ai';
+    content: string;
+    timestamp: string;
+    modelUsed?: string | null;
     reasoningContent?: string | null; // Add optional reasoning content
     citations?: any[]; // Add optional citations array
-    fileInfo?: { filename: string; originalname: string; mimetype: string; size: number; path: string; } 
+    fileInfo?: { filename: string; originalname: string; mimetype: string; size: number; path: string; }
 }
 
 // Removed ChatPageProps interface
@@ -58,7 +65,7 @@ const ChatPage: React.FC = () => { // Removed props
   // State for streaming response
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [streamingMessageContent, setStreamingMessageContent] = useState<string>('');
-  const [reasoningSteps, setReasoningSteps] = useState<{ [messageId: string]: any[] }>({}); // State for reasoning steps
+  const [reasoningSteps, setReasoningSteps] = useState<{ [messageId: string]: string }>({}); // State for reasoning steps (store as string)
   const [showReasoning, setShowReasoning] = useState(false); // State for showing/hiding reasoning AND enabling streaming
   // const [isStreamingEnabled, setIsStreamingEnabled] = useState(true); // REMOVED - Merged with showReasoning
   const { t } = useTranslation();
@@ -83,65 +90,56 @@ const ChatPage: React.FC = () => { // Removed props
   const fetchAvailableModels = async () => { setLoadingModels(true); try { const response = await apiClient.get('/providers/models'); if (response.data?.success) setAvailableModels(response.data.data); else console.error("Failed to fetch available models"); } catch (err: any) { console.error("Error fetching available models:", err); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingModels(false); } };
   const handleDeleteSession = async (sessionId: string, sessionTitle: string) => { if (!window.confirm(`Are you sure you want to delete the chat "${sessionTitle || 'Untitled Chat'}"?`)) return; setDeleteLoading(sessionId); setError(''); try { const response = await apiClient.delete(`/chatsessions/${sessionId}`); if (response.data?.success) { setSessions(prev => prev.filter(s => s._id !== sessionId)); if (currentSession?._id === sessionId) { setCurrentSession(null); setMessages([]); navigate('/'); } } else { setError('Failed to delete chat session.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error deleting session.'); if (err.response?.status === 401) navigate('/login'); } finally { setDeleteLoading(null); } };
   const handleToggleShare = async () => { if (!currentSession) return; setShareLoading(true); setError(''); const newShareStatus = !currentSession.isShared; try { const response = await apiClient.put(`/chatsessions/${currentSession._id}`, { isShared: newShareStatus }); if (response.data?.success) { const updatedSession = response.data.data; setCurrentSession(updatedSession); setSessions(prev => prev.map(s => s._id === updatedSession._id ? updatedSession : s)); } else { setError('Failed to update sharing status.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error updating sharing status.'); if (err.response?.status === 401) navigate('/login'); } finally { setShareLoading(false); } };
-  const fetchMessages = async (sessionId: string) => { 
-      if (!sessionId) return; 
-      setLoadingMessages(true); 
-      setError(''); 
-      setMessages([]); 
+  const fetchMessages = async (sessionId: string) => {
+      if (!sessionId) return;
+      setLoadingMessages(true);
+      setError('');
+      setMessages([]);
       setReasoningSteps({}); // Clear old reasoning steps when fetching new messages
-      try { 
-          const response = await apiClient.get(`/chatsessions/${sessionId}/messages`); 
-          if (response.data?.success) { 
-              const fetchedMessages: ChatMessage[] = response.data.data; 
-              setMessages(fetchedMessages); 
-              
-              // Populate reasoningSteps state from fetched messages
-              const initialReasoningSteps: { [messageId: string]: any[] } = {};
-              fetchedMessages.forEach(msg => {
-                  if (msg.sender === 'ai' && msg.reasoningContent) {
-                      // Assuming reasoningContent is stored as a string, 
-                      // place it directly into the state for the corresponding message ID.
-                      // If it were stored as JSON/Array, you might need JSON.parse here.
-                      initialReasoningSteps[msg._id] = msg.reasoningContent as any; // Cast needed if type mismatch
-                  }
-              });
-              setReasoningSteps(initialReasoningSteps);
+      try {
+          const response = await apiClient.get(`/chatsessions/${sessionId}/messages`);
+          if (response.data?.success) {
+              const fetchedMessages: ChatMessage[] = response.data.data;
+              setMessages(fetchedMessages);
 
-              const lastAiMessage = [...fetchedMessages].reverse().find(m => m.sender === 'ai' && m.modelUsed); 
-              setSelectedModel(lastAiMessage?.modelUsed || ''); 
-          } else { 
-              setError('Failed to load messages for this session.'); 
-          } 
-      } catch (err: any) { 
-          setError(err.response?.data?.error || 'Error loading messages.'); 
-          if (err.response?.status === 401) navigate('/login'); 
-      } finally { 
-          setLoadingMessages(false); 
-      } 
+              // Populate reasoningSteps state from fetched messages (ensure it's string)
+              // No need to populate reasoningSteps here anymore, as it's handled during SSE or stored in msg.reasoningContent
+
+              const lastAiMessage = [...fetchedMessages].reverse().find(m => m.sender === 'ai' && m.modelUsed);
+              setSelectedModel(lastAiMessage?.modelUsed || '');
+          } else {
+              setError('Failed to load messages for this session.');
+          }
+      } catch (err: any) {
+          setError(err.response?.data?.error || 'Error loading messages.');
+          if (err.response?.status === 401) navigate('/login');
+      } finally {
+          setLoadingMessages(false);
+      }
   };
-  const handleSelectSession = (session: ChatSession) => { 
-      setCurrentSession(session); 
-      navigate(`/chat/${session._id}`); 
-      fetchMessages(session._id); 
+  const handleSelectSession = (session: ChatSession) => {
+      setCurrentSession(session);
+      navigate(`/chat/${session._id}`);
+      fetchMessages(session._id);
       setIsSidebarVisible(false); // Collapse sidebar on selection
   };
-  const handleNewChat = async () => { 
-      setError(''); 
-      try { 
-          const response = await apiClient.post('/chatsessions', { title: 'New Chat' }); 
-          if (response.data?.success) { 
-              const newSession: ChatSession = response.data.data; 
-              setSessions([newSession, ...sessions]); 
+  const handleNewChat = async () => {
+      setError('');
+      try {
+          const response = await apiClient.post('/chatsessions', { title: 'New Chat' });
+          if (response.data?.success) {
+              const newSession: ChatSession = response.data.data;
+              setSessions([newSession, ...sessions]);
               handleSelectSession(newSession); // This will select and fetch messages
-              setSelectedModel(''); 
+              setSelectedModel('');
               setIsSidebarVisible(false); // Collapse sidebar on new chat
-          } else { 
-              setError('Failed to create new chat.'); 
-          } 
-      } catch (err: any) { 
-          setError(err.response?.data?.error || 'Error creating chat.'); 
-          if (err.response?.status === 401) navigate('/login'); 
-      } 
+          } else {
+              setError('Failed to create new chat.');
+          }
+      } catch (err: any) {
+          setError(err.response?.data?.error || 'Error creating chat.');
+          if (err.response?.status === 401) navigate('/login');
+      }
   };
 
   // Combined Send Message Logic
@@ -195,15 +193,15 @@ const ChatPage: React.FC = () => { // Removed props
 
           try {
               // Add stream=true parameter for streaming requests
-              formData.append('stream', 'true'); 
+              formData.append('stream', 'true');
 
               // Get the base URL from the same source as apiClient
               const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
               // Use the full URL for fetch in production, or relative URL in development
-              const fetchUrl = apiBaseUrl 
+              const fetchUrl = apiBaseUrl
                   ? `${apiBaseUrl}/chatsessions/${sessionId}/messages` // Production: full URL without duplicate /api/v1
                   : `/api/v1/chatsessions/${sessionId}/messages`;      // Development: relative URL with /api/v1
-              
+
               console.log('Streaming fetch URL:', fetchUrl);
               const response = await fetch(fetchUrl, {
                   method: 'POST',
@@ -226,6 +224,7 @@ const ChatPage: React.FC = () => { // Removed props
               const decoder = new TextDecoder();
               let buffer = '';
               let finalContent = '';
+              let accumulatedReasoning = ''; // Local accumulator for reasoning during stream
 
               while (true) {
                   const { done, value } = await reader.read();
@@ -245,17 +244,19 @@ const ChatPage: React.FC = () => { // Removed props
                               } else if (jsonData.type === 'citations') {
                                   console.log('Received citations:', jsonData.citations);
                                   // Store citations in the message
-                                  setMessages(prev => prev.map(msg => 
-                                      msg._id === optimisticAiMessageId 
-                                          ? { ...msg, citations: jsonData.citations } 
+                                  setMessages(prev => prev.map(msg =>
+                                      msg._id === optimisticAiMessageId
+                                          ? { ...msg, citations: jsonData.citations }
                                           : msg
                                   ));
                               } else if (jsonData.type === 'reasoning_chunk') { // Handle reasoning chunks
                                   console.log('Received reasoning chunk:', jsonData.content);
-                                  // Accumulate reasoning content as a string
+                                  // Accumulate reasoning content as a string locally
+                                  accumulatedReasoning += jsonData.content;
+                                  // Update the temporary state for immediate display
                                   setReasoningSteps(prev => ({
                                       ...prev,
-                                      [optimisticAiMessageId]: (prev[optimisticAiMessageId] || '') + jsonData.content 
+                                      [optimisticAiMessageId]: accumulatedReasoning
                                   }));
                               } else if (jsonData.type === 'title_update' && currentSession) {
                                   setCurrentSession(prev => prev ? { ...prev, title: jsonData.title } : null);
@@ -263,13 +264,44 @@ const ChatPage: React.FC = () => { // Removed props
                               } else if (jsonData.type === 'error') {
                                   setError(`AI Error: ${jsonData.message}`); console.error('SSE Error Event:', jsonData.message); setStreamingMessageId(null); setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, content: `[Error: ${jsonData.message}]`, modelUsed: 'error' } : msg)); reader.cancel(); return;
                               } else if (jsonData.type === 'done') {
-                                  console.log('Stream finished.'); setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, content: finalContent } : msg)); setStreamingMessageId(null); setStreamingMessageContent(''); return;
+                                  console.log('Stream finished.');
+                                  // Get accumulated reasoning for this message from the local variable
+                                  const finalReasoning = accumulatedReasoning || null;
+                                  setMessages(prev => prev.map(msg =>
+                                      msg._id === optimisticAiMessageId
+                                          ? { ...msg, content: finalContent, reasoningContent: finalReasoning } // Add reasoningContent here
+                                          : msg
+                                  ));
+                                  setStreamingMessageId(null);
+                                  setStreamingMessageContent('');
+                                  // Clean up reasoningSteps state for the temp ID
+                                  setReasoningSteps(prev => {
+                                      const newState = {...prev};
+                                      delete newState[optimisticAiMessageId];
+                                      return newState;
+                                  });
+                                  return;
                               }
                           } catch (e) { console.error('Failed to parse SSE data:', e, 'Line:', line); }
                       }
                   }
               }
-              console.log('Stream ended without done event.'); setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, content: finalContent } : msg)); setStreamingMessageId(null); setStreamingMessageContent('');
+              // Handle stream ending without 'done' event (might happen on error/abort)
+              console.log('Stream ended without done event.');
+              const finalReasoningOnEnd = accumulatedReasoning || null;
+              setMessages(prev => prev.map(msg =>
+                  msg._id === optimisticAiMessageId
+                      ? { ...msg, content: finalContent, reasoningContent: finalReasoningOnEnd }
+                      : msg
+              ));
+              setStreamingMessageId(null);
+              setStreamingMessageContent('');
+              setReasoningSteps(prev => {
+                  const newState = {...prev};
+                  delete newState[optimisticAiMessageId];
+                  return newState;
+              });
+
 
           } catch (err: any) {
               if (err.name === 'AbortError') { console.log('Fetch aborted'); setError('Message sending cancelled.'); } else { console.error('Fetch error:', err); setError(err.message || 'Error sending message or processing stream.'); }
@@ -299,7 +331,7 @@ const ChatPage: React.FC = () => { // Removed props
           try {
               // Use apiClient.post (expects single JSON response with AI message)
               // Add stream=false parameter for non-streaming requests
-              formData.append('stream', 'false'); 
+              formData.append('stream', 'false');
 
               const response = await apiClient.post(`/chatsessions/${sessionId}/messages`, formData, {
                   headers: {
@@ -361,7 +393,7 @@ const ChatPage: React.FC = () => { // Removed props
             } else {
                 console.warn(`Session ID ${routeSessionId} from URL not found in fetched sessions.`);
                 // Optional: Navigate to base chat page or show error?
-                // navigate('/chat'); 
+                // navigate('/chat');
             }
         }
     } else if (!currentSession && sessions.length > 0) {
@@ -463,8 +495,8 @@ const ChatPage: React.FC = () => { // Removed props
                     <a href={`/share/${currentSession.shareId}`} target="_blank" rel="noopener noreferrer" style={{ color: isDarkMode ? '#64b5f6' : '#007bff' }}>
                         {t('chat_share_link')} {/* Display translated text as link */}
                     </a>
-                    <CopyButton 
-                        textToCopy={`${window.location.origin}/share/${currentSession.shareId}`} 
+                    <CopyButton
+                        textToCopy={`${window.location.origin}/share/${currentSession.shareId}`}
                     />
                 </div>
              )}
@@ -474,29 +506,32 @@ const ChatPage: React.FC = () => { // Removed props
                {loadingMessages ? <p>{t('chat_loading_messages')}</p> : messages.length > 0 ? (
                  messages.map((msg) => (
                    <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>
-                        
+
                         {/* --- AI MESSAGE --- */}
                         {msg.sender === 'ai' && (
                             <>
                                 {/* --- Reasoning Section --- */}
-                                {/* Render if showReasoning is true AND (it's Deepseek with steps OR it's a PPLX reasoning model with parsed steps) */}
-                                {/* Render if showReasoning is true AND (it's Deepseek with steps OR it's a known reasoning model with parsed steps) */}
-                                {showReasoning && (reasoningSteps[msg._id] || (REASONING_MODELS.includes(msg.modelUsed || '') && parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).reasoning)) && (
+                                {/* Render if showReasoning is true AND reasoning is available */}
+                                {showReasoning && (msg.reasoningContent || reasoningSteps[msg._id] || (THINK_TAG_MODELS.includes(msg.modelUsed || '') && parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).reasoning)) && (
                                     <details open={streamingMessageId === msg._id} style={{ marginBottom: '10px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
                                         <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
                                         <pre style={{
                                             background: isDarkMode ? '#2a2a2a' : '#f0f0f0',
-                                    padding: '8px', 
-                                    borderRadius: '4px', 
-                                            whiteSpace: 'pre-wrap', 
+                                            padding: '8px',
+                                            borderRadius: '4px',
+                                            whiteSpace: 'pre-wrap',
                                             wordBreak: 'break-all',
                                             maxHeight: '200px', // Limit height
                                             overflowY: 'auto' // Allow scrolling
                                         }}>
-                                            {/* Display Deepseek reasoning OR parsed reasoning from other models */}
-                                            {REASONING_MODELS.includes(msg.modelUsed || '')
-                                                ? parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).reasoning
-                                                : reasoningSteps[msg._id] // Assuming Deepseek reasoning is stored here if not parsed
+                                            {/* Display reasoning: Check final msg.reasoningContent, then temp state, then parse <think> tags */}
+                                            {msg.reasoningContent
+                                                ? msg.reasoningContent
+                                                : reasoningSteps[msg._id] // Check temp state during streaming
+                                                    ? reasoningSteps[msg._id]
+                                                    : THINK_TAG_MODELS.includes(msg.modelUsed || '') // Then check for <think> tags
+                                                        ? parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).reasoning
+                                                        : null // No reasoning available/expected otherwise
                                             }
                                         </pre>
                                     </details>
@@ -505,7 +540,7 @@ const ChatPage: React.FC = () => { // Removed props
                                     {/* --- AI Bubble + Button Wrapper --- */}
                                     <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                                         {/* Pass original/full content to copy button */}
-                                        <CopyButton textToCopy={streamingMessageId === msg._id ? streamingMessageContent : msg.content} /> 
+                                        <CopyButton textToCopy={streamingMessageId === msg._id ? streamingMessageContent : msg.content} />
                                         <div
                                         className={`${styles.messageBubble}`}
                                         style={{
@@ -542,8 +577,8 @@ const ChatPage: React.FC = () => { // Removed props
                                             }
                                         }}
                                     >
-                                        {/* Render parsed main content for known reasoning models, otherwise full content */}
-                                        {REASONING_MODELS.includes(msg.modelUsed || '')
+                                        {/* Render parsed main content only for THINK_TAG_MODELS, otherwise full content */}
+                                        {THINK_TAG_MODELS.includes(msg.modelUsed || '')
                                             ? parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).mainContent
                                             : (streamingMessageId === msg._id ? streamingMessageContent : msg.content)
                                         }
@@ -565,9 +600,9 @@ const ChatPage: React.FC = () => { // Removed props
                                             <div key={index} style={{ marginBottom: '8px' }}>
                                                 <div style={{ fontWeight: 'bold' }}>{index + 1}. {citation.title || 'Source'}</div>
                                                 {citation.url && (
-                                                    <a 
-                                                        href={citation.url} 
-                                                        target="_blank" 
+                                                    <a
+                                                        href={citation.url}
+                                                        target="_blank"
                                                         rel="noopener noreferrer"
                                                         style={{ color: isDarkMode ? '#64b5f6' : '#007bff', wordBreak: 'break-all' }}
                                                     >
@@ -609,7 +644,7 @@ const ChatPage: React.FC = () => { // Removed props
                ) : <p>{t('chat_start_message')}</p>}
                 {error && <p style={{ color: 'red' }}>Error: {error}</p>}
                 {/* Add empty div at the end for scrolling ref */}
-                <div ref={messagesEndRef} /> 
+                <div ref={messagesEndRef} />
              </div>
 
              {/* Input Area */}
@@ -648,7 +683,7 @@ const ChatPage: React.FC = () => { // Removed props
                          </>
                      )}
                      {/* REMOVED Streaming Toggle Icon Button */}
-                     
+
                      {/* Reasoning Toggle Icon Button (Now also controls streaming) */}
                      <button
                          type="button"

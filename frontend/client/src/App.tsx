@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'; // Import useState, useEffect
-import { Routes, Route, useNavigate } from 'react-router-dom'; // Import useNavigate
+import React from 'react'; // Removed useState, useEffect
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
+import useAuthStore from './store/authStore'; // Import the Zustand store
 
 // --- Import Components ---
 import Navbar from './components/Navbar';
@@ -11,120 +12,68 @@ import SettingsPage from './pages/SettingsPage';
 import SharedChatPage from './pages/SharedChatPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute'; // Import AdminRoute
-import apiClient from './services/api';
+// Removed apiClient import, handled in store
 
-// Define User interface matching backend (excluding password)
-interface CurrentUser {
-    _id: string;
-    username: string;
-    email: string;
-    role: 'user' | 'admin';
-    createdAt: string;
-}
+// Removed CurrentUser interface, defined in store
 
 // --- App Component ---
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  // --- Dark Mode State ---
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-      // Initialize state from localStorage or default to false (light mode)
-      const savedMode = localStorage.getItem('darkMode');
-      return savedMode === 'true';
-  });
+  // Get state and actions from Zustand store
+  const {
+    isLoggedIn,
+    currentUser,
+    authLoading,
+    isDarkMode,
+    handleLogout: storeLogout, // Rename to avoid conflict with navigate
+    handleAuthSuccess,
+    toggleTheme,
+  } = useAuthStore();
+
   const navigate = useNavigate();
 
-  // Fetch current user details if token exists
-  const fetchCurrentUser = async () => {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-          try {
-              // apiClient interceptor already adds the token to headers
-              const response = await apiClient.get('/auth/me');
-              if (response.data?.success) {
-                  setCurrentUser(response.data.data);
-                  setIsLoggedIn(true);
-              } else {
-                  // Token might be invalid/expired
-                  handleLogout(); // Log out if /me fails
-              }
-          } catch (error) {
-              console.error("Error fetching current user:", error);
-              handleLogout(); // Log out on error
-          }
-      } else {
-          setIsLoggedIn(false);
-          setCurrentUser(null);
-      }
-      setAuthLoading(false); // Finished auth check
-  };
-
-  // Check login status on initial load
-  // --- Effects ---
-  useEffect(() => {
-      fetchCurrentUser(); // Check auth status on load
-  }, []);
-
-  // Effect to apply dark mode class to body and save preference
-  useEffect(() => {
-      if (isDarkMode) {
-          document.body.classList.add('dark');
-          localStorage.setItem('darkMode', 'true');
-      } else {
-          document.body.classList.remove('dark');
-          localStorage.setItem('darkMode', 'false');
-      }
-  }, [isDarkMode]);
-
+  // Wrapper for logout to include navigation
   const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    setIsLoggedIn(false);
-    setCurrentUser(null); // Clear user data
-    navigate('/login'); // Redirect to login after logout
+    storeLogout(navigate); // Pass navigate to the store action
   };
 
-  // Callback for login/register success
-  const handleAuthSuccess = () => {
-      setIsLoggedIn(true);
-      fetchCurrentUser();
-  };
+  // Removed local state declarations
+  // Removed fetchCurrentUser function
+  // Removed useEffect hooks for auth and theme (handled in store)
+  // Removed local handleLogout, handleAuthSuccess, toggleTheme functions
 
-  // Toggle dark mode
-  const toggleTheme = () => {
-      setIsDarkMode(prevMode => !prevMode);
-  };
-
-  // Note: A more robust solution would use React Context or Zustand
-
-  // Show loading indicator until auth check is complete
+  // Show loading indicator until auth check is complete (from store)
   if (authLoading) {
       return <div>Loading...</div>; // Or a proper spinner component
   }
 
   return (
     <div className="app-container">
-      {/* Pass theme state and toggle function to Navbar */}
-      <Navbar isLoggedIn={isLoggedIn} currentUser={currentUser} onLogout={handleLogout} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+      {/* Use state and actions from the store */}
+      {/* Removed props from Navbar as it now uses the store */}
+      <Navbar />
       <Routes>
          {/* Public Routes */}
-        <Route path="/login" element={<LoginPage onLoginSuccess={handleAuthSuccess} isDarkMode={isDarkMode} />} />
-        <Route path="/register" element={<RegisterPage onRegisterSuccess={handleAuthSuccess} isDarkMode={isDarkMode} />} />
-        <Route path="/share/:shareId" element={<SharedChatPage isDarkMode={isDarkMode} />} />
+         {/* LoginPage now uses the store directly */}
+        <Route path="/login" element={<LoginPage />} />
+        {/* RegisterPage now uses the store directly */}
+        <Route path="/register" element={<RegisterPage />} />
+        {/* SharedChatPage now uses the store directly */}
+        <Route path="/share/:shareId" element={<SharedChatPage />} />
 
          {/* Protected Routes (General Login Required) */}
-         <Route element={<ProtectedRoute isLoggedIn={isLoggedIn} authLoading={authLoading} />}>
-             {/* Pass isDarkMode prop back to ChatPage */}
-             <Route path="/" element={<ChatPage isDarkMode={isDarkMode} />} />
-             <Route path="/chat/:sessionId" element={<ChatPage isDarkMode={isDarkMode} />} />
-             {/* Settings route moved here - accessible to all logged-in users */}
-             {/* Pass currentUser and isDarkMode to SettingsPage */}
-             <Route path="/settings" element={<SettingsPage currentUser={currentUser} isDarkMode={isDarkMode} />} />
+         {/* ProtectedRoute will now internally use useAuthStore */}
+         <Route element={<ProtectedRoute />}>
+             {/* ChatPage now uses the store directly */}
+             <Route path="/" element={<ChatPage />} />
+             <Route path="/chat/:sessionId" element={<ChatPage />} />
+             {/* SettingsPage will now internally use useAuthStore */}
+             <Route path="/settings" element={<SettingsPage />} />
          </Route>
 
          {/* Admin Protected Route - Can be removed if no other admin-only routes exist */}
-         {/* <Route element={<AdminRoute isLoggedIn={isLoggedIn} authLoading={authLoading} currentUser={currentUser} />}> */}
+         {/* AdminRoute will now internally use useAuthStore */}
+         {/* <Route element={<AdminRoute />}> */}
              {/* Add any future admin-only routes here */}
          {/* </Route> */}
 

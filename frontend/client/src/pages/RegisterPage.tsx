@@ -3,13 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/api';
 import styles from './RegisterPage.module.css';
+import useAuthStore from '../store/authStore'; // Import the store
 
-interface RegisterPageProps {
-  onRegisterSuccess: () => void;
-  isDarkMode: boolean; // Add isDarkMode prop
-}
+// Removed RegisterPageProps interface
 
-const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess, isDarkMode }) => {
+const RegisterPage: React.FC = () => { // Removed props
+  const { handleAuthSuccess } = useAuthStore(); // Get action from store
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,7 +71,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess, isDarkMo
       if (response.data && response.data.success && response.data.token) {
         localStorage.setItem('authToken', response.data.token);
         localStorage.setItem('lastLoginIdentifier', email);
-        onRegisterSuccess();
+        handleAuthSuccess(); // Call store action
         navigate('/');
       } else {
         setError(response.data?.error || 'Registration failed. Please try again.');

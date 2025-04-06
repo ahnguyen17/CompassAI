@@ -7,6 +7,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { prism, okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import apiClient from '../services/api';
 import CopyButton from '../components/CopyButton';
+import useAuthStore from '../store/authStore'; // Import the store
 import { useTranslation } from 'react-i18next';
 import styles from './ChatPage.module.css'; // Import CSS Module
 
@@ -33,12 +34,10 @@ interface ChatMessage {
     fileInfo?: { filename: string; originalname: string; mimetype: string; size: number; path: string; } 
 }
 
-// Define props for ChatPage
-interface ChatPageProps {
-    isDarkMode: boolean;
-}
+// Removed ChatPageProps interface
 
-const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
+const ChatPage: React.FC = () => { // Removed props
+  const { isDarkMode } = useAuthStore(); // Get state from store
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
@@ -624,11 +623,18 @@ const ChatPage: React.FC<ChatPageProps> = ({ isDarkMode }) => {
                              }}>{t('chat_model_select_label')}</label>
                              <select
                                  id="model-select"
-                             value={selectedModel}
-                             onChange={(e) => setSelectedModel(e.target.value)}
-                             style={{
-                                 padding: '5px 8px',
-                                 borderRadius: '4px',
+                              value={selectedModel}
+                              onChange={(e) => {
+                                  const newModel = e.target.value;
+                                  setSelectedModel(newModel);
+                                  // Automatically enable reasoning/streaming if a known reasoning model is selected
+                                  if (PERPLEXITY_REASONING_MODELS.includes(newModel)) {
+                                      setShowReasoning(true);
+                                  }
+                              }}
+                              style={{
+                                  padding: '5px 8px',
+                                  borderRadius: '4px',
                                  border: `1px solid ${isDarkMode ? '#555' : '#ced4da'}`,
                                  background: isDarkMode ? '#3a3d41' : 'white',
                                  color: isDarkMode ? '#e0e0e0' : 'inherit'

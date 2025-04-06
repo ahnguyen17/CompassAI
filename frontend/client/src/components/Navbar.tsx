@@ -1,34 +1,36 @@
-import React, { useState, useRef, useEffect } from 'react'; // Import useState, useRef, useEffect
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next'; // Import useTranslation hook
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useTranslation } from 'react-i18next';
+import useAuthStore from '../store/authStore'; // Import the store
 
-// Re-use or import CurrentUser interface
-interface CurrentUser {
-    _id: string;
-    username: string;
-    email: string;
-    role: 'user' | 'admin';
-    createdAt: string;
-}
+// Removed CurrentUser interface (defined in store)
+// Removed NavbarProps interface
 
-// Define props interface
-interface NavbarProps {
-  isLoggedIn: boolean;
-  currentUser: CurrentUser | null;
-  onLogout: () => void;
-  isDarkMode: boolean; // Add dark mode state
-  toggleTheme: () => void; // Add toggle function
-}
+const Navbar: React.FC = () => { // Removed props
+  // Get state and actions from store
+  const {
+    isLoggedIn,
+    currentUser,
+    isDarkMode,
+    handleLogout: storeLogout, // Rename to avoid conflict
+    toggleTheme,
+  } = useAuthStore();
+  const navigate = useNavigate(); // Hook for navigation
 
-const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDarkMode, toggleTheme }) => {
-  const { t, i18n } = useTranslation(); // Get t function and i18n instance
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for user dropdown
-  const dropdownRef = useRef<HTMLDivElement>(null); // Ref for user dropdown container
+  const { t, i18n } = useTranslation();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false); // State for language dropdown
-  const langDropdownRef = useRef<HTMLDivElement>(null); // Ref for language dropdown container
+  const langDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Local logout handler to pass navigate
+  const handleLogout = () => {
+    storeLogout(navigate); // Call store action with navigate
+    setIsDropdownOpen(false); // Close dropdown after logout
+  };
 
   const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng); // Change the language
+    i18n.changeLanguage(lng);
   };
 
   // Close dropdown when clicking outside
@@ -187,12 +189,12 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, currentUser, onLogout, isDa
                     style={dropdownItemStyle} // Apply common style
                   >
                     ⚙️ {t('nav_settings')} {/* Icon and Text */}
-                  </Link>
-                   <button 
-                    onClick={() => { onLogout(); setIsDropdownOpen(false); }} 
-                    style={dropdownItemStyle} // Apply common style
-                  >
-                    🚪 {t('nav_logout')} {/* Add icon */}
+                   </Link>
+                    <button
+                     onClick={handleLogout} // Use the local handler
+                     style={dropdownItemStyle} // Apply common style
+                   >
+                     🚪 {t('nav_logout')} {/* Add icon */}
                   </button>
                 </div>
               )}

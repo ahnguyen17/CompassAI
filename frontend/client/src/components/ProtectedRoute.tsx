@@ -1,13 +1,12 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import useAuthStore from '../store/authStore'; // Import the store
 
-interface ProtectedRouteProps {
-  isLoggedIn: boolean;
-  authLoading: boolean; // Add loading state to prevent premature redirects
-  // children?: React.ReactNode; // Alternative: Use children prop
-}
+// Removed ProtectedRouteProps interface
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ isLoggedIn, authLoading }) => {
+const ProtectedRoute: React.FC = () => { // Removed props
+  const { isLoggedIn, authLoading } = useAuthStore(); // Get state from store
+
   if (authLoading) {
     // Show a loading indicator while checking auth status
     // Or return null/empty fragment to avoid rendering anything until check is complete

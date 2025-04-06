@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/api';
+import useAuthStore from '../store/authStore'; // Import the store
 
 // Interfaces
 interface ApiKey {
@@ -34,13 +35,10 @@ interface ModelStatus {
     isDisabled: boolean;
 }
 
-interface SettingsPageProps {
-    currentUser: User | null;
-    isDarkMode: boolean; // Add isDarkMode prop
-    // refreshCurrentUser: () => void; // Optional prop to refresh user data in App
-}
+// Removed SettingsPageProps interface
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, isDarkMode /*, refreshCurrentUser */ }) => {
+const SettingsPage: React.FC = () => { // Removed props
+  const { currentUser, isDarkMode } = useAuthStore(); // Get state from store
   const { t } = useTranslation();
 
   // API Key State

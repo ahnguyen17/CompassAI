@@ -2,15 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/api';
-import styles from './LoginPage.module.css'; // Revert to standard import
+import styles from './LoginPage.module.css';
+import useAuthStore from '../store/authStore'; // Import the store
 
-// Define props interface
-interface LoginPageProps {
-  onLoginSuccess: () => void;
-  isDarkMode: boolean; // Add isDarkMode prop
-}
+// Removed LoginPageProps interface
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, isDarkMode }) => {
+const LoginPage: React.FC = () => { // Removed props
+  const { handleAuthSuccess } = useAuthStore(); // Get action from store
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -37,7 +35,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, isDarkMode }) => 
       if (response.data && response.data.success && response.data.token) {
         localStorage.setItem('authToken', response.data.token);
         localStorage.setItem('lastLoginIdentifier', loginIdentifier);
-        onLoginSuccess();
+        handleAuthSuccess(); // Call store action
         navigate('/');
       } else {
         setError(response.data?.error || 'Login failed. Please check credentials.');

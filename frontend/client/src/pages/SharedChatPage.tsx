@@ -5,7 +5,8 @@ import CopyButton from '../components/CopyButton';
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import remarkGfm from 'remark-gfm'; // Import GFM plugin
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'; // Import SyntaxHighlighter
-import { prism, okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism'; // Import both light and dark themes
+import { prism, okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import useAuthStore from '../store/authStore'; // Import the store
 
 interface Message {
   _id: string;
@@ -23,12 +24,10 @@ interface SharedChatData {
     messages: Message[];
 }
 
-// Define props interface
-interface SharedChatPageProps {
-  isDarkMode: boolean;
-}
+// Removed SharedChatPageProps interface
 
-const SharedChatPage: React.FC<SharedChatPageProps> = ({ isDarkMode }) => {
+const SharedChatPage: React.FC = () => { // Removed props
+  const { isDarkMode } = useAuthStore(); // Get state from store
   const { shareId } = useParams<{ shareId: string }>();
   const [chatData, setChatData] = useState<SharedChatData | null>(null);
   const [loading, setLoading] = useState(true);

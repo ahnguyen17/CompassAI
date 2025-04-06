@@ -586,43 +586,33 @@ const ChatPage: React.FC = () => { // Removed props
                                 </div>
                             </div>
 
-                            {/* Citations Bubble (if available) */}
-                            {(() => {
-                                // Debug log for citations
-                                console.log(`Message ${msg._id} citations:`, msg.citations);
-                                return msg.citations && msg.citations.length > 0 && (
-                                    <div style={{ display: 'flex', alignItems: 'flex-end', marginTop: '8px' }}>
-                                    <div className={`${styles.messageBubble}`} style={{
-                                        background: isDarkMode ? '#2a2a2a' : '#f0f0f0', // Slightly different background
-                                        color: isDarkMode ? '#e0e0e0' : '#343a40',
-                                        fontSize: '0.9em',
-                                        marginLeft: '30px' // Indent the citations bubble
-                                    }}>
-                                        <div style={{ marginBottom: '5px', fontWeight: 'bold' }}>Sources:</div>
-                                        {msg.citations.map((citation, index) => (
-                                            <div key={index} style={{ marginBottom: '8px' }}>
-                                                <div style={{ fontWeight: 'bold' }}>{index + 1}. {citation.title || 'Source'}</div>
-                                                {citation.url && (
-                                                    <a
-                                                        href={citation.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        style={{ color: isDarkMode ? '#64b5f6' : '#007bff', wordBreak: 'break-all' }}
-                                                    >
-                                                        {citation.url}
-                                                    </a>
-                                                )}
-                                                {citation.snippet && (
-                                                    <div style={{ marginTop: '4px', fontStyle: 'italic', opacity: 0.8 }}>
-                                                        "{citation.snippet}"
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                            {/* Add citations to the main bubble if available */}
+                            {msg.citations && msg.citations.length > 0 && (
+                                <div style={{ 
+                                    marginTop: '15px', 
+                                    borderTop: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
+                                    paddingTop: '10px'
+                                }}>
+                                    <div style={{ marginBottom: '5px', fontWeight: 'bold' }}>Sources:</div>
+                                    {msg.citations.map((citation, index) => (
+                                        <div key={index} style={{ marginBottom: '8px' }}>
+                                            <a
+                                                href={citation.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ color: isDarkMode ? '#64b5f6' : '#007bff', wordBreak: 'break-all' }}
+                                            >
+                                                {index + 1}. {citation.url}
+                                            </a>
+                                            {citation.snippet && (
+                                                <div style={{ marginTop: '4px', fontStyle: 'italic', opacity: 0.8 }}>
+                                                    "{citation.snippet}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
-                                );
-                            })()}
+                            )}
                         </>
                     )}
 

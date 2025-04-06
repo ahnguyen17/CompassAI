@@ -137,11 +137,37 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
                 aiResponseContent = completion.choices[0].message.content || '';
 
                 // Extract citations if this is a Perplexity response
-                if (providerName === 'Perplexity' && completion.choices[0].message.citations) {
-                    extractedCitations = completion.choices[0].message.citations; // Store raw citations
-                    console.log('Perplexity citations (non-streaming):', JSON.stringify(extractedCitations, null, 2));
-                    console.log('Citations type:', typeof extractedCitations);
-                    console.log('Citations length:', extractedCitations.length);
+                // Check both locations where citations might be found
+                if (providerName === 'Perplexity') {
+                    // Check for citations at the top level of the response (new API format)
+                    if (completion.citations) {
+                        extractedCitations = completion.citations;
+                        console.log('Perplexity citations found at top level:', JSON.stringify(extractedCitations, null, 2));
+                    } 
+                    // Also check the old location inside message (for backward compatibility)
+                    else if (completion.choices[0].message.citations) {
+                        extractedCitations = completion.choices[0].message.citations;
+                        console.log('Perplexity citations found in message:', JSON.stringify(extractedCitations, null, 2));
+                    }
+                    
+                    if (extractedCitations) {
+                        console.log('Citations type:', typeof extractedCitations);
+                        console.log('Citations length:', extractedCitations.length);
+                        
+                        // Convert URL-only citations to proper format if needed
+                        if (Array.isArray(extractedCitations) && extractedCitations.length > 0 && typeof extractedCitations[0] === 'string') {
+                            // Convert simple URL strings to citation objects
+                            extractedCitations = extractedCitations.map((url, index) => ({
+                                url: url,
+                                title: `Source ${index + 1}`,
+                                // No snippet available for simple URL citations
+                            }));
+                            console.log('Converted URL citations to objects:', JSON.stringify(extractedCitations, null, 2));
+                        }
+                    } else {
+                        console.log('No citations found in Perplexity response');
+                    }
+                    
                     // DO NOT append formatted citations to aiResponseContent here anymore
                     // The frontend will handle rendering from the 'citations' field
                 }
@@ -236,31 +262,51 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
                 } else if (chunk.choices[0]?.finish_reason) {
                     console.log("Stream Chunk Finish Reason:", chunk.choices[0].finish_reason);
 
-                    // If this is the end of a Perplexity response, check for citations
-                    if (providerName === 'Perplexity' && chunk.choices[0].finish_reason === 'stop') {
-                        try {
-                            // Make a separate API call to get the full response with citations
-                            const fullResponse = await client.chat.completions.create({
-                                model: actualModelName,
-                                messages: formattedMessages
-                            });
-
-                            if (fullResponse.choices?.[0]?.message?.citations) {
-                                const citations = fullResponse.choices[0].message.citations;
-                                console.log('Perplexity citations from streaming response:', JSON.stringify(citations, null, 2));
-
-                                if (citations && citations.length > 0) {
-                                    // DO NOT append formatted citations to content here
-                                    // Send the raw citations data for the frontend to use
-                                    sendSse({
-                                        type: 'citations',
-                                        citations: citations
+                            // If this is the end of a Perplexity response, check for citations
+                            if (providerName === 'Perplexity' && chunk.choices[0].finish_reason === 'stop') {
+                                try {
+                                    // Make a separate API call to get the full response with citations
+                                    const fullResponse = await client.chat.completions.create({
+                                        model: actualModelName,
+                                        messages: formattedMessages
                                     });
 
-                                    // Store citations for later use when saving to DB
-                                    fullCitations = citations;
-                                }
-                            }
+                                    let citations = null;
+                                    
+                                    // Check for citations at the top level of the response (new API format)
+                                    if (fullResponse.citations) {
+                                        citations = fullResponse.citations;
+                                        console.log('Perplexity citations found at top level (streaming):', JSON.stringify(citations, null, 2));
+                                    } 
+                                    // Also check the old location inside message (for backward compatibility)
+                                    else if (fullResponse.choices?.[0]?.message?.citations) {
+                                        citations = fullResponse.choices[0].message.citations;
+                                        console.log('Perplexity citations found in message (streaming):', JSON.stringify(citations, null, 2));
+                                    }
+                                    
+                                    if (citations) {
+                                        // Convert URL-only citations to proper format if needed
+                                        if (Array.isArray(citations) && citations.length > 0 && typeof citations[0] === 'string') {
+                                            // Convert simple URL strings to citation objects
+                                            citations = citations.map((url, index) => ({
+                                                url: url,
+                                                title: `Source ${index + 1}`,
+                                                // No snippet available for simple URL citations
+                                            }));
+                                            console.log('Converted URL citations to objects (streaming):', JSON.stringify(citations, null, 2));
+                                        }
+                                        
+                                        // Send the raw citations data for the frontend to use
+                                        sendSse({
+                                            type: 'citations',
+                                            citations: citations
+                                        });
+
+                                        // Store citations for later use when saving to DB
+                                        fullCitations = citations;
+                                    } else {
+                                        console.log('No citations found in Perplexity streaming response');
+                                    }
                         } catch (citationError) {
                             console.error('Error fetching citations during stream end:', citationError);
                         }

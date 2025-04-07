@@ -242,13 +242,28 @@ const ChatPage: React.FC = () => { // Removed props
                               } else if (jsonData.type === 'model_info') {
                                   setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, modelUsed: jsonData.modelUsed || 'unknown' } : msg));
                               } else if (jsonData.type === 'citations') {
-                                  console.log('Received citations:', jsonData.citations);
-                                  // Store citations in the message
-                                  setMessages(prev => prev.map(msg =>
-                                      msg._id === optimisticAiMessageId
-                                          ? { ...msg, citations: jsonData.citations }
-                                          : msg
-                                  ));
+                                  console.log('Received citations in streaming mode:', jsonData.citations);
+                                  if (jsonData.citations && jsonData.citations.length > 0) {
+                                      console.log(`Citations count: ${jsonData.citations.length}`);
+                                      // Store citations in the message
+                                      setMessages(prev => {
+                                          const updatedMessages = prev.map(msg =>
+                                              msg._id === optimisticAiMessageId
+                                                  ? { ...msg, citations: jsonData.citations }
+                                                  : msg
+                                          );
+                                          // Log the updated message to verify citations were added
+                                          const updatedMsg = updatedMessages.find(m => m._id === optimisticAiMessageId);
+                                          console.log('Updated message with citations:', {
+                                              id: updatedMsg?._id,
+                                              hasCitations: !!updatedMsg?.citations,
+                                              citationsCount: updatedMsg?.citations?.length || 0
+                                          });
+                                          return updatedMessages;
+                                      });
+                                  } else {
+                                      console.warn('Received empty citations array in streaming mode');
+                                  }
                               } else if (jsonData.type === 'reasoning_chunk') { // Handle reasoning chunks
                                   console.log('Received reasoning chunk:', jsonData.content);
                                   // Accumulate reasoning content as a string locally
@@ -598,12 +613,20 @@ const ChatPage: React.FC = () => { // Removed props
                             </div>
 
                             {/* Add citations to the main bubble if available */}
-                            {msg.citations && msg.citations.length > 0 && (
-                                <div style={{ 
-                                    marginTop: '15px', 
-                                    borderTop: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
-                                    paddingTop: '10px'
-                                }}>
+                            {(() => {
+                                // Debug log for citations rendering
+                                console.log(`Rendering message ${msg._id}:`, {
+                                    hasCitations: !!msg.citations,
+                                    citationsLength: msg.citations?.length || 0,
+                                    isStreaming: streamingMessageId === msg._id
+                                });
+                                
+                                return msg.citations && msg.citations.length > 0 && (
+                                    <div style={{ 
+                                        marginTop: '15px', 
+                                        borderTop: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
+                                        paddingTop: '10px'
+                                    }}>
                                     <div style={{ marginBottom: '5px', fontWeight: 'bold' }}>Sources:</div>
                                     {msg.citations.map((citation, index) => (
                                         <div key={index} style={{ marginBottom: '8px' }}>
@@ -623,7 +646,8 @@ const ChatPage: React.FC = () => { // Removed props
                                         </div>
                                     ))}
                                 </div>
-                            )}
+                                );
+                            })()}
                         </>
                     )}
 

@@ -609,6 +609,12 @@ exports.addMessageToSession = async (req, res, next) => {
             // 6. Save final AI message to DB *after* streaming
             if (!streamError && finalAiContent !== null && actualModelUsed) {
                 try {
+                    // Add more detailed logging for citations in streaming mode
+                    console.log(`Streaming citations before saving: Provider=${providerUsed}, Citations count=${fullCitations.length}`);
+                    if (fullCitations.length > 0) {
+                        console.log("Citations to save:", JSON.stringify(fullCitations, null, 2));
+                    }
+                    
                     const messageToSave = {
                         session: sessionId,
                         sender: 'ai',
@@ -616,10 +622,13 @@ exports.addMessageToSession = async (req, res, next) => {
                         modelUsed: actualModelUsed,
                         // Only add reasoningContent if it's not empty
                         ...(finalReasoningContent && { reasoningContent: finalReasoningContent }),
-                        // Add citations if this is a Perplexity response and we have citations
-                        ...(providerUsed === 'Perplexity' && fullCitations.length > 0 && { citations: fullCitations })
+                        // Add citations if we have them (not just for Perplexity)
+                        ...(fullCitations.length > 0 && { citations: fullCitations })
                     };
-                    console.log("Attempting to save AI message (streaming):", JSON.stringify(messageToSave, null, 2)); // Log message details
+                    console.log("Attempting to save AI message (streaming):", JSON.stringify({
+                        ...messageToSave,
+                        content: messageToSave.content.substring(0, 100) + '...' // Truncate content for log readability
+                    }, null, 2));
                     const savedMessage = await ChatMessage.create(messageToSave);
                     console.log("Successfully saved final AI message to DB (streaming). ID:", savedMessage._id); // Log success and ID
                 } catch (dbError) {

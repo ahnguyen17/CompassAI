@@ -128,16 +128,21 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
 
             console.log(`Using model name for ${providerName} API: ${actualModelName}`);
 
-            const completion = await client.chat.completions.create({
+            // For Perplexity, we need to use a different approach to request citations
+            let requestOptions = {
                 model: actualModelName,
-                messages: formattedMessages,
-                // Add parameters to request citations for Perplexity
-                ...(providerName === 'Perplexity' && {
-                    extra_params: {
-                        citations: true
-                    }
-                })
-            });
+                messages: formattedMessages
+            };
+            
+            // Add citations parameter directly for Perplexity
+            if (providerName === 'Perplexity') {
+                console.log('Adding citations parameter for Perplexity non-streaming request');
+                // Try direct approach
+                requestOptions.citations = true;
+            }
+            
+            console.log('Non-streaming request options:', JSON.stringify(requestOptions, null, 2));
+            const completion = await client.chat.completions.create(requestOptions);
             if (completion.choices?.[0]?.message) {
                 // Extract content
                 aiResponseContent = completion.choices[0].message.content || '';

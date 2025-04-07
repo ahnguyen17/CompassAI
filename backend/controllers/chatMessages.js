@@ -262,13 +262,20 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
                 } else if (chunk.choices[0]?.finish_reason) {
                     console.log("Stream Chunk Finish Reason:", chunk.choices[0].finish_reason);
 
-                            // If this is the end of a Perplexity response, check for citations
-                            if (providerName === 'Perplexity' && chunk.choices[0].finish_reason === 'stop') {
+                            // If this is the end of a response, check for citations (for any provider, not just Perplexity)
+                            if (chunk.choices[0].finish_reason === 'stop') {
                                 try {
+                                    console.log(`Stream finished for ${providerName}. Checking for citations...`);
+                                    
                                     // Make a separate API call to get the full response with citations
                                     const fullResponse = await client.chat.completions.create({
                                         model: actualModelName,
                                         messages: formattedMessages
+                                    });
+
+                                    console.log(`Got full response for ${providerName}:`, {
+                                        hasTopLevelCitations: !!fullResponse.citations,
+                                        hasMessageCitations: !!fullResponse.choices?.[0]?.message?.citations
                                     });
 
                                     let citations = null;
@@ -276,12 +283,12 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
                                     // Check for citations at the top level of the response (new API format)
                                     if (fullResponse.citations) {
                                         citations = fullResponse.citations;
-                                        console.log('Perplexity citations found at top level (streaming):', JSON.stringify(citations, null, 2));
+                                        console.log(`Citations found at top level for ${providerName} (streaming):`, JSON.stringify(citations, null, 2));
                                     } 
                                     // Also check the old location inside message (for backward compatibility)
                                     else if (fullResponse.choices?.[0]?.message?.citations) {
                                         citations = fullResponse.choices[0].message.citations;
-                                        console.log('Perplexity citations found in message (streaming):', JSON.stringify(citations, null, 2));
+                                        console.log(`Citations found in message for ${providerName} (streaming):`, JSON.stringify(citations, null, 2));
                                     }
                                     
                                     if (citations) {

@@ -130,7 +130,13 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
 
             const completion = await client.chat.completions.create({
                 model: actualModelName,
-                messages: formattedMessages
+                messages: formattedMessages,
+                // Add parameters to request citations for Perplexity
+                ...(providerName === 'Perplexity' && {
+                    extra_params: {
+                        citations: true
+                    }
+                })
             });
             if (completion.choices?.[0]?.message) {
                 // Extract content

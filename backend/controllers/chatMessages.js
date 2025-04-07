@@ -249,7 +249,13 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
             const stream = await client.chat.completions.create({
                 model: actualModelName,
                 messages: formattedMessages,
-                stream: true
+                stream: true,
+                // Add parameters to request citations for Perplexity
+                ...(providerName === 'Perplexity' && {
+                    extra_params: {
+                        citations: true
+                    }
+                })
             });
 
             for await (const chunk of stream) {

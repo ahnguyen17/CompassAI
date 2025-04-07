@@ -246,17 +246,22 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
 
             console.log(`Using model name for ${providerName} API streaming: ${actualModelName}`);
 
-            const stream = await client.chat.completions.create({
+            // For Perplexity, we need to use a different approach to request citations in streaming mode
+            let requestOptions = {
                 model: actualModelName,
                 messages: formattedMessages,
-                stream: true,
-                // Add parameters to request citations for Perplexity
-                ...(providerName === 'Perplexity' && {
-                    extra_params: {
-                        citations: true
-                    }
-                })
-            });
+                stream: true
+            };
+            
+            // Add citations parameter directly for Perplexity
+            if (providerName === 'Perplexity') {
+                console.log('Adding citations parameter for Perplexity streaming request');
+                // Try different approaches to request citations
+                requestOptions.citations = true; // Direct approach
+            }
+            
+            console.log('Streaming request options:', JSON.stringify(requestOptions, null, 2));
+            const stream = await client.chat.completions.create(requestOptions);
 
             for await (const chunk of stream) {
                 // Log the entire chunk structure for inspection

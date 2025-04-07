@@ -268,9 +268,16 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
                                     console.log(`Stream finished for ${providerName}. Checking for citations...`);
                                     
                                     // Make a separate API call to get the full response with citations
+                                    // Add explicit parameters to request citations
                                     const fullResponse = await client.chat.completions.create({
                                         model: actualModelName,
-                                        messages: formattedMessages
+                                        messages: formattedMessages,
+                                        // Add parameters to request citations
+                                        ...(providerName === 'Perplexity' && {
+                                            extra_params: {
+                                                citations: true
+                                            }
+                                        })
                                     });
 
                                     console.log(`Got full response for ${providerName}:`, {

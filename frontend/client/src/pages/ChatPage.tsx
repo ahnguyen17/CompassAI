@@ -282,17 +282,29 @@ const ChatPage: React.FC = () => { // Removed props
                                   console.log('Stream finished.');
                                   // Get accumulated reasoning for this message from the local variable
                                   const finalReasoning = accumulatedReasoning || null;
-                                  setMessages(prev => prev.map(msg =>
-                                      msg._id === optimisticAiMessageId
-                                          ? { 
-                                              ...msg, 
-                                              content: finalContent, 
-                                              reasoningContent: finalReasoning,
-                                              // Preserve citations that were set earlier
-                                              // This ensures citations are not lost when the message is updated
-                                            } 
-                                          : msg
-                                  ));
+                                  setMessages(prev => {
+                                      // Find the current message to preserve its citations
+                                      const currentMsg = prev.find(m => m._id === optimisticAiMessageId);
+                                      const currentCitations = currentMsg?.citations;
+                                      
+                                      console.log('Updating message at stream end:', {
+                                          messageId: optimisticAiMessageId,
+                                          hasCitations: !!currentCitations,
+                                          citationsCount: currentCitations?.length || 0
+                                      });
+                                      
+                                      return prev.map(msg =>
+                                          msg._id === optimisticAiMessageId
+                                              ? { 
+                                                  ...msg, 
+                                                  content: finalContent, 
+                                                  reasoningContent: finalReasoning,
+                                                  // Explicitly preserve citations
+                                                  citations: currentCitations
+                                                } 
+                                              : msg
+                                      );
+                                  });
                                   setStreamingMessageId(null);
                                   setStreamingMessageContent('');
                                   // Clean up reasoningSteps state for the temp ID
@@ -310,16 +322,29 @@ const ChatPage: React.FC = () => { // Removed props
               // Handle stream ending without 'done' event (might happen on error/abort)
               console.log('Stream ended without done event.');
               const finalReasoningOnEnd = accumulatedReasoning || null;
-              setMessages(prev => prev.map(msg =>
-                  msg._id === optimisticAiMessageId
-                      ? { 
-                          ...msg, 
-                          content: finalContent, 
-                          reasoningContent: finalReasoningOnEnd
-                          // Preserve citations that were set earlier
-                        }
-                      : msg
-              ));
+              setMessages(prev => {
+                  // Find the current message to preserve its citations
+                  const currentMsg = prev.find(m => m._id === optimisticAiMessageId);
+                  const currentCitations = currentMsg?.citations;
+                  
+                  console.log('Updating message at stream end (no done event):', {
+                      messageId: optimisticAiMessageId,
+                      hasCitations: !!currentCitations,
+                      citationsCount: currentCitations?.length || 0
+                  });
+                  
+                  return prev.map(msg =>
+                      msg._id === optimisticAiMessageId
+                          ? { 
+                              ...msg, 
+                              content: finalContent, 
+                              reasoningContent: finalReasoningOnEnd,
+                              // Explicitly preserve citations
+                              citations: currentCitations
+                            } 
+                          : msg
+                  );
+              });
               setStreamingMessageId(null);
               setStreamingMessageContent('');
               setReasoningSteps(prev => {

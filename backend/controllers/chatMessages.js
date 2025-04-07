@@ -251,19 +251,69 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
 
             console.log(`Using model name for ${providerName} API streaming: ${actualModelName}`);
 
-            // For Perplexity, we need to use a different approach to request citations in streaming mode
+            // For Perplexity, we'll make a separate non-streaming call first to get citations
+            // since citations might not be fully supported in streaming mode
+            let citationsFromNonStreaming = [];
+            
+            if (providerName === 'Perplexity') {
+                try {
+                    console.log('Making separate non-streaming call to get citations for Perplexity');
+                    
+                    // Make a non-streaming call with citations parameter
+                    const nonStreamingOptions = {
+                        model: actualModelName,
+                        messages: formattedMessages,
+                        citations: true
+                    };
+                    
+                    console.log('Non-streaming citation request options:', JSON.stringify(nonStreamingOptions, null, 2));
+                    const nonStreamingResponse = await client.chat.completions.create(nonStreamingOptions);
+                    
+                    // Extract citations from the response
+                    if (nonStreamingResponse.citations) {
+                        citationsFromNonStreaming = nonStreamingResponse.citations;
+                        console.log('Citations found at top level in non-streaming call:', JSON.stringify(citationsFromNonStreaming, null, 2));
+                    } else if (nonStreamingResponse.choices?.[0]?.message?.citations) {
+                        citationsFromNonStreaming = nonStreamingResponse.choices[0].message.citations;
+                        console.log('Citations found in message in non-streaming call:', JSON.stringify(citationsFromNonStreaming, null, 2));
+                    }
+                    
+                    // If we got citations, send them to the client immediately
+                    if (citationsFromNonStreaming && citationsFromNonStreaming.length > 0) {
+                        console.log(`Got ${citationsFromNonStreaming.length} citations from non-streaming call`);
+                        
+                        // Convert URL-only citations to proper format if needed
+                        if (Array.isArray(citationsFromNonStreaming) && citationsFromNonStreaming.length > 0 && 
+                            typeof citationsFromNonStreaming[0] === 'string') {
+                            citationsFromNonStreaming = citationsFromNonStreaming.map((url, index) => ({
+                                url: url,
+                                title: `Source ${index + 1}`
+                            }));
+                        }
+                        
+                        // Send citations to client
+                        sendSse({
+                            type: 'citations',
+                            citations: citationsFromNonStreaming
+                        });
+                        
+                        // Store citations for later use
+                        fullCitations = citationsFromNonStreaming;
+                    } else {
+                        console.log('No citations found in non-streaming call');
+                    }
+                } catch (nonStreamingError) {
+                    console.error('Error making non-streaming call for citations:', nonStreamingError);
+                    // Continue with streaming even if non-streaming call fails
+                }
+            }
+            
+            // Now make the streaming call (without citations parameter to avoid errors)
             let requestOptions = {
                 model: actualModelName,
                 messages: formattedMessages,
                 stream: true
             };
-            
-            // Add citations parameter directly for Perplexity
-            if (providerName === 'Perplexity') {
-                console.log('Adding citations parameter for Perplexity streaming request');
-                // Try different approaches to request citations
-                requestOptions.citations = true; // Direct approach
-            }
             
             console.log('Streaming request options:', JSON.stringify(requestOptions, null, 2));
             const stream = await client.chat.completions.create(requestOptions);

@@ -247,18 +247,38 @@ const ChatPage: React.FC = () => { // Removed props
                                       console.log(`Citations count: ${jsonData.citations.length}`);
                                       // Store citations in the message
                                       setMessages(prev => {
+                                          // Deep clone the citations to ensure we're not sharing references
+                                          const citationsCopy = JSON.parse(JSON.stringify(jsonData.citations));
+                                          console.log('Citations copy:', citationsCopy);
+                                          
                                           const updatedMessages = prev.map(msg =>
                                               msg._id === optimisticAiMessageId
-                                                  ? { ...msg, citations: jsonData.citations }
+                                                  ? { 
+                                                      ...msg, 
+                                                      citations: citationsCopy 
+                                                    }
                                                   : msg
                                           );
+                                          
                                           // Log the updated message to verify citations were added
                                           const updatedMsg = updatedMessages.find(m => m._id === optimisticAiMessageId);
                                           console.log('Updated message with citations:', {
                                               id: updatedMsg?._id,
                                               hasCitations: !!updatedMsg?.citations,
-                                              citationsCount: updatedMsg?.citations?.length || 0
+                                              citationsCount: updatedMsg?.citations?.length || 0,
+                                              citations: updatedMsg?.citations
                                           });
+                                          
+                                          // Debug: Log all messages to see if citations are being stored
+                                          console.log('All messages after citation update:', 
+                                              updatedMessages.map(m => ({
+                                                  id: m._id,
+                                                  sender: m.sender,
+                                                  hasCitations: !!m.citations,
+                                                  citationsCount: m.citations?.length || 0
+                                              }))
+                                          );
+                                          
                                           return updatedMessages;
                                       });
                                   } else {
@@ -638,20 +658,25 @@ const ChatPage: React.FC = () => { // Removed props
                             </div>
 
                             {/* Add citations to the main bubble if available */}
+                            {/* Force citations to be displayed regardless of streaming state */}
                             {(() => {
                                 // Debug log for citations rendering
                                 console.log(`Rendering message ${msg._id}:`, {
                                     hasCitations: !!msg.citations,
                                     citationsLength: msg.citations?.length || 0,
-                                    isStreaming: streamingMessageId === msg._id
+                                    isStreaming: streamingMessageId === msg._id,
+                                    citations: msg.citations
                                 });
                                 
-                                return msg.citations && msg.citations.length > 0 && (
-                                    <div style={{ 
-                                        marginTop: '15px', 
-                                        borderTop: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
-                                        paddingTop: '10px'
-                                    }}>
+                                // Check if citations exist and are not empty
+                                if (msg.citations && msg.citations.length > 0) {
+                                    console.log(`Rendering citations for message ${msg._id}`);
+                                    return (
+                                        <div style={{ 
+                                            marginTop: '15px', 
+                                            borderTop: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
+                                            paddingTop: '10px'
+                                        }}>
                                     <div style={{ marginBottom: '5px', fontWeight: 'bold' }}>Sources:</div>
                                     {msg.citations.map((citation, index) => (
                                         <div key={index} style={{ marginBottom: '8px' }}>
@@ -671,7 +696,9 @@ const ChatPage: React.FC = () => { // Removed props
                                         </div>
                                     ))}
                                 </div>
-                                );
+                                    );
+                                }
+                                return null;
                             })()}
                         </>
                     )}

@@ -291,16 +291,20 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
                                     
                                     // Make a separate API call to get the full response with citations
                                     // Add explicit parameters to request citations
-                                    const fullResponse = await client.chat.completions.create({
+                                    let fullRequestOptions = {
                                         model: actualModelName,
-                                        messages: formattedMessages,
-                                        // Add parameters to request citations
-                                        ...(providerName === 'Perplexity' && {
-                                            extra_params: {
-                                                citations: true
-                                            }
-                                        })
-                                    });
+                                        messages: formattedMessages
+                                    };
+                                    
+                                    // Add citations parameter directly for Perplexity
+                                    if (providerName === 'Perplexity') {
+                                        console.log('Adding citations parameter for Perplexity full response request');
+                                        // Try direct approach
+                                        fullRequestOptions.citations = true;
+                                    }
+                                    
+                                    console.log('Full response request options:', JSON.stringify(fullRequestOptions, null, 2));
+                                    const fullResponse = await client.chat.completions.create(fullRequestOptions);
 
                                     console.log(`Got full response for ${providerName}:`, {
                                         hasTopLevelCitations: !!fullResponse.citations,

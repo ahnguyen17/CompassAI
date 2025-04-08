@@ -808,10 +808,24 @@ const ChatPage: React.FC = () => { // Removed props
                                  border: `1px solid ${isDarkMode ? '#555' : '#ced4da'}`,
                                  background: isDarkMode ? '#3a3d41' : 'white',
                                  color: isDarkMode ? '#e0e0e0' : 'inherit'
-                             }}
+                                 }}
                          >
                                  <option value="">{t('chat_model_default')}</option>
-                                 {Object.entries(availableModels).map(([provider, models]) => ( <optgroup label={provider} key={provider}> {models.map(modelName => (<option key={modelName} value={modelName}>{modelName}</option>))} </optgroup> ))}
+                                 {Object.entries(availableModels).map(([provider, models]) => (
+                                     <optgroup label={provider} key={provider}>
+                                         {models.map(modelName => {
+                                             // Determine display text: remove prefix for perplexity, otherwise use full name
+                                             const displayText = provider === 'perplexity'
+                                                 ? modelName.replace(/^perplexity\//, '') // Remove prefix only if it exists at the start
+                                                 : modelName;
+                                             return (
+                                                 <option key={modelName} value={modelName}>
+                                                     {displayText}
+                                                 </option>
+                                             );
+                                         })}
+                                     </optgroup>
+                                 ))}
                              </select>
                          </>
                      )}

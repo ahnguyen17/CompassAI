@@ -813,11 +813,11 @@ const ChatPage: React.FC = () => { // Removed props
                                  <option value="">{t('chat_model_default')}</option>
                                  {Object.entries(availableModels).map(([provider, models]) => (
                                      <optgroup label={provider} key={provider}>
-                                         {models.map(modelName => {
-                                             // Determine display text: remove prefix for perplexity, otherwise use full name
-                                             const displayText = provider === 'perplexity'
-                                                 ? modelName.replace(/^perplexity\//, '') // Remove prefix only if it exists at the start
-                                                 : modelName;
+         {models.map(modelName => {
+             // Determine display text: remove prefix for Perplexity (case-insensitive check), otherwise use full name
+             const displayText = provider.toLowerCase() === 'perplexity' // Use toLowerCase() for robust check
+                 ? modelName.replace(/^perplexity\//, '') // Remove prefix only if it exists at the start
+                 : modelName;
                                              return (
                                                  <option key={modelName} value={modelName}>
                                                      {displayText}

@@ -17,7 +17,8 @@ const REASONING_MODELS = [
     "perplexity/sonar-reasoning-pro",
     "perplexity/sonar-reasoning",
     "perplexity/r1-1776",
-    "deepseek-reasoner"
+    "deepseek-reasoner",
+    "o3-mini" // Added per user request, assuming it provides reasoning
 ];
 
 // Models known to embed reasoning in <think> tags within main content

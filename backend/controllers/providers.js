@@ -16,7 +16,8 @@ const AVAILABLE_MODELS = {
         "gpt-4",
         "gpt-4-turbo",
         "gpt-4o",
-        "gpt-3.5-turbo"
+        "gpt-3.5-turbo",
+        "o3-mini" // Added per user request
     ],
     'Gemini': [
         // Note: Verify official API identifiers before use

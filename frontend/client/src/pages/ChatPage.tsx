@@ -88,7 +88,49 @@ const ChatPage: React.FC = () => { // Removed props
   // --- Fetch Functions ---
   const fetchSessions = async () => { setLoadingSessions(true); setError(''); try { const response = await apiClient.get('/chatsessions'); if (response.data?.success) setSessions(response.data.data); else setError('Failed to load chat sessions.'); } catch (err: any) { setError(err.response?.data?.error || 'Error loading sessions.'); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingSessions(false); } };
   const fetchAvailableModels = async () => { setLoadingModels(true); try { const response = await apiClient.get('/providers/models'); if (response.data?.success) setAvailableModels(response.data.data); else console.error("Failed to fetch available models"); } catch (err: any) { console.error("Error fetching available models:", err); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingModels(false); } };
-  const handleDeleteSession = async (sessionId: string, sessionTitle: string) => { if (!window.confirm(`Are you sure you want to delete the chat "${sessionTitle || 'Untitled Chat'}"?`)) return; setDeleteLoading(sessionId); setError(''); try { const response = await apiClient.delete(`/chatsessions/${sessionId}`); if (response.data?.success) { setSessions(prev => prev.filter(s => s._id !== sessionId)); if (currentSession?._id === sessionId) { setCurrentSession(null); setMessages([]); navigate('/'); } } else { setError('Failed to delete chat session.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error deleting session.'); if (err.response?.status === 401) navigate('/login'); } finally { setDeleteLoading(null); } };
+  // Updated handleDeleteSession with smoother transition logic
+  const handleDeleteSession = async (sessionId: string, sessionTitle: string) => {
+      if (!window.confirm(`Are you sure you want to delete the chat "${sessionTitle || 'Untitled Chat'}"?`)) return;
+      setDeleteLoading(sessionId);
+      setError('');
+      const originalSessions = [...sessions]; // Keep a copy before potential state update
+      const deletedSessionIndex = originalSessions.findIndex(s => s._id === sessionId);
+
+      try {
+          const response = await apiClient.delete(`/chatsessions/${sessionId}`);
+          if (response.data?.success) {
+              const remainingSessions = originalSessions.filter(s => s._id !== sessionId);
+              setSessions(remainingSessions); // Update the sessions list
+
+              // Determine which session to select next if the current one was deleted
+              if (currentSession?._id === sessionId) {
+                  let nextSessionToSelect: ChatSession | null = null;
+                  if (remainingSessions.length > 0) {
+                      // Try to select the session at the same index, or the previous one if it was the last
+                      const nextIndex = Math.min(deletedSessionIndex, remainingSessions.length - 1);
+                      nextSessionToSelect = remainingSessions[nextIndex];
+                  }
+
+                  if (nextSessionToSelect) {
+                      handleSelectSession(nextSessionToSelect); // Selects, navigates, and fetches messages
+                  } else {
+                      // No sessions left
+                      setCurrentSession(null);
+                      setMessages([]);
+                      navigate('/'); // Navigate to base route
+                  }
+              }
+              // If a different session was deleted, no need to change the current one
+          } else {
+              setError('Failed to delete chat session.');
+          }
+      } catch (err: any) {
+          setError(err.response?.data?.error || 'Error deleting session.');
+          if (err.response?.status === 401) navigate('/login');
+      } finally {
+          setDeleteLoading(null);
+      }
+  };
   const handleToggleShare = async () => { if (!currentSession) return; setShareLoading(true); setError(''); const newShareStatus = !currentSession.isShared; try { const response = await apiClient.put(`/chatsessions/${currentSession._id}`, { isShared: newShareStatus }); if (response.data?.success) { const updatedSession = response.data.data; setCurrentSession(updatedSession); setSessions(prev => prev.map(s => s._id === updatedSession._id ? updatedSession : s)); } else { setError('Failed to update sharing status.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error updating sharing status.'); if (err.response?.status === 401) navigate('/login'); } finally { setShareLoading(false); } };
   const fetchMessages = async (sessionId: string) => {
       if (!sessionId) return;
@@ -502,14 +544,24 @@ const ChatPage: React.FC = () => { // Removed props
       >
          {isSidebarVisible && (
              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}> {/* Restore New Chat button */}
+                {/* Updated Header with Explicit Close Button */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <button onClick={handleNewChat} className={styles.newChatButton}>{t('chat_new_button')}</button>
-                    <button onClick={toggleSidebarVisibility} className={styles.sidebarToggleButton} title="Hide Sidebar" style={{ flexShrink: 0 }}>{'‹'}</button>
+                    {/* Explicit Close Button */}
+                    <button
+                        onClick={toggleSidebarVisibility}
+                        className={`${styles.sidebarToggleButton} ${styles.sidebarCloseButton}`} // Add specific class if needed
+                        title={t('chat_sidebar_hide_tooltip')} // Use translation key
+                        aria-label={t('chat_sidebar_hide_tooltip')} // Ensure ARIA label uses translation
+                        style={{ flexShrink: 0, fontSize: '1.2em' }} // Adjust style as needed
+                    >
+                        &times; {/* Use 'X' character */}
+                    </button>
                 </div>
                 <h4>{t('chat_history_title')}</h4>
                 {loadingSessions ? <p>{t('chat_loading')}</p> : error && !sessions.length ? <p style={{ color: 'red' }}>{error}</p> : sessions.length > 0 ? (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                    {sessions.map((session) => ( <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}> <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}> {session.title || 'Untitled Chat'} </span> <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(session._id, session.title); }} disabled={deleteLoading === session._id} className={styles.deleteSessionButton}> {deleteLoading === session._id ? '...' : '×'} </button> </li> ))}
+                    {sessions.map((session) => ( <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}> <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}> {session.title || 'Untitled Chat'} </span> <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(session._id, session.title); }} disabled={deleteLoading === session._id} className={styles.deleteSessionButton} aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}> {deleteLoading === session._id ? '...' : '×'} </button> </li> ))}
                 </ul> ) : <p>{t('chat_no_history')}</p>}
              </>
          )}
@@ -518,7 +570,7 @@ const ChatPage: React.FC = () => { // Removed props
       {/* Main Chat Area */}
       <div className={styles.mainChatArea}>
          {!isSidebarVisible && (
-            <button onClick={toggleSidebarVisibility} className={`${styles.sidebarToggleButton} ${styles.sidebarToggleButtonHidden}`} title="Show Sidebar">{'›'}</button>
+            <button onClick={toggleSidebarVisibility} className={`${styles.sidebarToggleButton} ${styles.sidebarToggleButtonHidden}`} title={t('chat_sidebar_show_tooltip')} aria-label={t('chat_sidebar_show_tooltip')}>{'›'}</button>
          )}
 
          {currentSession ? (
@@ -768,10 +820,11 @@ const ChatPage: React.FC = () => { // Removed props
                      {/* Reasoning Toggle Icon Button (Now also controls streaming) */}
                      <button
                          type="button"
-                         // style={{ marginLeft: 'auto' }} // Removed duplicate style attribute
                          onClick={() => setShowReasoning(!showReasoning)}
-                         title={showReasoning ? "Hide Reasoning Steps" : "Show Reasoning Steps"}
-                         style={{ // Merged styles
+                         title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
+                         aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
+                         aria-pressed={showReasoning} // Indicate toggle state
+                         style={{
                              marginLeft: 'auto', // Push reasoning button to the right
                              background: 'none',
                              border: 'none',
@@ -799,7 +852,8 @@ const ChatPage: React.FC = () => { // Removed props
                              border: `1px solid ${isDarkMode ? '#666' : '#ccc'}`,
                              color: isDarkMode ? '#eee' : 'inherit'
                          }}
-                         title={selectedFile ? `Selected: ${selectedFile.name}` : t('chat_attach_file')}
+                         title={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')}
+                         aria-label={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')}
                      >
                          📎
                      </button>

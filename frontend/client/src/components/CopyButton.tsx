@@ -27,7 +27,8 @@ const CopyButton: React.FC<CopyButtonProps> = ({ textToCopy }) => {
   return (
     <button
       onClick={handleCopy}
-      title="Copy to clipboard"
+      title="Copy to clipboard" // Keep title for visual users
+      aria-label="Copy to clipboard" // Add ARIA label for screen readers
       style={{
         background: 'none',
         border: 'none',

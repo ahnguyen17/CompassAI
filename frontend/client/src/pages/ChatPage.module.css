@@ -13,16 +13,22 @@
     width: 280px;
     min-width: 280px; /* Desktop default width */
     padding: 15px;
-    transition: width 0.3s ease-in-out, min-width 0.3s ease-in-out, padding 0.3s ease-in-out, transform 0.3s ease-in-out;
+    /* Use transform for visibility transition */
+    transition: transform 0.3s ease-in-out;
     overflow-y: auto; /* Allow scrolling if content overflows */
     overflow-x: hidden;
     white-space: nowrap;
+    /* Ensure it starts hidden if needed, or visible based on initial state */
+    transform: translateX(0); /* Assume visible by default unless hidden class is applied */
 }
 
 .chatSidebarHidden {
-    width: 0;
-    min-width: 0;
-    padding: 0;
+    /* Hide by translating off-screen */
+    transform: translateX(-100%);
+    /* Remove width/padding overrides as transform handles hiding */
+    /* Keep border/overflow overrides if necessary */
+    min-width: 0; /* Still needed to allow shrinking */
+    padding: 0 15px 0 0; /* Adjust padding during transition if needed, or keep 0 */
     border-right: none;
     overflow: hidden;
 }

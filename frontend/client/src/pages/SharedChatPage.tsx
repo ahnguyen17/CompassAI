@@ -47,12 +47,13 @@ const SharedChatPage: React.FC = () => { // Removed props
     setCopyError('');
     try {
       const response = await apiClient.post(`/chatsessions/copy/${shareId}`);
-      if (response.data?.success) {
-        // Success! Navigate to the chat list as requested
-        navigate('/chat');
+      if (response.data?.success && response.data.data?.newSessionId) {
+        // Success! Navigate directly to the newly copied chat
+        const newSessionId = response.data.data.newSessionId;
+        navigate(`/chat/${newSessionId}`);
         // Optionally show a success toast/message here
       } else {
-        setCopyError(response.data?.error || 'Failed to copy chat.');
+        setCopyError(response.data?.error || 'Failed to copy chat or missing new session ID.');
       }
     } catch (err: any) {
       console.error('Error copying chat:', err);

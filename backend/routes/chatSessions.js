@@ -5,7 +5,8 @@ const {
   createChatSession,
   updateChatSession,
   deleteChatSession,
-  getSharedChatSession // Import the public function
+  getSharedChatSession, // Import the public function
+  copySharedChatSession // Import the new copy function
 } = require('../controllers/chatSessions'); // Import controller functions
 
 const router = express.Router();
@@ -40,6 +41,10 @@ router.route('/:id')
   .get(getChatSession)
   .put(updateChatSession)
   .delete(deleteChatSession);
+
+// Route to copy a shared session (must be protected)
+router.route('/copy/:shareId').post(copySharedChatSession);
+
 
 // Note: Routes for adding/getting messages within a session will likely be separate
 // e.g., router.route('/:sessionId/messages').get(getMessages).post(addMessage);

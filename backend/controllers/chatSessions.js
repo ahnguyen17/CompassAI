@@ -20,7 +20,70 @@ exports.getChatSessions = async (req, res, next) => {
   } catch (error) {
     console.error("Get Chat Sessions Error:", error);
     res.status(500).json({ success: false, error: 'Server Error fetching chat sessions' });
-  }
+    }
+};
+
+// @desc    Copy a shared chat session to the logged-in user's sessions
+// @route   POST /api/v1/chatsessions/copy/:shareId
+// @access  Private
+exports.copySharedChatSession = async (req, res, next) => {
+    const { shareId } = req.params;
+    const currentUserId = req.user.id;
+
+    try {
+        // 1. Find the original shared session
+        const originalSession = await ChatSession.findOne({ shareId: shareId, isShared: true });
+
+        if (!originalSession) {
+            return res.status(404).json({ success: false, error: 'Shared chat session not found or sharing disabled' });
+        }
+
+        const originalOwnerId = originalSession.user.toString();
+
+        // 2. Check if the current user is the owner
+        if (currentUserId === originalOwnerId) {
+            return res.status(403).json({ success: false, error: 'You cannot copy your own shared chat session' });
+        }
+
+        // 3. Fetch original messages
+        const originalMessages = await ChatMessage.find({ session: originalSession._id }).sort({ timestamp: 1 }).lean(); // Use lean for plain JS objects
+
+        // 4. Create a new chat session for the current user
+        const newSession = await ChatSession.create({
+            user: currentUserId,
+            title: originalSession.title, // Use original title as requested
+            isShared: false,
+            // shareId will be null/undefined by default
+        });
+
+        // 5. Prepare and create new messages linked to the new session
+        if (originalMessages.length > 0) {
+            const newMessagesData = originalMessages.map(msg => ({
+                session: newSession._id, // Link to the NEW session
+                sender: msg.sender,
+                content: msg.content,
+                timestamp: msg.timestamp, // Keep original timestamps
+                modelUsed: msg.modelUsed,
+                reasoningContent: msg.reasoningContent,
+            }));
+            await ChatMessage.insertMany(newMessagesData);
+        }
+
+        // 6. Respond with success
+        res.status(201).json({
+            success: true,
+            message: 'Chat session copied successfully',
+            data: { newSessionId: newSession._id } // Send back new ID in case FE wants it later, though redirecting to list now
+        });
+
+    } catch (error) {
+        console.error("Copy Shared Chat Session Error:", error);
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ success: false, error: messages });
+        }
+        res.status(500).json({ success: false, error: 'Server Error copying chat session' });
+    }
 };
 
 // @desc    Get a single chat session (including messages - TBD)
@@ -196,7 +259,7 @@ exports.getSharedChatSession = async (req, res, next) => {
                 _id: session._id,
                 title: session.title,
                 createdAt: session.createdAt,
-                // user: user ? { username: user.username } : null, // Example user info
+                ownerId: session.user, // Include the owner's ID
                 messages: messages
             }
         });

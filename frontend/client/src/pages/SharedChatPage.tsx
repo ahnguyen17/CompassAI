@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom'; // Import useNavigate
 import apiClient from '../services/api';
 import CopyButton from '../components/CopyButton';
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import remarkGfm from 'remark-gfm'; // Import GFM plugin
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'; // Import SyntaxHighlighter
 import { prism, okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import useAuthStore from '../store/authStore'; // Import the store
+import useAuthStore from '../store/authStore'; // Import the auth store
 
 interface Message {
   _id: string;
@@ -21,17 +21,52 @@ interface SharedChatData {
     _id: string;
     title: string;
     createdAt: string;
+    ownerId: string; // Add ownerId
     messages: Message[];
 }
 
 // Removed SharedChatPageProps interface
 
 const SharedChatPage: React.FC = () => { // Removed props
-  const { isDarkMode } = useAuthStore(); // Get state from store
+  const { isDarkMode, isLoggedIn, currentUser, authLoading } = useAuthStore(); // Get auth state from store
+  const navigate = useNavigate(); // Get navigate function
   const { shareId } = useParams<{ shareId: string }>();
   const [chatData, setChatData] = useState<SharedChatData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Loading for initial chat data
   const [error, setError] = useState('');
+  const [isCopying, setIsCopying] = useState(false); // Loading state for copy action
+  const [copyError, setCopyError] = useState(''); // Error state for copy action
+
+  // Handler to copy the chat
+  const handleCopyChat = async () => {
+    if (!shareId || !chatData || !isLoggedIn || !currentUser || currentUser._id === chatData.ownerId) {
+      setCopyError('Cannot copy this chat.'); // Should not happen if button logic is correct
+      return;
+    }
+    setIsCopying(true);
+    setCopyError('');
+    try {
+      const response = await apiClient.post(`/chatsessions/copy/${shareId}`);
+      if (response.data?.success) {
+        // Success! Navigate to the chat list as requested
+        navigate('/chat');
+        // Optionally show a success toast/message here
+      } else {
+        setCopyError(response.data?.error || 'Failed to copy chat.');
+      }
+    } catch (err: any) {
+      console.error('Error copying chat:', err);
+      setCopyError(err.response?.data?.error || 'An unexpected error occurred while copying.');
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
+  // Handler to redirect to login
+  const handleLoginRedirect = () => {
+    navigate('/login');
+  };
+
 
   useEffect(() => {
     const fetchSharedChat = async () => {
@@ -113,6 +148,34 @@ const SharedChatPage: React.FC = () => { // Removed props
       <p style={subtitleStyle}>
         <small>Shared on: {new Date(chatData.createdAt).toLocaleString()}</small>
       </p>
+
+      {/* --- Conditional Button --- */}
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        {!authLoading && chatData && (
+          <>
+            {isLoggedIn && currentUser && currentUser._id !== chatData.ownerId && (
+              <button
+                onClick={handleCopyChat}
+                disabled={isCopying}
+                style={{ padding: '10px 20px', cursor: 'pointer', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px' }}
+              >
+                {isCopying ? 'Copying...' : 'Chat with AI'}
+              </button>
+            )}
+            {!isLoggedIn && (
+              <button
+                onClick={handleLoginRedirect}
+                 style={{ padding: '10px 20px', cursor: 'pointer', background: '#6c757d', color: 'white', border: 'none', borderRadius: '5px' }}
+              >
+                Login to chat with AI
+              </button>
+            )}
+          </>
+        )}
+        {copyError && <p style={{ color: 'red', marginTop: '10px' }}>{copyError}</p>}
+      </div>
+      {/* --- End Conditional Button --- */}
+
       <div style={messagesContainerStyle}>
         {chatData.messages.map((msg) => (
           <div

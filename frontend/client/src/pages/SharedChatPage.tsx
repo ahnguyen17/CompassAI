@@ -149,32 +149,6 @@ const SharedChatPage: React.FC = () => { // Removed props
         <small>Shared on: {new Date(chatData.createdAt).toLocaleString()}</small>
       </p>
 
-      {/* --- Conditional Button --- */}
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        {!authLoading && chatData && (
-          <>
-            {isLoggedIn && currentUser && currentUser._id !== chatData.ownerId && (
-              <button
-                onClick={handleCopyChat}
-                disabled={isCopying}
-                style={{ padding: '10px 20px', cursor: 'pointer', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px' }}
-              >
-                {isCopying ? 'Copying...' : 'Chat with AI'}
-              </button>
-            )}
-            {!isLoggedIn && (
-              <button
-                onClick={handleLoginRedirect}
-                 style={{ padding: '10px 20px', cursor: 'pointer', background: '#6c757d', color: 'white', border: 'none', borderRadius: '5px' }}
-              >
-                Login to chat with AI
-              </button>
-            )}
-          </>
-        )}
-        {copyError && <p style={{ color: 'red', marginTop: '10px' }}>{copyError}</p>}
-      </div>
-      {/* --- End Conditional Button --- */}
 
       <div style={messagesContainerStyle}>
         {chatData.messages.map((msg) => (
@@ -282,6 +256,34 @@ const SharedChatPage: React.FC = () => { // Removed props
           </div>
         ))}
       </div>
+
+      {/* --- Conditional Button --- */}
+      <div style={{ textAlign: 'center', marginTop: '20px' }}> {/* Changed marginBottom to marginTop */}
+        {!authLoading && chatData && (
+          <>
+            {isLoggedIn && currentUser && currentUser._id !== chatData.ownerId && (
+              <button
+                onClick={handleCopyChat}
+                disabled={isCopying}
+                style={{ padding: '10px 20px', cursor: 'pointer', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px' }}
+              >
+                {isCopying ? 'Copying...' : 'Chat with AI'}
+              </button>
+            )}
+            {!isLoggedIn && (
+              <button
+                onClick={handleLoginRedirect}
+                 style={{ padding: '10px 20px', cursor: 'pointer', background: '#6c757d', color: 'white', border: 'none', borderRadius: '5px' }}
+              >
+                Login to chat with AI
+              </button>
+            )}
+          </>
+        )}
+        {copyError && <p style={{ color: 'red', marginTop: '10px' }}>{copyError}</p>}
+      </div>
+      {/* --- End Conditional Button --- */}
+
     </div>
   );
 };

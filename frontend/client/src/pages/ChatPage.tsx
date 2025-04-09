@@ -72,10 +72,11 @@ const ChatPage: React.FC = () => { // Removed props
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
-  const abortControllerRef = useRef<AbortController | null>(null); // Restore AbortController ref
-  const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for the end of the messages list
+   const abortControllerRef = useRef<AbortController | null>(null); // Restore AbortController ref
+   const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for the end of the messages list
+   const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for textarea
 
-  // --- Helper Function for Parsing Perplexity Content ---
+   // --- Helper Function for Parsing Perplexity Content ---
   const parsePerplexityContent = (content: string): { reasoning: string | null; mainContent: string } => {
       const reasoningMatch = content.match(/<think>([\s\S]*?)<\/think>/);
       if (reasoningMatch && reasoningMatch[1]) {
@@ -182,11 +183,20 @@ const ChatPage: React.FC = () => { // Removed props
       } catch (err: any) {
           setError(err.response?.data?.error || 'Error creating chat.');
           if (err.response?.status === 401) navigate('/login');
-      }
-  };
+       }
+   };
 
-  // Combined Send Message Logic
-  const handleSendMessage = async (e?: React.FormEvent) => {
+   // Handle keydown for textarea (Enter to send, Shift+Enter for newline)
+   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+       if (e.key === 'Enter' && !e.shiftKey) {
+           e.preventDefault(); // Prevent default newline behavior
+           handleSendMessage(); // Call the send message function
+       }
+       // Allow Shift+Enter to create a newline (default behavior)
+   };
+
+   // Combined Send Message Logic
+   const handleSendMessage = async (e?: React.FormEvent) => {
       if (e) e.preventDefault();
       if ((!newMessage.trim() && !selectedFile) || !currentSession?._id || sendingMessage) return;
 
@@ -877,24 +887,30 @@ const ChatPage: React.FC = () => { // Removed props
                              className={styles.fileName}
                              style={{ color: isDarkMode ? '#bbb' : '#6c757d' }}
                          >
-                             {selectedFile.name}
-                         </span>
-                     )}
-                     <input
-                         type="text"
-                         value={newMessage}
-                         onChange={(e) => setNewMessage(e.target.value)}
+                              {selectedFile.name}
+                          </span>
+                      )}
+                      <textarea
+                          ref={textareaRef}
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyDown={handleKeyDown} // Add keydown handler
                          placeholder={t('chat_input_placeholder')}
                          disabled={sendingMessage || loadingMessages || !currentSession}
-                         className={styles.messageInput}
-                         style={{
-                             background: isDarkMode ? '#3a3d41' : 'white',
-                             border: `1px solid ${isDarkMode ? '#555' : '#ced4da'}`,
-                             color: isDarkMode ? '#e0e0e0' : 'inherit'
-                         }}
-                     />
-                     <button
-                         type="submit"
+                          className={styles.messageInput}
+                          style={{
+                              background: isDarkMode ? '#3a3d41' : 'white',
+                              border: `1px solid ${isDarkMode ? '#555' : '#ced4da'}`,
+                              color: isDarkMode ? '#e0e0e0' : 'inherit',
+                              resize: 'vertical', // Allow vertical resize
+                              minHeight: '40px', // Set a minimum height
+                              maxHeight: '150px', // Optional: Limit max height
+                              overflowY: 'auto' // Add scroll if content exceeds max height
+                          }}
+                          rows={1} // Start with 1 row, auto-expands with CSS potentially or JS
+                      />
+                      <button
+                          type="submit"
                          disabled={sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)}
                          className={styles.sendButton}
                          style={{

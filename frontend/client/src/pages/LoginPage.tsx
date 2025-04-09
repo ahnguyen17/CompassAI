@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom'; // Import useLocation
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/api';
 import styles from './LoginPage.module.css';
@@ -14,6 +14,7 @@ const LoginPage: React.FC = () => { // Removed props
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation(); // Get location object
   const { t } = useTranslation();
 
   // Pre-fill identifier on mount
@@ -36,7 +37,11 @@ const LoginPage: React.FC = () => { // Removed props
         localStorage.setItem('authToken', response.data.token);
         localStorage.setItem('lastLoginIdentifier', loginIdentifier);
         handleAuthSuccess(); // Call store action
-        navigate('/');
+
+        // Check for redirect path from state, otherwise default to '/'
+        const from = location.state?.from || '/';
+        navigate(from, { replace: true }); // Use replace to avoid login page in history
+
       } else {
         setError(response.data?.error || 'Login failed. Please check credentials.');
       }

@@ -63,9 +63,9 @@ const SharedChatPage: React.FC = () => { // Removed props
     }
   };
 
-  // Handler to redirect to login
+  // Handler to redirect to login, passing the current path as state
   const handleLoginRedirect = () => {
-    navigate('/login');
+    navigate('/login', { state: { from: location.pathname } }); // Pass current path
   };
 
 

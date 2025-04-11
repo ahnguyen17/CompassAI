@@ -25,7 +25,8 @@ const app = express();
 // Configure CORS to allow specific origins in production
 const allowedOrigins = [
     'https://frolicking-elf-a41c93.netlify.app', // Previous Netlify URL
-    'https://asianblvd.com'                     // New custom domain
+    'https://asianblvd.com',                     // New custom domain
+    'https://compassai-dev.onrender.com'         // New Render dev site
 ];
 
 /* --- TEMPORARY DEBUGGING --- Allow all origins

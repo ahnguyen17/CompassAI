@@ -26,7 +26,8 @@ const app = express();
 const allowedOrigins = [
     'https://frolicking-elf-a41c93.netlify.app', // Previous Netlify URL
     'https://asianblvd.com',                     // New custom domain
-    'https://compassai-dev.onrender.com'         // New Render dev site
+    'https://compassai-dev.onrender.com',        // New Render dev site
+    'https://compass247.vn'                      // New VN domain
 ];
 
 /* --- TEMPORARY DEBUGGING --- Allow all origins

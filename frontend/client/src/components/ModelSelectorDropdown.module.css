@@ -80,3 +80,8 @@ body.dark .modelItemSelected {
   background-color: #0d6efd; /* Use primary blue for selection */
   color: white;
 }
+
+/* Dark mode specific color for non-selected items */
+body.dark .modelItem {
+  color: #ccc; /* Slightly darker than default panel text */
+}

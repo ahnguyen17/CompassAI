@@ -28,7 +28,8 @@
   border-radius: 4px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.15);
   z-index: 10; /* Ensure it's above other elements */
-  min-width: max-content; /* Changed from 200px to fit content */
+  min-width: max-content; /* Fit content */
+  width: auto; /* Added width auto */
   max-height: 300px; /* Limit height */
   overflow-y: auto;
   padding: 5px 0;
@@ -67,7 +68,7 @@ body.dark .dropdownPanel {
 }
 
 body.dark .providerGroup {
-  color: #ddd; /* Made provider group text brighter */
+  color: #eee; /* Made provider group text even brighter */
   border-bottom-color: #555;
 }
 

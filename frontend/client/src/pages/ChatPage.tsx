@@ -803,12 +803,19 @@ const ChatPage: React.FC = () => { // Removed props
                   {/* Model Select and Streaming Toggle Row */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                       {!loadingModels && Object.keys(availableModels).length > 0 && (
-                          <> {/* Use Fragment to group icon and select */}
-                              {/* Replaced label with icon + tooltip */}
-                              <span title={t('chat_model_select_label')} style={{ cursor: 'default', fontSize: '1.2em', marginRight: '5px' }}>🤖</span>
+                          <div className={styles.modelSelectWrapper}> {/* Wrapper Div */}
+                              {/* Icon with new class */}
+                              <span
+                                  className={styles.modelSelectIcon}
+                                  title={t('chat_model_select_label')}
+                              >
+                                  🤖
+                              </span>
+                              {/* Select with new class */}
                               <select
-                                  id="model-select" // Keep id for potential future label association if needed
-                               value={selectedModel}
+                                  id="model-select" // Keep id
+                                  className={styles.modelSelectDropdown} // New class
+                                  value={selectedModel}
                               onChange={(e) => {
                                   const newModel = e.target.value;
                                   setSelectedModel(newModel);
@@ -821,8 +828,12 @@ const ChatPage: React.FC = () => { // Removed props
                                   padding: '5px 8px',
                                   borderRadius: '4px',
                                  border: `1px solid ${isDarkMode ? '#555' : '#ced4da'}`,
-                                 background: isDarkMode ? '#3a3d41' : 'white',
-                                 color: isDarkMode ? '#e0e0e0' : 'inherit'
+                                 // Removed inline styles, will be handled by CSS module class
+                                 // background: isDarkMode ? '#3a3d41' : 'white',
+                                 // color: isDarkMode ? '#e0e0e0' : 'inherit'
+                                 // border: `1px solid ${isDarkMode ? '#555' : '#ced4da'}`,
+                                 // padding: '5px 8px',
+                                 // borderRadius: '4px',
                                  }}
                          >
                                  <option value="">{t('chat_model_default')}</option>
@@ -841,10 +852,10 @@ const ChatPage: React.FC = () => { // Removed props
                                          })}
                                      </optgroup>
                                  ))}
-                             </select>
-                         </>
-                     )}
-                     {/* REMOVED Streaming Toggle Icon Button */}
+                              </select>
+                          </div> // Close Wrapper Div
+                      )}
+                      {/* REMOVED Streaming Toggle Icon Button */}
 
                      {/* Reasoning Toggle Icon Button (Now also controls streaming) */}
                      <button

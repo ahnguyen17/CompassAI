@@ -45,7 +45,7 @@
 /* Style for the copy button when placed inside the bubble */
 .copyButtonInside {
     position: absolute;
-    top: 5px;
+    bottom: 5px; /* Changed from top */
     right: 5px;
     z-index: 1;
     opacity: 0; /* Hidden by default */

@@ -99,37 +99,24 @@
     opacity: 0.6;
 }
 
-/* Microphone Button Styles */
+/* Microphone Button Styles (Standardized) */
 .micButton {
-    padding: 10px;
+    background: none;
+    border: none;
+    padding: 5px; /* Match dropdown button padding */
+    margin: 0;
     cursor: pointer;
-    border: 1px solid #ccc;
-    border-radius: 50%;
-    background: #eee;
+    font-size: 1.3em; /* Match other icons */
+    line-height: 1;
+    color: inherit; /* Inherit color */
     flex-shrink: 0;
-    color: #333; /* Default icon color */
-    transition: background-color 0.2s ease, color 0.2s ease;
+    /* Removed transition */
 }
 .micButton:disabled {
     cursor: not-allowed;
-    opacity: 0.6;
+    opacity: 0.5; /* Match dropdown button disabled state */
 }
-.micButtonListening {
-    background-color: #dc3545; /* Red background when listening */
-    border-color: #bd2c3a;
-    color: white; /* White icon when listening */
-}
-/* Dark mode for mic button */
-body.dark .micButton {
-    background: #444;
-    border-color: #666;
-    color: #eee;
-}
-body.dark .micButtonListening {
-    background-color: #e64959; /* Lighter red for dark mode */
-    border-color: #dc3545;
-    color: white;
-}
+/* Removed .micButtonListening and its dark mode variant */
 
 
 .fileName {

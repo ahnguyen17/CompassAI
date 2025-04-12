@@ -859,13 +859,14 @@ const ChatPage: React.FC = () => { // Removed props
                 <div ref={messagesEndRef} />
              </div>
 
-             {/* Input Area */}
-             <form onSubmit={handleSendMessage} className={styles.inputForm}>
-                  {/* Model Select and Streaming Toggle Row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                       {!loadingModels && Object.keys(availableModels).length > 0 && (
-                           <ModelSelectorDropdown
-                               availableModels={availableModels}
+              {/* Input Area */}
+              <form onSubmit={handleSendMessage} className={styles.inputForm}>
+                   {/* Model Select, Mic, and Reasoning Toggle Row */}
+                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}> {/* Changed gap to space-between */}
+                        {/* Model Selector */}
+                        {!loadingModels && Object.keys(availableModels).length > 0 ? (
+                            <ModelSelectorDropdown
+                                availableModels={availableModels}
                                selectedModel={selectedModel}
                                onModelChange={(newModel) => {
                                    setSelectedModel(newModel);
@@ -874,22 +875,35 @@ const ChatPage: React.FC = () => { // Removed props
                                        setShowReasoning(true);
                                    }
                                }}
-                               disabled={sendingMessage || loadingMessages}
-                           />
-                       )}
-                       {/* REMOVED Streaming Toggle Icon Button */}
+                                disabled={sendingMessage || loadingMessages}
+                            />
+                        ) : ( <div /> /* Placeholder to maintain space-between */)}
 
-                     {/* Reasoning Toggle Icon Button (Now also controls streaming) */}
-                     <button
-                         type="button"
+                        {/* Microphone Button (Moved Here) */}
+                        {recognitionRef.current && ( // Only show if API is supported
+                            <button
+                                type="button"
+                                onClick={handleToggleListening}
+                                disabled={sendingMessage || loadingMessages || !currentSession}
+                                className={`${styles.micButton} ${isListening ? styles.micButtonListening : ''}`} // Keep listening class for now, style will be removed via CSS
+                                title={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
+                                aria-label={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
+                            >
+                                🎤
+                            </button>
+                        )}
+
+                       {/* Reasoning Toggle Icon Button */}
+                       <button
+                           type="button"
                          onClick={() => setShowReasoning(!showReasoning)}
                          title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
                          aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
-                         aria-pressed={showReasoning} // Indicate toggle state
-                         style={{
-                             marginLeft: 'auto', // Push reasoning button to the right
-                             background: 'none',
-                             border: 'none',
+                          aria-pressed={showReasoning} // Indicate toggle state
+                          style={{
+                              // Removed marginLeft: 'auto'
+                              background: 'none',
+                              border: 'none',
                              cursor: 'pointer',
                              fontSize: '1.3em',
                              padding: '0 5px',
@@ -926,22 +940,10 @@ const ChatPage: React.FC = () => { // Removed props
                          >
                               {selectedFile.name}
                           </span>
-                       )}
-                       {/* Microphone Button */}
-                       {recognitionRef.current && ( // Only show if API is supported
-                           <button
-                               type="button"
-                               onClick={handleToggleListening}
-                               disabled={sendingMessage || loadingMessages || !currentSession}
-                               className={`${styles.micButton} ${isListening ? styles.micButtonListening : ''}`}
-                               title={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
-                               aria-label={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
-                           >
-                               🎤
-                           </button>
-                       )}
-                       <textarea
-                           ref={textareaRef}
+                        )}
+                        {/* Microphone Button Removed from here */}
+                        <textarea
+                            ref={textareaRef}
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
                           onKeyDown={handleKeyDown} // Add keydown handler

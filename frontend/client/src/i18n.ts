@@ -50,11 +50,19 @@ const resources = {
       "chat_send_button": "Send",
       "chat_sending_button": "Sending...",
       "chat_model_select_label": "Model:",
-      "chat_model_default": "Default (Auto-Select)",
-      "chat_attach_file": "Attach file",
-      "chat_enable_streaming": "Streaming Response",
-      // Settings Page
-      "settings_title": "Settings",
+       "chat_model_default": "Default (Auto-Select)",
+       "chat_attach_file": "Attach file",
+       "chat_attach_file_selected": "File: {{filename}}", // Added for selected file tooltip
+       "chat_start_listening": "Start Listening", // Added for mic button
+       "chat_stop_listening": "Stop Listening", // Added for mic button
+       "chat_enable_streaming": "Streaming Response",
+       "chat_reasoning_show_tooltip": "Show Reasoning Steps (Enables Streaming)", // Added
+       "chat_reasoning_hide_tooltip": "Hide Reasoning Steps (Disables Streaming)", // Added
+       "chat_sidebar_show_tooltip": "Show Chat History", // Added
+       "chat_sidebar_hide_tooltip": "Hide Chat History", // Added
+       "chat_delete_session_tooltip": "Delete chat: {{title}}", // Added
+       // Settings Page
+       "settings_title": "Settings",
       "settings_general_title": "General Settings",
       "settings_api_keys_title": "API Key Management",
       "settings_users_title": "User Management",
@@ -108,11 +116,19 @@ const resources = {
       "chat_send_button": "Gửi",
       "chat_sending_button": "Đang gửi...",
       "chat_model_select_label": "Mô hình:",
-      "chat_model_default": "Mặc định (Tự động chọn)",
-      "chat_attach_file": "Đính kèm tệp",
-      "chat_enable_streaming": "Phản hồi Streaming",
-      // Settings Page
-      "settings_title": "Cài đặt",
+       "chat_model_default": "Mặc định (Tự động chọn)",
+       "chat_attach_file": "Đính kèm tệp",
+       "chat_attach_file_selected": "Tệp: {{filename}}", // Added
+       "chat_start_listening": "Bắt đầu nghe", // Added
+       "chat_stop_listening": "Dừng nghe", // Added
+       "chat_enable_streaming": "Phản hồi Streaming",
+       "chat_reasoning_show_tooltip": "Hiện các bước suy luận (Bật Streaming)", // Added
+       "chat_reasoning_hide_tooltip": "Ẩn các bước suy luận (Tắt Streaming)", // Added
+       "chat_sidebar_show_tooltip": "Hiện lịch sử trò chuyện", // Added
+       "chat_sidebar_hide_tooltip": "Ẩn lịch sử trò chuyện", // Added
+       "chat_delete_session_tooltip": "Xóa cuộc trò chuyện: {{title}}", // Added
+       // Settings Page
+       "settings_title": "Cài đặt",
       "settings_general_title": "Cài đặt chung",
       "settings_api_keys_title": "Quản lý Khóa API",
       "settings_users_title": "Quản lý Người dùng",

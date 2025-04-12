@@ -73,10 +73,12 @@ const ChatPage: React.FC = () => { // Removed props
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
    const abortControllerRef = useRef<AbortController | null>(null); // Restore AbortController ref
-   const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for the end of the messages list
-   const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for textarea
+    const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for the end of the messages list
+    const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for textarea
+    const [isListening, setIsListening] = useState(false); // State for speech recognition
+    const recognitionRef = useRef<SpeechRecognition | null>(null); // Ref to hold recognition instance
 
-   // --- Helper Function for Parsing Perplexity Content ---
+    // --- Helper Function for Parsing Perplexity Content ---
   const parsePerplexityContent = (content: string): { reasoning: string | null; mainContent: string } => {
       const reasoningMatch = content.match(/<think>([\s\S]*?)<\/think>/);
       if (reasoningMatch && reasoningMatch[1]) {
@@ -498,10 +500,68 @@ const ChatPage: React.FC = () => { // Removed props
         await fetchAvailableModels(); // Fetch models first
         await fetchSessions(); // Then fetch sessions
     };
-    fetchInitialData();
-  }, []); // Run only once on mount
+     fetchInitialData();
 
-  // Effect to handle selecting session based on URL or loading the latest
+     // --- Speech Recognition Setup ---
+     // Check for browser support and initialize
+     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+     if (SpeechRecognition) {
+         recognitionRef.current = new SpeechRecognition();
+         recognitionRef.current.continuous = false; // Process speech after user stops talking
+         recognitionRef.current.lang = 'en-US'; // Set language (adjust if needed)
+         recognitionRef.current.interimResults = false; // We only want final results
+
+         recognitionRef.current.onstart = () => {
+             console.log('Speech recognition started');
+             setIsListening(true);
+         };
+
+         recognitionRef.current.onresult = (event) => {
+             const transcript = event.results[event.results.length - 1][0].transcript.trim();
+             console.log('Speech recognized:', transcript);
+             setNewMessage(prev => prev ? prev + ' ' + transcript : transcript); // Append transcript
+         };
+
+         recognitionRef.current.onerror = (event) => {
+             console.error('Speech recognition error:', event.error);
+             // Handle specific errors like 'not-allowed' or 'no-speech' if needed
+             setIsListening(false); // Ensure listening state is reset on error
+         };
+
+         recognitionRef.current.onend = () => {
+             console.log('Speech recognition ended');
+             setIsListening(false);
+         };
+     } else {
+         console.warn('Speech Recognition API not supported in this browser.');
+     }
+     // --- End Speech Recognition Setup ---
+
+   }, []); // Run only once on mount
+
+   // --- Speech Recognition Toggle Function ---
+   const handleToggleListening = () => {
+       if (!recognitionRef.current) {
+           alert('Speech Recognition is not supported by your browser.');
+           return;
+       }
+
+       if (isListening) {
+           recognitionRef.current.stop();
+       } else {
+           try {
+               recognitionRef.current.start();
+           } catch (err) {
+               // Handle potential errors if start() is called while already active (though onend should prevent this)
+               console.error("Error starting speech recognition:", err);
+               setIsListening(false); // Reset state if start fails
+           }
+       }
+   };
+   // --- End Speech Recognition Toggle Function ---
+
+
+   // Effect to handle selecting session based on URL or loading the latest
   useEffect(() => {
     // Don't run if sessions haven't loaded yet
     if (loadingSessions) return;
@@ -894,9 +954,22 @@ const ChatPage: React.FC = () => { // Removed props
                          >
                               {selectedFile.name}
                           </span>
-                      )}
-                      <textarea
-                          ref={textareaRef}
+                       )}
+                       {/* Microphone Button */}
+                       {recognitionRef.current && ( // Only show if API is supported
+                           <button
+                               type="button"
+                               onClick={handleToggleListening}
+                               disabled={sendingMessage || loadingMessages || !currentSession}
+                               className={`${styles.micButton} ${isListening ? styles.micButtonListening : ''}`}
+                               title={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
+                               aria-label={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
+                           >
+                               🎤
+                           </button>
+                       )}
+                       <textarea
+                           ref={textareaRef}
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
                           onKeyDown={handleKeyDown} // Add keydown handler

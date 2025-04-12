@@ -92,6 +92,53 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100px;
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
+.fileUploadButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Microphone Button Styles */
+.micButton {
+    padding: 10px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    background: #eee;
+    flex-shrink: 0;
+    color: #333; /* Default icon color */
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.micButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+.micButtonListening {
+    background-color: #dc3545; /* Red background when listening */
+    border-color: #bd2c3a;
+    color: white; /* White icon when listening */
+}
+/* Dark mode for mic button */
+body.dark .micButton {
+    background: #444;
+    border-color: #666;
+    color: #eee;
+}
+body.dark .micButtonListening {
+    background-color: #e64959; /* Lighter red for dark mode */
+    border-color: #dc3545;
+    color: white;
+}
+
+
+.fileName {
+    font-size: 0.8em;
+    color: #6c757d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
     flex-shrink: 0; /* Prevent shrinking */
 }
 

@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "lib": ["DOM", "DOM.Iterable", "ESNext", "dom.speech"], // Added dom.speech
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": true, // Enables compatibility with CommonJS modules

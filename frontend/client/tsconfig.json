@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext", "dom.speech"], // Added dom.speech
+    "lib": ["DOM", "DOM.Iterable", "ESNext"], // Reverted: Removed dom.speech
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": true, // Enables compatibility with CommonJS modules
@@ -15,6 +15,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "types": ["vite/client", "@types/dom-speech-recognition"], // Added types array
     // Add typeRoots if needed, but usually not required with standard setup
     // "typeRoots": ["./node_modules/@types", "./src/types"]
   },

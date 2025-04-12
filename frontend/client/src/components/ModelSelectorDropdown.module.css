@@ -1,0 +1,81 @@
+.dropdownContainer {
+  position: relative;
+  display: inline-block; /* Or inline-flex */
+}
+
+.dropdownButton {
+  background: none;
+  border: none;
+  padding: 5px;
+  margin: 0;
+  cursor: pointer;
+  font-size: 1.3em; /* Adjust icon size */
+  line-height: 1;
+  color: inherit; /* Inherit color from parent */
+}
+.dropdownButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dropdownPanel {
+  position: absolute;
+  bottom: 100%; /* Position above the button */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+  z-index: 10; /* Ensure it's above other elements */
+  min-width: 200px; /* Adjust as needed */
+  max-height: 300px; /* Limit height */
+  overflow-y: auto;
+  padding: 5px 0;
+  margin-bottom: 5px; /* Space between panel and button */
+}
+
+.providerGroup {
+  padding: 5px 10px;
+  font-weight: bold;
+  color: #6c757d;
+  font-size: 0.9em;
+  border-bottom: 1px solid #eee;
+}
+
+.modelItem {
+  padding: 8px 15px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 0.95em;
+}
+
+.modelItem:hover {
+  background-color: #f8f9fa;
+}
+
+.modelItemSelected {
+  background-color: #e9ecef;
+  font-weight: bold;
+}
+
+/* Dark Mode Styles */
+body.dark .dropdownPanel {
+  background-color: #3a3d41;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+body.dark .providerGroup {
+  color: #bbb;
+  border-bottom-color: #555;
+}
+
+body.dark .modelItem:hover {
+  background-color: #495057;
+}
+
+body.dark .modelItemSelected {
+  background-color: #0d6efd; /* Use primary blue for selection */
+  color: white;
+}

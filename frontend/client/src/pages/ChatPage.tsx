@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-// Import both light and dark themes
-import { prism, okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import apiClient from '../services/api';
-import CopyButton from '../components/CopyButton';
-import useAuthStore from '../store/authStore'; // Import the store
-import { useTranslation } from 'react-i18next';
+ // Import both light and dark themes
+ import { prism, okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism';
+ import apiClient from '../services/api';
+ import CopyButton from '../components/CopyButton';
+ import ModelSelectorDropdown from '../components/ModelSelectorDropdown'; // Import the new component
+ import useAuthStore from '../store/authStore'; // Import the store
+ import { useTranslation } from 'react-i18next';
 import styles from './ChatPage.module.css'; // Import CSS Module
 
 // --- Constants ---
@@ -862,50 +863,21 @@ const ChatPage: React.FC = () => { // Removed props
              <form onSubmit={handleSendMessage} className={styles.inputForm}>
                   {/* Model Select and Streaming Toggle Row */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                      {!loadingModels && Object.keys(availableModels).length > 0 && (
-                          <> {/* Reverted back to Fragment */}
-                              {/* Removed Icon Span */}
-                              {/* Restored Select element without wrapper/extra class */}
-                              <select
-                                  id="model-select" // Keep id
-                                  // Removed className={styles.modelSelectDropdown}
-                                  value={selectedModel}
-                              onChange={(e) => {
-                                  const newModel = e.target.value;
-                                  setSelectedModel(newModel);
-                                  // Automatically enable reasoning/streaming if a known reasoning model is selected
-                                  if (REASONING_MODELS.includes(newModel)) {
-                                      setShowReasoning(true);
-                                  }
-                              }}
-                              style={{ // Restored inline styles
-                                  padding: '5px 8px',
-                                  borderRadius: '4px',
-                                 border: `1px solid ${isDarkMode ? '#555' : '#ced4da'}`,
-                                 background: isDarkMode ? '#3a3d41' : 'white',
-                                 color: isDarkMode ? '#e0e0e0' : 'inherit'
-                                 }}
-                         >
-                                 <option value="">{t('chat_model_default')}</option>
-                                 {Object.entries(availableModels).map(([provider, models]) => (
-                                     <optgroup label={provider} key={provider}>
-         {models.map(modelName => {
-             // Determine display text: remove prefix for Perplexity (case-insensitive check), otherwise use full name
-             const displayText = provider.toLowerCase() === 'perplexity' // Use toLowerCase() for robust check
-                 ? modelName.replace(/^perplexity\//, '') // Remove prefix only if it exists at the start
-                 : modelName;
-                                             return (
-                                                 <option key={modelName} value={modelName}>
-                                                     {displayText}
-                                                 </option>
-                                             );
-                                         })}
-                                     </optgroup>
-                                 ))}
-                              </select>
-                          </> // Close Fragment
-                      )}
-                      {/* REMOVED Streaming Toggle Icon Button */}
+                       {!loadingModels && Object.keys(availableModels).length > 0 && (
+                           <ModelSelectorDropdown
+                               availableModels={availableModels}
+                               selectedModel={selectedModel}
+                               onModelChange={(newModel) => {
+                                   setSelectedModel(newModel);
+                                   // Automatically enable reasoning/streaming if a known reasoning model is selected
+                                   if (REASONING_MODELS.includes(newModel)) {
+                                       setShowReasoning(true);
+                                   }
+                               }}
+                               disabled={sendingMessage || loadingMessages}
+                           />
+                       )}
+                       {/* REMOVED Streaming Toggle Icon Button */}
 
                      {/* Reasoning Toggle Icon Button (Now also controls streaming) */}
                      <button

@@ -346,7 +346,7 @@ body.dark .inputForm {
     border-top-color: #444;
 }
 
-/* Removed styles for .modelSelectWrapper, .modelSelectIcon, .modelSelectDropdown */
+/* Styles for .modelSelectWrapper, .modelSelectIcon, .modelSelectDropdown were removed as they are no longer used */
 
 body.dark .inputControls label { /* Keep label style if used elsewhere */
     color: #bbb;

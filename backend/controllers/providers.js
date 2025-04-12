@@ -30,12 +30,13 @@ const AVAILABLE_MODELS = {
         "gemini-1.5-flash-8b",         // Added per request (Note: Size specifiers usually aren't in model names)
         "gemini-1.0-pro",
     ],
-    'DeepSeek': [ // Added DeepSeek
-        "deepseek-chat",
-        "deepseek-coder",
-        "deepseek-reasoner" // Added new model
-    ],
-    'Perplexity': [ // Added Perplexity with prefix
+     'DeepSeek': [ // Added DeepSeek
+         "deepseek-chat",
+         "deepseek-coder",
+         "deepseek-reasoner", // Added new model
+         "DeepSeek-V3" // Added DeepSeek-V3
+     ],
+     'Perplexity': [ // Added Perplexity with prefix
         "perplexity/sonar-deep-research",
         "perplexity/sonar-reasoning-pro",
         "perplexity/sonar-reasoning",

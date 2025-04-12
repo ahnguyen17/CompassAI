@@ -299,46 +299,7 @@ body.dark .inputForm {
     border-top-color: #444;
 }
 
-/* Styles for the model select wrapper and its children */
-.modelSelectWrapper {
-    position: relative; /* Container for absolute positioning */
-    display: inline-flex; /* Align icon and select nicely if needed */
-    align-items: center;
-}
-
-.modelSelectIcon {
-    position: absolute;
-    left: 8px; /* Adjust as needed */
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 1; /* Icon on top */
-    pointer-events: none; /* Clicks pass through to the select */
-    font-size: 1.2em; /* Match size used in JSX */
-    cursor: default; /* Match cursor used in JSX */
-}
-
-.modelSelectDropdown {
-    padding: 5px 8px 5px 30px; /* Top/Bottom, Right, Left (make space for icon) */
-    border-radius: 4px;
-    border: 1px solid #ced4da;
-    background: white;
-    color: inherit;
-    appearance: none; /* Optional: remove default browser arrow */
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    min-width: 150px; /* Give it some base width */
-    cursor: pointer;
-}
-
-/* Dark mode specific styles for the dropdown */
-body.dark .modelSelectDropdown {
-    background-color: #3a3d41;
-    border-color: #555;
-    color: #e0e0e0;
-}
-
-/* Remove old dark mode styles targeting select directly */
-/* body.dark .inputControls select { ... } */
+/* Removed styles for .modelSelectWrapper, .modelSelectIcon, .modelSelectDropdown */
 
 body.dark .inputControls label { /* Keep label style if used elsewhere */
     color: #bbb;

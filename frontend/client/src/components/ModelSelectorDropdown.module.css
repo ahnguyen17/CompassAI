@@ -83,5 +83,5 @@ body.dark .modelItemSelected {
 
 /* Dark mode specific color for non-selected items */
 body.dark .modelItem {
-  color: #aaa; /* Changed from #ccc */
+  color: #888; /* Changed from #aaa */
 }

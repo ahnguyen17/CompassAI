@@ -21,8 +21,8 @@
 .dropdownPanel {
   position: absolute;
   bottom: 100%; /* Position above the button */
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0; /* Align left edge with container */
+  /* Removed transform: translateX(-50%); */
   background-color: white;
   border: 1px solid #ccc;
   border-radius: 4px;

@@ -800,18 +800,15 @@ const ChatPage: React.FC = () => { // Removed props
 
              {/* Input Area */}
              <form onSubmit={handleSendMessage} className={styles.inputForm}>
-                 {/* Model Select and Streaming Toggle Row */}
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                     {!loadingModels && Object.keys(availableModels).length > 0 && (
-                         <> {/* Use Fragment to group label and select */}
-                             <label htmlFor="model-select" style={{
-                                 marginRight: '5px', // Reduced margin
-                             fontSize: '0.9em',
-                             color: isDarkMode ? '#bbb' : '#6c757d'
-                             }}>{t('chat_model_select_label')}</label>
-                             <select
-                                 id="model-select"
-                              value={selectedModel}
+                  {/* Model Select and Streaming Toggle Row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                      {!loadingModels && Object.keys(availableModels).length > 0 && (
+                          <> {/* Use Fragment to group icon and select */}
+                              {/* Replaced label with icon + tooltip */}
+                              <span title={t('chat_model_select_label')} style={{ cursor: 'default', fontSize: '1.2em', marginRight: '5px' }}>🤖</span>
+                              <select
+                                  id="model-select" // Keep id for potential future label association if needed
+                               value={selectedModel}
                               onChange={(e) => {
                                   const newModel = e.target.value;
                                   setSelectedModel(newModel);

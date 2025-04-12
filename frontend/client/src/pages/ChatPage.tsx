@@ -671,20 +671,23 @@ const ChatPage: React.FC = () => { // Removed props
                                     </details>
                                 )}
 
-                                    {/* --- AI Bubble + Button Wrapper --- */}
-                                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                                        {/* Pass original/full content to copy button */}
-                                        <CopyButton textToCopy={streamingMessageId === msg._id ? streamingMessageContent : msg.content} />
-                                        <div
+                                    {/* --- AI Bubble (Copy Button moved inside) --- */}
+                                    {/* Removed outer flex wrapper */}
+                                    <div
                                         className={`${styles.messageBubble}`}
                                         style={{
                                             background: isDarkMode ? '#3a3d41' : '#e9ecef', // AI Background
                                             color: isDarkMode ? '#e0e0e0' : '#343a40', // AI Text Color
                                         }}
                                     >
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        components={{
+                                        {/* Copy Button moved inside */}
+                                        <CopyButton
+                                            textToCopy={streamingMessageId === msg._id ? streamingMessageContent : msg.content}
+                                            className={styles.copyButtonInside} // Apply new class
+                                        />
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
                                             code({ className, children, ...props }: { className?: string; children?: React.ReactNode }) {
                                                 const match = /language-(\w+)/.exec(className || '');
                                                 const baseTheme = isDarkMode ? okaidia : prism;
@@ -716,9 +719,9 @@ const ChatPage: React.FC = () => { // Removed props
                                             ? parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).mainContent
                                             : (streamingMessageId === msg._id ? streamingMessageContent : msg.content)
                                         }
-                                    </ReactMarkdown>
-                                </div>
-                            </div>
+                                        </ReactMarkdown>
+                                    </div>
+                                    {/* End AI Bubble */}
 
                             {/* Add citations to the main bubble if available */}
                             {/* Force citations to be displayed regardless of streaming state */}
@@ -777,10 +780,14 @@ const ChatPage: React.FC = () => { // Removed props
                                     color: 'white',
                                 }}
                             >
+                                {/* Copy Button moved inside */}
+                                <CopyButton
+                                    textToCopy={msg.content}
+                                    className={styles.copyButtonInside} // Apply new class
+                                />
                                 <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                             </div>
-                            {/* User Button */}
-                            <CopyButton textToCopy={msg.content} />
+                            {/* User Button Removed from outside */}
                         </>
                     )}
                     </div>

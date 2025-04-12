@@ -42,6 +42,16 @@
     overflow-y: auto; /* Allow messages to scroll */
 }
 
+/* Style for the copy button when placed inside the bubble */
+.copyButtonInside {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 1;
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.2s ease-in-out;
+}
+
 .messageList {
     flex: 1;
     overflow-y: auto;
@@ -128,7 +138,14 @@
     border-radius: 15px;
     max-width: 75%; /* Default max width */
     word-wrap: break-word;
-    /* Add any other shared bubble styles */
+    position: relative; /* Needed for absolute positioning of the copy button */
+    padding: 10px 35px 10px 15px; /* Add padding for the button */
+}
+
+/* Show copy button on bubble hover/focus */
+.messageBubble:hover .copyButtonInside,
+.messageBubble:focus-within .copyButtonInside {
+    opacity: 1;
 }
 .messageBubbleUser {
     background-color: #007bff;
@@ -366,6 +383,7 @@ body.dark .sendButton:disabled {
     .mainChatArea {
         margin-left: 0 !important; /* Ensure no margin push */
         width: 100%; /* Take full width */
+        padding: 10px; /* Reduce padding for more fullscreen feel */
     }
 
     /* Adjustments for the button *inside* the sidebar on mobile */

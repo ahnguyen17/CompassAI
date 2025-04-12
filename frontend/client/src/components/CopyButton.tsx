@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 
 interface CopyButtonProps {
   textToCopy: string;
+  className?: string; // Add optional className prop
 }
 
-const CopyButton: React.FC<CopyButtonProps> = ({ textToCopy }) => {
+const CopyButton: React.FC<CopyButtonProps> = ({ textToCopy, className }) => { // Destructure className
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -26,18 +27,19 @@ const CopyButton: React.FC<CopyButtonProps> = ({ textToCopy }) => {
 
   return (
     <button
+      className={className} // Apply the className prop here
       onClick={handleCopy}
       title="Copy to clipboard" // Keep title for visual users
       aria-label="Copy to clipboard" // Add ARIA label for screen readers
       style={{
         background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        padding: '2px 5px',
-        marginLeft: '8px', // Space it from the message bubble
-        fontSize: '0.9em',
-        color: copied ? 'green' : '#6c757d', // Change color on copy
-        opacity: 0.7, // Make it subtle
+         border: 'none',
+         cursor: 'pointer',
+         padding: '2px 5px',
+         // marginLeft: '8px', // Removed: Space it from the message bubble - Handled by CSS now
+         fontSize: '0.9em',
+         color: copied ? 'green' : '#6c757d', // Change color on copy
+         opacity: 0.7, // Make it subtle
         transition: 'opacity 0.2s ease-in-out, color 0.2s ease-in-out',
       }}
       onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}

@@ -83,5 +83,5 @@ body.dark .modelItemSelected {
 
 /* Dark mode specific color for non-selected items */
 body.dark .modelItem {
-  color: #000080; /* Changed to Navy Blue */
+  color: #77aaff; /* Changed to a lighter blue */
 }

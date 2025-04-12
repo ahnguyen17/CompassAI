@@ -18,6 +18,8 @@ import AdminRoute from './components/AdminRoute'; // Import AdminRoute
 
 // --- App Component ---
 
+const navbarHeight = 50; // Same height as defined in Navbar.tsx
+
 function App() {
   // Get state and actions from Zustand store
   const {
@@ -48,7 +50,8 @@ function App() {
   }
 
   return (
-    <div className="app-container">
+    // Add paddingTop to account for the fixed navbar height
+    <div className="app-container" style={{ paddingTop: `${navbarHeight}px` }}>
       {/* Use state and actions from the store */}
       {/* Removed props from Navbar as it now uses the store */}
       <Navbar />

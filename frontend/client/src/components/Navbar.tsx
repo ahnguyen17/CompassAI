@@ -86,8 +86,9 @@ const Navbar: React.FC = () => { // Removed props
 
   return (
     <nav style={{ background: '#333', color: '#fff', padding: '10px 20px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <Link to="/" style={{ color: '#fff', textDecoration: 'none', fontSize: '1.2em' }}>
-        {t('nav_title')}
+      <Link to="/" style={{ color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center' }}> {/* Added display flex for alignment */}
+        <img src="/logo.png" alt={t('nav_title')} style={{ height: '30px', marginRight: '10px' }} /> {/* Replaced text with image */}
+        {/* Removed {t('nav_title')} */}
       </Link>
       <div style={{ display: 'flex', alignItems: 'center' }}> {/* Container for right-side items */}
         {/* Theme Toggle Button */}

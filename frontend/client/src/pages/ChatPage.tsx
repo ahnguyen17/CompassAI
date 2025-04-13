@@ -666,24 +666,7 @@ interface ChatMessage {
                  color: isDarkMode ? '#e0e0e0' : 'inherit',
                   gap: '10px' // Add gap between header items
               }}>
-                  {/* Add Hamburger Button Here */}
-                  <button
-                      onClick={toggleSidebarVisibility}
-                      style={{
-                          background: 'none',
-                          border: 'none',
-                          color: isDarkMode ? '#ccc' : '#666', // Match subdued text color
-                          cursor: 'pointer',
-                          fontSize: '1.5em', // Adjust size as needed
-                          padding: '0 10px 0 0', // Padding on the right
-                          margin: 0,
-                          lineHeight: 1
-                      }}
-                      title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
-                      aria-label={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
-                  >
-                      ☰
-                  </button>
+                  {/* Hamburger Button Removed From Here */}
                   <h3 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit', flexGrow: 1, margin: 0 }}>{currentSession.title || 'Untitled Chat'}</h3> {/* Allow title to grow */}
                   {/* Ensure New Chat Button is removed from here */}
                   <button

@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
+import { Link, useNavigate, useLocation } from 'react-router-dom'; // Import useNavigate and useLocation
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../store/authStore'; // Import the store
 
-// Removed CurrentUser interface (defined in store)
-// Removed NavbarProps interface
+// Define props interface
+interface NavbarProps {
+  isSidebarVisible: boolean;
+  toggleSidebarVisibility: () => void;
+}
 
 const navbarHeight = 50; // Define navbar height for calculations and styling
 
-const Navbar: React.FC = () => { // Removed props
+const Navbar: React.FC<NavbarProps> = ({ isSidebarVisible, toggleSidebarVisibility }) => { // Accept props
   // Get state and actions from store
   const {
     isLoggedIn,
@@ -18,6 +21,7 @@ const Navbar: React.FC = () => { // Removed props
     toggleTheme,
   } = useAuthStore();
   const navigate = useNavigate(); // Hook for navigation
+  const location = useLocation(); // Hook for location
 
   const { t, i18n } = useTranslation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -105,11 +109,34 @@ const Navbar: React.FC = () => { // Removed props
       // Removed transition
       // Removed marginBottom: '20px'
     }}>
-      <Link to="/" style={{ color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center' }}> {/* Added display flex for alignment */}
-        <img src="/logo.png" alt={t('nav_title')} style={{ height: '30px', marginRight: '10px' }} /> {/* Replaced text with image */}
-        {/* Removed {t('nav_title')} */}
-      </Link>
-      <div style={{ display: 'flex', alignItems: 'center' }}> {/* Container for right-side items */}
+      {/* Left side: Hamburger (conditional) + Logo */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        {/* Hamburger Button - Show only on chat pages when logged in */}
+        {isLoggedIn && (location.pathname === '/' || location.pathname.startsWith('/chat/')) && (
+          <button
+            onClick={toggleSidebarVisibility}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '1.5em', // Slightly larger
+              marginRight: '15px', // Space before logo
+              padding: '0 5px' // Minimal padding
+            }}
+            title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+            aria-label={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+          >
+            ☰
+          </button>
+        )}
+        <Link to="/" style={{ color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+          <img src="/logo.png" alt={t('nav_title')} style={{ height: '30px', marginRight: '10px' }} />
+        </Link>
+      </div>
+
+      {/* Right side: Theme, Language, Auth Links/Dropdown */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
         {/* Theme Toggle Button */}
         <button
             onClick={toggleTheme}

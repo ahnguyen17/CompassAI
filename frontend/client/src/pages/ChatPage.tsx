@@ -42,14 +42,18 @@ interface ChatMessage {
     reasoningContent?: string | null; // Add optional reasoning content
     citations?: any[]; // Add optional citations array
     fileInfo?: { filename: string; originalname: string; mimetype: string; size: number; path: string; }
-}
-
-// Removed ChatPageProps interface
-
-const ChatPage: React.FC = () => { // Removed props
-  const { isDarkMode } = useAuthStore(); // Get state from store
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+ }
+ 
+ // Define props interface
+ interface ChatPageProps {
+   isSidebarVisible: boolean;
+   toggleSidebarVisibility: () => void; // Add toggle function prop
+ }
+ 
+ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisibility }) => { // Accept props
+   const { isDarkMode } = useAuthStore(); // Get state from store
+   const [sessions, setSessions] = useState<ChatSession[]>([]);
+   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [loadingSessions, setLoadingSessions] = useState(true);
@@ -60,13 +64,13 @@ const ChatPage: React.FC = () => { // Removed props
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [availableModels, setAvailableModels] = useState<AvailableModels>({});
-  const [selectedModel, setSelectedModel] = useState<string>('');
-  const [loadingModels, setLoadingModels] = useState(true);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false); // Default to hidden
-  // State for streaming response
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
-  const [streamingMessageContent, setStreamingMessageContent] = useState<string>('');
+   const [availableModels, setAvailableModels] = useState<AvailableModels>({});
+   const [selectedModel, setSelectedModel] = useState<string>('');
+   const [loadingModels, setLoadingModels] = useState(true);
+   // Removed local isSidebarVisible state
+   // State for streaming response
+   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+   const [streamingMessageContent, setStreamingMessageContent] = useState<string>('');
   const [reasoningSteps, setReasoningSteps] = useState<{ [messageId: string]: string }>({}); // State for reasoning steps (store as string)
   const [showReasoning, setShowReasoning] = useState(false); // State for showing/hiding reasoning AND enabling streaming
   // const [isStreamingEnabled, setIsStreamingEnabled] = useState(true); // REMOVED - Merged with showReasoning
@@ -164,24 +168,24 @@ const ChatPage: React.FC = () => { // Removed props
           setLoadingMessages(false);
       }
   };
-  const handleSelectSession = (session: ChatSession) => {
-      setCurrentSession(session);
-      navigate(`/chat/${session._id}`);
-      fetchMessages(session._id);
-      setIsSidebarVisible(false); // Collapse sidebar on selection
-  };
-  const handleNewChat = async () => {
+   const handleSelectSession = (session: ChatSession) => {
+       setCurrentSession(session);
+       navigate(`/chat/${session._id}`);
+       fetchMessages(session._id);
+       // Removed setIsSidebarVisible(false); - State is controlled by App.tsx now
+   };
+   const handleNewChat = async () => {
       setError('');
       try {
           const response = await apiClient.post('/chatsessions', { title: 'New Chat' });
           if (response.data?.success) {
               const newSession: ChatSession = response.data.data;
-              setSessions([newSession, ...sessions]);
-              handleSelectSession(newSession); // This will select and fetch messages
-              setSelectedModel('');
-              setIsSidebarVisible(false); // Collapse sidebar on new chat
-          } else {
-              setError('Failed to create new chat.');
+               setSessions([newSession, ...sessions]);
+               handleSelectSession(newSession); // This will select and fetch messages
+               setSelectedModel('');
+               // Removed setIsSidebarVisible(false); - State is controlled by App.tsx now
+           } else {
+               setError('Failed to create new chat.');
           }
       } catch (err: any) {
           setError(err.response?.data?.error || 'Error creating chat.');
@@ -601,12 +605,11 @@ const ChatPage: React.FC = () => { // Removed props
   //   if (!currentSession && !isSidebarVisible) {
   //     setIsSidebarVisible(true);
   //   }
-  // }, [currentSession, isSidebarVisible]);
-
-  // --- Toggle Sidebar Visibility ---
-  const toggleSidebarVisibility = () => setIsSidebarVisible(!isSidebarVisible);
-
-  // --- Render ---
+   // }, [currentSession, isSidebarVisible]); // Keep comment or remove if no longer relevant
+ 
+   // Removed local toggleSidebarVisibility function
+ 
+   // --- Render ---
   return (
     <div className={styles.chatPageContainer} style={{ backgroundColor: isDarkMode ? '#1a1a1a' : '#f8f9fa' }}> {/* Apply container background */}
       {/* Sidebar */}
@@ -641,13 +644,11 @@ const ChatPage: React.FC = () => { // Removed props
          )}
       </div>
 
-      {/* Main Chat Area */}
-      <div className={styles.mainChatArea}>
-         {!isSidebarVisible && (
-            <button onClick={toggleSidebarVisibility} className={`${styles.sidebarToggleButton} ${styles.sidebarToggleButtonHidden}`} title={t('chat_sidebar_show_tooltip')} aria-label={t('chat_sidebar_show_tooltip')}>{'☰'}</button> /* Changed icon */
-         )}
-
-         {currentSession ? (
+       {/* Main Chat Area */}
+       <div className={styles.mainChatArea}>
+          {/* Removed floating hamburger button */}
+ 
+          {currentSession ? (
            <>
              {/* Header */}
              <div style={{

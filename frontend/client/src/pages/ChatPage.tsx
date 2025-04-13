@@ -44,13 +44,9 @@ interface ChatMessage {
     fileInfo?: { filename: string; originalname: string; mimetype: string; size: number; path: string; }
  }
  
- // Define props interface
- interface ChatPageProps {
-   isSidebarVisible: boolean;
-   toggleSidebarVisibility: () => void; // Add toggle function prop
- }
+ // Removed ChatPageProps interface
  
- const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisibility }) => { // Accept props
+ const ChatPage: React.FC = () => { // Removed props
    const { isDarkMode } = useAuthStore(); // Get state from store
    const [sessions, setSessions] = useState<ChatSession[]>([]);
    const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -67,7 +63,7 @@ interface ChatMessage {
    const [availableModels, setAvailableModels] = useState<AvailableModels>({});
    const [selectedModel, setSelectedModel] = useState<string>('');
    const [loadingModels, setLoadingModels] = useState(true);
-   // Removed local isSidebarVisible state
+   const [isSidebarVisible, setIsSidebarVisible] = useState(false); // Re-add local state
    // State for streaming response
    const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
    const [streamingMessageContent, setStreamingMessageContent] = useState<string>('');
@@ -607,7 +603,8 @@ interface ChatMessage {
   //   }
    // }, [currentSession, isSidebarVisible]); // Keep comment or remove if no longer relevant
  
-   // Removed local toggleSidebarVisibility function
+   // Re-add local toggleSidebarVisibility function
+   const toggleSidebarVisibility = () => setIsSidebarVisible(!isSidebarVisible);
  
    // --- Render ---
   return (
@@ -646,7 +643,7 @@ interface ChatMessage {
 
        {/* Main Chat Area */}
        <div className={styles.mainChatArea}>
-          {/* Removed floating hamburger button */}
+          {/* Hamburger button removed from Navbar, will be added below */}
  
           {currentSession ? (
            <>
@@ -660,12 +657,30 @@ interface ChatMessage {
                  borderBottom: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
                  marginLeft: '40px',
                  color: isDarkMode ? '#e0e0e0' : 'inherit',
-                 gap: '10px' // Add gap between header items
-             }}>
-                 <h3 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit', flexGrow: 1, margin: 0 }}>{currentSession.title || 'Untitled Chat'}</h3> {/* Allow title to grow */}
-                 {/* Ensure New Chat Button is removed from here */}
-                 <button
-                     onClick={handleToggleShare}
+                  gap: '10px' // Add gap between header items
+              }}>
+                  {/* Add Hamburger Button Here */}
+                  <button
+                      onClick={toggleSidebarVisibility}
+                      style={{
+                          background: 'none',
+                          border: 'none',
+                          color: isDarkMode ? '#ccc' : '#666', // Match subdued text color
+                          cursor: 'pointer',
+                          fontSize: '1.5em', // Adjust size as needed
+                          padding: '0 10px 0 0', // Padding on the right
+                          margin: 0,
+                          lineHeight: 1
+                      }}
+                      title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+                      aria-label={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+                  >
+                      ☰
+                  </button>
+                  <h3 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit', flexGrow: 1, margin: 0 }}>{currentSession.title || 'Untitled Chat'}</h3> {/* Allow title to grow */}
+                  {/* Ensure New Chat Button is removed from here */}
+                  <button
+                      onClick={handleToggleShare}
                      disabled={shareLoading}
                      className={styles.sendButton} // Use the send button class
                      style={{ // Keep only necessary inline styles that differ from .sendButton

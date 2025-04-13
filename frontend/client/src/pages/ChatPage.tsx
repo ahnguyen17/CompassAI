@@ -642,7 +642,7 @@ const ChatPage: React.FC = () => { // Removed props
       {/* Main Chat Area */}
       <div className={styles.mainChatArea}>
          {!isSidebarVisible && (
-            <button onClick={toggleSidebarVisibility} className={`${styles.sidebarToggleButton} ${styles.sidebarToggleButtonHidden}`} title={t('chat_sidebar_show_tooltip')} aria-label={t('chat_sidebar_show_tooltip')}>{'›'}</button>
+            <button onClick={toggleSidebarVisibility} className={`${styles.sidebarToggleButton} ${styles.sidebarToggleButtonHidden}`} title={t('chat_sidebar_show_tooltip')} aria-label={t('chat_sidebar_show_tooltip')}>{'☰'}</button> /* Changed icon */
          )}
 
          {currentSession ? (

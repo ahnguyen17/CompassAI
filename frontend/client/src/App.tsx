@@ -1,4 +1,4 @@
-import React from 'react'; // Removed useState
+import React, { useState } from 'react'; // Added useState
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
 import useAuthStore from './store/authStore'; // Import the Zustand store
@@ -21,7 +21,9 @@ import AdminRoute from './components/AdminRoute'; // Import AdminRoute
 const navbarHeight = 50; // Same height as defined in Navbar.tsx
 
 function App() {
-  // Removed Sidebar State and toggle function
+  // Sidebar State
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const toggleSidebarVisibility = () => setIsSidebarVisible(!isSidebarVisible);
 
   // Get state and actions from Zustand store
   const {
@@ -54,8 +56,8 @@ function App() {
   return (
     // Add paddingTop to account for the fixed navbar height
     <div className="app-container" style={{ paddingTop: `${navbarHeight}px` }}>
-      {/* Removed props passed to Navbar */}
-      <Navbar />
+      {/* Pass sidebar state and toggle function to Navbar */}
+      <Navbar isSidebarVisible={isSidebarVisible} toggleSidebarVisibility={toggleSidebarVisibility} />
       <Routes>
          {/* Public Routes */}
          {/* LoginPage now uses the store directly */}
@@ -68,9 +70,9 @@ function App() {
          {/* Protected Routes (General Login Required) */}
          {/* ProtectedRoute will now internally use useAuthStore */}
          <Route element={<ProtectedRoute />}>
-             {/* Removed props passed to ChatPage */}
-             <Route path="/" element={<ChatPage />} />
-             <Route path="/chat/:sessionId" element={<ChatPage />} />
+             {/* Pass sidebar state and toggle function to ChatPage */}
+             <Route path="/" element={<ChatPage isSidebarVisible={isSidebarVisible} toggleSidebarVisibility={toggleSidebarVisibility} />} />
+             <Route path="/chat/:sessionId" element={<ChatPage isSidebarVisible={isSidebarVisible} toggleSidebarVisibility={toggleSidebarVisibility} />} />
              {/* SettingsPage will now internally use useAuthStore */}
              <Route path="/settings" element={<SettingsPage />} />
          </Route>

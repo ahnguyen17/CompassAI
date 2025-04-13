@@ -120,8 +120,8 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarVisible, toggleSidebarVisibili
               border: 'none',
               color: '#fff',
               cursor: 'pointer',
-              fontSize: '1.5em', // Slightly larger
-              marginRight: '15px', // Space before logo
+              fontSize: '1.2em', // Match other icons
+              marginRight: '10px', // Reduced space before logo
               padding: '0 5px' // Minimal padding
             }}
             title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}

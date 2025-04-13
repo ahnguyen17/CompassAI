@@ -44,9 +44,13 @@ interface ChatMessage {
     fileInfo?: { filename: string; originalname: string; mimetype: string; size: number; path: string; }
  }
  
- // Removed ChatPageProps interface
+ // Define props interface
+ interface ChatPageProps {
+   isSidebarVisible: boolean;
+   toggleSidebarVisibility: () => void; // Add toggle function prop
+ }
  
- const ChatPage: React.FC = () => { // Removed props
+ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisibility }) => { // Accept props
    const { isDarkMode } = useAuthStore(); // Get state from store
    const [sessions, setSessions] = useState<ChatSession[]>([]);
    const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -63,7 +67,7 @@ interface ChatMessage {
    const [availableModels, setAvailableModels] = useState<AvailableModels>({});
    const [selectedModel, setSelectedModel] = useState<string>('');
    const [loadingModels, setLoadingModels] = useState(true);
-   const [isSidebarVisible, setIsSidebarVisible] = useState(false); // Re-add local state
+   // Removed local isSidebarVisible state
    // State for streaming response
    const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
    const [streamingMessageContent, setStreamingMessageContent] = useState<string>('');
@@ -168,7 +172,10 @@ interface ChatMessage {
        setCurrentSession(session);
        navigate(`/chat/${session._id}`);
        fetchMessages(session._id);
-       // Removed setIsSidebarVisible(false); - State is controlled by App.tsx now
+       // Close sidebar if it's currently visible
+       if (isSidebarVisible) {
+           toggleSidebarVisibility();
+       }
    };
    const handleNewChat = async () => {
       setError('');
@@ -603,8 +610,7 @@ interface ChatMessage {
   //   }
    // }, [currentSession, isSidebarVisible]); // Keep comment or remove if no longer relevant
  
-   // Re-add local toggleSidebarVisibility function
-   const toggleSidebarVisibility = () => setIsSidebarVisible(!isSidebarVisible);
+   // Removed local toggleSidebarVisibility function
  
    // --- Render ---
   return (
@@ -643,7 +649,8 @@ interface ChatMessage {
 
        {/* Main Chat Area */}
        <div className={styles.mainChatArea}>
-          {/* Hamburger button removed from Navbar, will be added below */}
+          {/* Removed floating hamburger button */}
+          {/* Hamburger button removed from Navbar, will be added below - This comment seems misplaced now */}
  
           {currentSession ? (
            <>

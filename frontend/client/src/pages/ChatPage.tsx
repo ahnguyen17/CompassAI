@@ -616,24 +616,26 @@ const ChatPage: React.FC = () => { // Removed props
       >
          {isSidebarVisible && (
              <>
-                {/* Updated Header with Explicit Close Button */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <button onClick={handleNewChat} className={styles.newChatButton}>{t('chat_new_button')}</button>
-                    {/* Explicit Close Button */}
-                    <button
-                        onClick={toggleSidebarVisibility}
-                        className={`${styles.sidebarToggleButton} ${styles.sidebarCloseButton}`} // Add specific class if needed
-                        title={t('chat_sidebar_hide_tooltip')} // Use translation key
-                        aria-label={t('chat_sidebar_hide_tooltip')} // Ensure ARIA label uses translation
-                        style={{ flexShrink: 0, fontSize: '1.2em' }} // Adjust style as needed
-                    >
-                        &times; {/* Use 'X' character */}
-                    </button>
-                </div>
-                <h4>{t('chat_history_title')}</h4>
-                {loadingSessions ? <p>{t('chat_loading')}</p> : error && !sessions.length ? <p style={{ color: 'red' }}>{error}</p> : sessions.length > 0 ? (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                    {sessions.map((session) => ( <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}> <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}> {session.title || 'Untitled Chat'} </span> <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(session._id, session.title); }} disabled={deleteLoading === session._id} className={styles.deleteSessionButton} aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}> {deleteLoading === session._id ? '...' : '×'} </button> </li> ))}
+                 {/* Header with New Chat Button */}
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                     <button onClick={handleNewChat} className={styles.newChatButton}>{t('chat_new_button')}</button>
+                     {/* Close button removed from here */}
+                 </div>
+                 {/* Chat History Title and Close Button */}
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                     <h4>{t('chat_history_title')}</h4>
+                     <button
+                         onClick={toggleSidebarVisibility}
+                         className={styles.sidebarHeaderCloseButton} // Use new specific class
+                         title={t('chat_sidebar_hide_tooltip')}
+                         aria-label={t('chat_sidebar_hide_tooltip')}
+                     >
+                         &laquo; {/* Use left arrow icon */}
+                     </button>
+                 </div>
+                 {loadingSessions ? <p>{t('chat_loading')}</p> : error && !sessions.length ? <p style={{ color: 'red' }}>{error}</p> : sessions.length > 0 ? (
+                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                     {sessions.map((session) => ( <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}> <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}> {session.title || 'Untitled Chat'} </span> <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(session._id, session.title); }} disabled={deleteLoading === session._id} className={styles.deleteSessionButton} aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}> {deleteLoading === session._id ? '...' : '×'} </button> </li> ))}
                 </ul> ) : <p>{t('chat_no_history')}</p>}
              </>
          )}

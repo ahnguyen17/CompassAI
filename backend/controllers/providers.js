@@ -33,8 +33,8 @@ const AVAILABLE_MODELS = {
      'DeepSeek': [ // Added DeepSeek
          "deepseek-chat",
          "deepseek-coder",
-         "deepseek-reasoner", // Added new model
-         "DeepSeek-V3" // Added DeepSeek-V3
+         "deepseek-reasoner" // Added new model
+         // Removed "DeepSeek-V3"
      ],
      'Perplexity': [ // Added Perplexity with prefix
         "perplexity/sonar-deep-research",

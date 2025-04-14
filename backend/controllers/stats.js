@@ -83,6 +83,7 @@ exports.getMonthlyUsageStats = async (req, res, next) => {
                 user: 1,   // Then by user ascending
                 model: 1   // Then by model ascending
             }
+        }, // Added trailing comma
         ]);
 
         res.status(200).json({
@@ -168,6 +169,7 @@ exports.getAllTimeUsageStats = async (req, res, next) => {
                 user: 1,
                 model: 1
             }
+        }, // Added trailing comma
         ]);
 
         res.status(200).json({

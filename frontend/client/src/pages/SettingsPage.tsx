@@ -1,9 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react'; // Added useMemo
+import React, { useState, useEffect } from 'react'; // Removed useMemo as it's not used
 import { useTranslation } from 'react-i18next';
-import apiClient, { ApiResponse, MonthlyStat, AllTimeStat } from '../services/api'; // Import new types
+// Import updated and new interfaces from api.ts
+import apiClient, {
+    ApiResponse,
+    MonthlyUserStat, // Renamed
+    AllTimeUserStat,  // Renamed
+    MonthlyModelStat, // New
+    AllTimeModelStat  // New
+} from '../services/api';
 import useAuthStore from '../store/authStore'; // Import the store
 
-// Interfaces
+// Interfaces (Keep existing local interfaces)
 interface ApiKey {
   _id: string;
   providerName: string;
@@ -95,12 +102,17 @@ const SettingsPage: React.FC = () => { // Removed props
   const [newReferralCode, setNewReferralCode] = useState('');
   const [newReferralDescription, setNewReferralDescription] = useState('');
 
-  // --- Usage Statistics State (Admin) --- NEW
-  const [monthlyStats, setMonthlyStats] = useState<MonthlyStat[]>([]);
-  const [allTimeStats, setAllTimeStats] = useState<AllTimeStat[]>([]);
-  const [statsView, setStatsView] = useState<'monthly' | 'alltime'>('monthly');
+  // --- Usage Statistics State (Admin) --- UPDATED
+  const [statsTypeView, setStatsTypeView] = useState<'user' | 'model'>('user'); // 'user' or 'model'
+  const [statsTimeView, setStatsTimeView] = useState<'monthly' | 'alltime'>('monthly'); // 'monthly' or 'alltime'
   const [loadingStats, setLoadingStats] = useState(true);
   const [fetchStatsError, setFetchStatsError] = useState('');
+  // State for User Stats
+  const [monthlyUserStats, setMonthlyUserStats] = useState<MonthlyUserStat[]>([]);
+  const [allTimeUserStats, setAllTimeUserStats] = useState<AllTimeUserStat[]>([]);
+  // State for Model Stats
+  const [monthlyModelStats, setMonthlyModelStats] = useState<MonthlyModelStat[]>([]);
+  const [allTimeModelStats, setAllTimeModelStats] = useState<AllTimeModelStat[]>([]);
 
   // --- User Profile Update State (Self) ---
   const [profileUsername, setProfileUsername] = useState('');
@@ -225,7 +237,7 @@ const SettingsPage: React.FC = () => { // Removed props
   }, [currentUser]); // Refetch if currentUser changes (e.g., after login)
 
 
-  // --- Fetch Usage Statistics (Admin) --- NEW
+  // --- Fetch Usage Statistics (Admin) --- UPDATED
   useEffect(() => {
       const fetchStats = async () => {
           if (currentUser?.role !== 'admin') {
@@ -234,27 +246,41 @@ const SettingsPage: React.FC = () => { // Removed props
           }
           setLoadingStats(true);
           setFetchStatsError('');
+          let endpoint = '';
+          let statType = ''; // For error messages
+
+          // Determine endpoint based on view selections
+          if (statsTypeView === 'user') {
+              endpoint = statsTimeView === 'monthly' ? '/stats/usage/user/monthly' : '/stats/usage/user/alltime';
+              statType = `user ${statsTimeView}`;
+          } else { // statsTypeView === 'model'
+              endpoint = statsTimeView === 'monthly' ? '/stats/usage/model/monthly' : '/stats/usage/model/alltime';
+              statType = `model ${statsTimeView}`;
+          }
+
           try {
-              let response;
-              if (statsView === 'monthly') {
-                  // Use the updated user-specific path
-                  response = await apiClient.get<ApiResponse<MonthlyStat[]>>('/stats/usage/user/monthly');
-                  if (response.data?.success) {
-                      setMonthlyStats(response.data.data);
-                  } else {
-                      setFetchStatsError(response.data?.error || 'Failed to load monthly usage statistics.');
+              const response = await apiClient.get(endpoint); // Fetch data
+
+              if (response.data?.success) {
+                  // Update the correct state based on the view
+                  if (statsTypeView === 'user') {
+                      if (statsTimeView === 'monthly') {
+                          setMonthlyUserStats(response.data.data as MonthlyUserStat[]);
+                      } else {
+                          setAllTimeUserStats(response.data.data as AllTimeUserStat[]);
+                      }
+                  } else { // statsTypeView === 'model'
+                      if (statsTimeView === 'monthly') {
+                          setMonthlyModelStats(response.data.data as MonthlyModelStat[]);
+                      } else {
+                          setAllTimeModelStats(response.data.data as AllTimeModelStat[]);
+                      }
                   }
-              } else { // statsView === 'alltime'
-                  // Use the updated user-specific path
-                  response = await apiClient.get<ApiResponse<AllTimeStat[]>>('/stats/usage/user/alltime');
-                  if (response.data?.success) {
-                      setAllTimeStats(response.data.data);
-                  } else {
-                      setFetchStatsError(response.data?.error || 'Failed to load all-time usage statistics.');
-                  }
+              } else {
+                  setFetchStatsError(response.data?.error || `Failed to load ${statType} usage statistics.`);
               }
           } catch (err: any) {
-              setFetchStatsError(err.response?.data?.error || `Error loading ${statsView} usage statistics.`);
+              setFetchStatsError(err.response?.data?.error || `Error loading ${statType} usage statistics.`);
               if (err.response?.status === 401) setFetchStatsError('Unauthorized.');
               if (err.response?.status === 403) setFetchStatsError('Forbidden.');
           } finally {
@@ -263,7 +289,8 @@ const SettingsPage: React.FC = () => { // Removed props
       };
 
       fetchStats();
-  }, [currentUser, statsView]); // Refetch when user changes or view changes
+  // Refetch when user changes or any view selection changes
+  }, [currentUser, statsTypeView, statsTimeView]);
 
 
   // --- API Key Handlers ---
@@ -993,17 +1020,35 @@ const SettingsPage: React.FC = () => { // Removed props
        {currentUser?.role === 'admin' && (
            <section style={sectionStyle}>
                <h3 style={h3Style}>Usage Statistics</h3>
+               {/* Type Selection (User/Model) */}
+               <div style={{ marginBottom: '10px' }}>
+                   <button
+                       style={statsTypeView === 'user' ? activeTabButtonStyle : inactiveTabButtonStyle}
+                       onClick={() => setStatsTypeView('user')}
+                       disabled={loadingStats}
+                   >
+                       User Stats
+                   </button>
+                   <button
+                       style={statsTypeView === 'model' ? activeTabButtonStyle : inactiveTabButtonStyle}
+                       onClick={() => setStatsTypeView('model')}
+                       disabled={loadingStats}
+                   >
+                       Model Stats
+                   </button>
+               </div>
+               {/* Time Selection (Monthly/All-Time) */}
                <div style={{ marginBottom: '15px' }}>
                    <button
-                       style={statsView === 'monthly' ? activeTabButtonStyle : inactiveTabButtonStyle}
-                       onClick={() => setStatsView('monthly')}
+                       style={statsTimeView === 'monthly' ? activeTabButtonStyle : inactiveTabButtonStyle}
+                       onClick={() => setStatsTimeView('monthly')}
                        disabled={loadingStats}
                    >
                        Monthly
                    </button>
                    <button
-                       style={statsView === 'alltime' ? activeTabButtonStyle : inactiveTabButtonStyle}
-                       onClick={() => setStatsView('alltime')}
+                       style={statsTimeView === 'alltime' ? activeTabButtonStyle : inactiveTabButtonStyle}
+                       onClick={() => setStatsTimeView('alltime')}
                        disabled={loadingStats}
                    >
                        All-Time
@@ -1015,54 +1060,104 @@ const SettingsPage: React.FC = () => { // Removed props
 
                {!loadingStats && !fetchStatsError && (
                    <>
-                       {statsView === 'monthly' && (
-                           monthlyStats.length > 0 ? (
-                               <table style={tableStyle}>
-                                   <thead>
-                                       <tr>
-                                           <th style={thStyle}>Year</th>
-                                           <th style={thStyle}>Month</th>
-                                           <th style={thStyle}>User</th>
-                                           {/* Removed Model column */}
-                                           <th style={thStyle}>Count</th>
-                                       </tr>
-                                   </thead>
-                                   <tbody>
-                                       {monthlyStats.map((stat, index) => (
-                                           <tr key={index}>
-                                               <td style={tdStyle}>{stat.year}</td>
-                                               <td style={tdStyle}>{getMonthName(stat.month)}</td>
-                                               <td style={tdStyle}>{stat.user}</td>
-                                               {/* Removed Model cell */}
-                                               <td style={tdStyle}>{stat.count}</td>
-                                           </tr>
-                                       ))}
-                                   </tbody>
-                               </table>
-                           ) : <p>No monthly usage data available.</p>
+                       {/* User Stats View */}
+                       {statsTypeView === 'user' && (
+                           <>
+                               {statsTimeView === 'monthly' && (
+                                   monthlyUserStats.length > 0 ? (
+                                       <table style={tableStyle}>
+                                           <thead>
+                                               <tr>
+                                                   <th style={thStyle}>Year</th>
+                                                   <th style={thStyle}>Month</th>
+                                                   <th style={thStyle}>User</th>
+                                                   <th style={thStyle}>Count</th>
+                                               </tr>
+                                           </thead>
+                                           <tbody>
+                                               {monthlyUserStats.map((stat, index) => (
+                                                   <tr key={index}>
+                                                       <td style={tdStyle}>{stat.year}</td>
+                                                       <td style={tdStyle}>{getMonthName(stat.month)}</td>
+                                                       <td style={tdStyle}>{stat.user}</td>
+                                                       <td style={tdStyle}>{stat.count}</td>
+                                                   </tr>
+                                               ))}
+                                           </tbody>
+                                       </table>
+                                   ) : <p>No monthly user usage data available.</p>
+                               )}
+                               {statsTimeView === 'alltime' && (
+                                   allTimeUserStats.length > 0 ? (
+                                       <table style={tableStyle}>
+                                           <thead>
+                                               <tr>
+                                                   <th style={thStyle}>User</th>
+                                                   <th style={thStyle}>Count</th>
+                                               </tr>
+                                           </thead>
+                                           <tbody>
+                                               {allTimeUserStats.map((stat, index) => (
+                                                   <tr key={index}>
+                                                       <td style={tdStyle}>{stat.user}</td>
+                                                       <td style={tdStyle}>{stat.count}</td>
+                                                   </tr>
+                                               ))}
+                                           </tbody>
+                                       </table>
+                                   ) : <p>No all-time user usage data available.</p>
+                               )}
+                           </>
                        )}
 
-                       {statsView === 'alltime' && (
-                           allTimeStats.length > 0 ? (
-                               <table style={tableStyle}>
-                                   <thead>
-                                       <tr>
-                                           <th style={thStyle}>User</th>
-                                           {/* Removed Model column */}
-                                           <th style={thStyle}>Count</th>
-                                       </tr>
-                                   </thead>
-                                   <tbody>
-                                       {allTimeStats.map((stat, index) => (
-                                           <tr key={index}>
-                                               <td style={tdStyle}>{stat.user}</td>
-                                               {/* Removed Model cell */}
-                                               <td style={tdStyle}>{stat.count}</td>
-                                           </tr>
-                                       ))}
-                                   </tbody>
-                               </table>
-                           ) : <p>No all-time usage data available.</p>
+                       {/* Model Stats View */}
+                       {statsTypeView === 'model' && (
+                           <>
+                               {statsTimeView === 'monthly' && (
+                                   monthlyModelStats.length > 0 ? (
+                                       <table style={tableStyle}>
+                                           <thead>
+                                               <tr>
+                                                   <th style={thStyle}>Year</th>
+                                                   <th style={thStyle}>Month</th>
+                                                   <th style={thStyle}>Model</th>
+                                                   <th style={thStyle}>Count</th>
+                                               </tr>
+                                           </thead>
+                                           <tbody>
+                                               {monthlyModelStats.map((stat, index) => (
+                                                   <tr key={index}>
+                                                       <td style={tdStyle}>{stat.year}</td>
+                                                       <td style={tdStyle}>{getMonthName(stat.month)}</td>
+                                                       <td style={tdStyle}>{stat.model}</td>
+                                                       <td style={tdStyle}>{stat.count}</td>
+                                                   </tr>
+                                               ))}
+                                           </tbody>
+                                       </table>
+                                   ) : <p>No monthly model usage data available.</p>
+                               )}
+                               {statsTimeView === 'alltime' && (
+                                   allTimeModelStats.length > 0 ? (
+                                       <table style={tableStyle}>
+                                           <thead>
+                                               <tr>
+                                                   <th style={thStyle}>Model</th>
+                                                   <th style={thStyle}>Count</th>
+                                               </tr>
+                                           </thead>
+                                           <tbody>
+                                               {allTimeModelStats.map((stat, index) => (
+                                                   <tr key={index}>
+                                                       <td style={tdStyle}>{stat.model}</td>
+                                                       <td style={tdStyle}>{stat.count}</td>
+                                                   </tr>
+                                               ))}
+                                           </tbody>
+                                       </table>
+                                   ) : <p>No all-time model usage data available.</p>
+                               )}
+                           </>
                        )}
                    </>
                )}

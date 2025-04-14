@@ -10,18 +10,34 @@ export interface ApiResponse<T> {
     error?: string; // Optional error message
 }
 
-// Interface for Monthly Usage Statistics
-export interface MonthlyStat {
+// --- User Statistics Interfaces ---
+// Interface for Monthly User Usage Statistics (Note: model field might be unused now)
+export interface MonthlyUserStat {
     year: number;
     month: number;
     user: string; // User identifier (e.g., email)
+    // model: string; // Model field is no longer returned by this endpoint
+    count: number;
+}
+
+// Interface for All-Time User Usage Statistics (Note: model field might be unused now)
+export interface AllTimeUserStat {
+    user: string; // User identifier (e.g., email)
+    // model: string; // Model field is no longer returned by this endpoint
+    count: number;
+}
+
+// --- Model Statistics Interfaces ---
+// Interface for Monthly Model Usage Statistics
+export interface MonthlyModelStat {
+    year: number;
+    month: number;
     model: string;
     count: number;
 }
 
-// Interface for All-Time Usage Statistics
-export interface AllTimeStat {
-    user: string; // User identifier (e.g., email)
+// Interface for All-Time Model Usage Statistics
+export interface AllTimeModelStat {
     model: string;
     count: number;
 }

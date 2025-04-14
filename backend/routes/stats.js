@@ -1,7 +1,9 @@
 const express = require('express');
 const {
     getMonthlyUsageStats,
-    getAllTimeUsageStats
+    getAllTimeUsageStats,
+    getMonthlyModelStats, // Added import
+    getAllTimeModelStats  // Added import
 } = require('../controllers/stats');
 
 // Include middleware
@@ -13,11 +15,18 @@ const router = express.Router();
 router.use(protect);
 router.use(authorize('admin'));
 
-// Define routes
-router.route('/usage/monthly')
+// Define routes for User Stats
+router.route('/usage/user/monthly') // Updated path
     .get(getMonthlyUsageStats);
 
-router.route('/usage/alltime')
+router.route('/usage/user/alltime') // Updated path
     .get(getAllTimeUsageStats);
+
+// Define routes for Model Stats
+router.route('/usage/model/monthly') // New route
+    .get(getMonthlyModelStats);
+
+router.route('/usage/model/alltime') // New route
+    .get(getAllTimeModelStats);
 
 module.exports = router;

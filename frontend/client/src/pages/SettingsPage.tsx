@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react'; // Added useMemo
 import { useTranslation } from 'react-i18next';
-import apiClient from '../services/api';
+import apiClient, { ApiResponse, MonthlyStat, AllTimeStat } from '../services/api'; // Import new types
 import useAuthStore from '../store/authStore'; // Import the store
 
 // Interfaces
@@ -36,6 +36,14 @@ interface ModelStatus {
 }
 
 // Removed SettingsPageProps interface
+
+// Helper to get month name
+const getMonthName = (monthNumber: number, locale: string = 'en-US'): string => {
+    const date = new Date();
+    date.setMonth(monthNumber - 1); // Month is 0-indexed in JS Date
+    return date.toLocaleString(locale, { month: 'long' });
+};
+
 
 const SettingsPage: React.FC = () => { // Removed props
   const { currentUser, isDarkMode } = useAuthStore(); // Get state from store
@@ -86,6 +94,13 @@ const SettingsPage: React.FC = () => { // Removed props
   const [deleteReferralCodeLoading, setDeleteReferralCodeLoading] = useState<string | null>(null);
   const [newReferralCode, setNewReferralCode] = useState('');
   const [newReferralDescription, setNewReferralDescription] = useState('');
+
+  // --- Usage Statistics State (Admin) --- NEW
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyStat[]>([]);
+  const [allTimeStats, setAllTimeStats] = useState<AllTimeStat[]>([]);
+  const [statsView, setStatsView] = useState<'monthly' | 'alltime'>('monthly');
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [fetchStatsError, setFetchStatsError] = useState('');
 
   // --- User Profile Update State (Self) ---
   const [profileUsername, setProfileUsername] = useState('');
@@ -199,13 +214,55 @@ const SettingsPage: React.FC = () => { // Removed props
         fetchUsers();
         fetchReferralCodes();
         fetchModelStatuses(); // Fetch model statuses for admin
+        // Initial fetch for stats is handled by the stats useEffect below
     } else {
         // Ensure loading states are false if not admin
         setLoadingUsers(false);
         setLoadingReferralCodes(false);
         setLoadingModelStatuses(false); // Also set model status loading to false
+        setLoadingStats(false); // Also set stats loading to false if not admin
     }
   }, [currentUser]); // Refetch if currentUser changes (e.g., after login)
+
+
+  // --- Fetch Usage Statistics (Admin) --- NEW
+  useEffect(() => {
+      const fetchStats = async () => {
+          if (currentUser?.role !== 'admin') {
+              setLoadingStats(false); // Ensure loading is false if somehow triggered when not admin
+              return;
+          }
+          setLoadingStats(true);
+          setFetchStatsError('');
+          try {
+              let response;
+              if (statsView === 'monthly') {
+                  response = await apiClient.get<ApiResponse<MonthlyStat[]>>('/stats/usage/monthly');
+                  if (response.data?.success) {
+                      setMonthlyStats(response.data.data);
+                  } else {
+                      setFetchStatsError(response.data?.error || 'Failed to load monthly usage statistics.');
+                  }
+              } else { // statsView === 'alltime'
+                  response = await apiClient.get<ApiResponse<AllTimeStat[]>>('/stats/usage/alltime');
+                  if (response.data?.success) {
+                      setAllTimeStats(response.data.data);
+                  } else {
+                      setFetchStatsError(response.data?.error || 'Failed to load all-time usage statistics.');
+                  }
+              }
+          } catch (err: any) {
+              setFetchStatsError(err.response?.data?.error || `Error loading ${statsView} usage statistics.`);
+              if (err.response?.status === 401) setFetchStatsError('Unauthorized.');
+              if (err.response?.status === 403) setFetchStatsError('Forbidden.');
+          } finally {
+              setLoadingStats(false);
+          }
+      };
+
+      fetchStats();
+  }, [currentUser, statsView]); // Refetch when user changes or view changes
+
 
   // --- API Key Handlers ---
   const handleAddKey = async (e: React.FormEvent) => {
@@ -586,6 +643,46 @@ const SettingsPage: React.FC = () => { // Removed props
       border: 'none'
   };
 
+  // --- Table Styles --- NEW
+  const tableStyle: React.CSSProperties = {
+      width: '100%',
+      borderCollapse: 'collapse',
+      marginTop: '20px',
+      fontSize: '0.9em',
+      color: isDarkMode ? '#e0e0e0' : 'inherit'
+  };
+
+  const thStyle: React.CSSProperties = {
+      borderBottom: `2px solid ${isDarkMode ? '#666' : '#ddd'}`,
+      padding: '10px 8px',
+      textAlign: 'left',
+      background: isDarkMode ? '#3a3d41' : '#f2f2f2',
+      color: isDarkMode ? '#e0e0e0' : 'inherit'
+  };
+
+  const tdStyle: React.CSSProperties = {
+      borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}`,
+      padding: '8px',
+      textAlign: 'left',
+      color: isDarkMode ? '#e0e0e0' : 'inherit'
+  };
+
+  const activeTabButtonStyle = {
+      ...smallButtonStyle,
+      background: isDarkMode ? '#0d6efd' : '#007bff',
+      color: 'white',
+      border: `1px solid ${isDarkMode ? '#0d6efd' : '#007bff'}`,
+      marginRight: '5px'
+  };
+
+  const inactiveTabButtonStyle = {
+      ...smallButtonStyle,
+      background: isDarkMode ? '#495057' : '#e9ecef',
+      color: isDarkMode ? '#ccc' : '#495057',
+      border: `1px solid ${isDarkMode ? '#555' : '#dee2e6'}`,
+      marginRight: '5px'
+  };
+
   const resetPwdButtonStyle = {
       ...smallButtonStyle,
       background: isDarkMode ? '#e0a800' : '#ffc107', // Darker yellow
@@ -887,6 +984,86 @@ const SettingsPage: React.FC = () => { // Removed props
                    {referralCodes.length >= 5 && <p style={{ color: 'orange', fontSize: '0.9em', marginTop: '5px' }}>Maximum number of codes reached.</p>}
                    {addReferralCodeError && <p style={{ color: 'red', marginTop: '10px' }}>{addReferralCodeError}</p>}
                </div>
+           </section>
+       )}
+
+       {/* Usage Statistics (Admin Only) */}
+       {currentUser?.role === 'admin' && (
+           <section style={sectionStyle}>
+               <h3 style={h3Style}>Usage Statistics</h3>
+               <div style={{ marginBottom: '15px' }}>
+                   <button
+                       style={statsView === 'monthly' ? activeTabButtonStyle : inactiveTabButtonStyle}
+                       onClick={() => setStatsView('monthly')}
+                       disabled={loadingStats}
+                   >
+                       Monthly
+                   </button>
+                   <button
+                       style={statsView === 'alltime' ? activeTabButtonStyle : inactiveTabButtonStyle}
+                       onClick={() => setStatsView('alltime')}
+                       disabled={loadingStats}
+                   >
+                       All-Time
+                   </button>
+               </div>
+
+               {loadingStats && <p>Loading statistics...</p>}
+               {fetchStatsError && <p style={{ color: 'red' }}>{fetchStatsError}</p>}
+
+               {!loadingStats && !fetchStatsError && (
+                   <>
+                       {statsView === 'monthly' && (
+                           monthlyStats.length > 0 ? (
+                               <table style={tableStyle}>
+                                   <thead>
+                                       <tr>
+                                           <th style={thStyle}>Year</th>
+                                           <th style={thStyle}>Month</th>
+                                           <th style={thStyle}>User</th>
+                                           <th style={thStyle}>Model</th>
+                                           <th style={thStyle}>Count</th>
+                                       </tr>
+                                   </thead>
+                                   <tbody>
+                                       {monthlyStats.map((stat, index) => (
+                                           <tr key={index}>
+                                               <td style={tdStyle}>{stat.year}</td>
+                                               <td style={tdStyle}>{getMonthName(stat.month)}</td>
+                                               <td style={tdStyle}>{stat.user}</td>
+                                               <td style={tdStyle}>{stat.model}</td>
+                                               <td style={tdStyle}>{stat.count}</td>
+                                           </tr>
+                                       ))}
+                                   </tbody>
+                               </table>
+                           ) : <p>No monthly usage data available.</p>
+                       )}
+
+                       {statsView === 'alltime' && (
+                           allTimeStats.length > 0 ? (
+                               <table style={tableStyle}>
+                                   <thead>
+                                       <tr>
+                                           <th style={thStyle}>User</th>
+                                           <th style={thStyle}>Model</th>
+                                           <th style={thStyle}>Count</th>
+                                       </tr>
+                                   </thead>
+                                   <tbody>
+                                       {allTimeStats.map((stat, index) => (
+                                           <tr key={index}>
+                                               <td style={tdStyle}>{stat.user}</td>
+                                               <td style={tdStyle}>{stat.model}</td>
+                                               <td style={tdStyle}>{stat.count}</td>
+                                           </tr>
+                                       ))}
+                                   </tbody>
+                               </table>
+                           ) : <p>No all-time usage data available.</p>
+                       )}
+                   </>
+               )}
            </section>
        )}
 

@@ -1,5 +1,33 @@
 import axios from 'axios';
 
+// --- Interfaces ---
+
+// Generic API Response structure (assuming backend follows this pattern)
+export interface ApiResponse<T> {
+    success: boolean;
+    count?: number; // Optional count, often used for lists
+    data: T;
+    error?: string; // Optional error message
+}
+
+// Interface for Monthly Usage Statistics
+export interface MonthlyStat {
+    year: number;
+    month: number;
+    user: string; // User identifier (e.g., email)
+    model: string;
+    count: number;
+}
+
+// Interface for All-Time Usage Statistics
+export interface AllTimeStat {
+    user: string; // User identifier (e.g., email)
+    model: string;
+    count: number;
+}
+
+// --- Dynamic Backend URL ---
+
 // Determine backend URL dynamically
 const getBaseUrl = () => {
     // 1. Check for explicit deployment environment variable

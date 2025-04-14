@@ -237,14 +237,16 @@ const SettingsPage: React.FC = () => { // Removed props
           try {
               let response;
               if (statsView === 'monthly') {
-                  response = await apiClient.get<ApiResponse<MonthlyStat[]>>('/stats/usage/monthly');
+                  // Use the updated user-specific path
+                  response = await apiClient.get<ApiResponse<MonthlyStat[]>>('/stats/usage/user/monthly');
                   if (response.data?.success) {
                       setMonthlyStats(response.data.data);
                   } else {
                       setFetchStatsError(response.data?.error || 'Failed to load monthly usage statistics.');
                   }
               } else { // statsView === 'alltime'
-                  response = await apiClient.get<ApiResponse<AllTimeStat[]>>('/stats/usage/alltime');
+                  // Use the updated user-specific path
+                  response = await apiClient.get<ApiResponse<AllTimeStat[]>>('/stats/usage/user/alltime');
                   if (response.data?.success) {
                       setAllTimeStats(response.data.data);
                   } else {
@@ -1021,7 +1023,7 @@ const SettingsPage: React.FC = () => { // Removed props
                                            <th style={thStyle}>Year</th>
                                            <th style={thStyle}>Month</th>
                                            <th style={thStyle}>User</th>
-                                           <th style={thStyle}>Model</th>
+                                           {/* Removed Model column */}
                                            <th style={thStyle}>Count</th>
                                        </tr>
                                    </thead>
@@ -1031,7 +1033,7 @@ const SettingsPage: React.FC = () => { // Removed props
                                                <td style={tdStyle}>{stat.year}</td>
                                                <td style={tdStyle}>{getMonthName(stat.month)}</td>
                                                <td style={tdStyle}>{stat.user}</td>
-                                               <td style={tdStyle}>{stat.model}</td>
+                                               {/* Removed Model cell */}
                                                <td style={tdStyle}>{stat.count}</td>
                                            </tr>
                                        ))}
@@ -1046,7 +1048,7 @@ const SettingsPage: React.FC = () => { // Removed props
                                    <thead>
                                        <tr>
                                            <th style={thStyle}>User</th>
-                                           <th style={thStyle}>Model</th>
+                                           {/* Removed Model column */}
                                            <th style={thStyle}>Count</th>
                                        </tr>
                                    </thead>
@@ -1054,7 +1056,7 @@ const SettingsPage: React.FC = () => { // Removed props
                                        {allTimeStats.map((stat, index) => (
                                            <tr key={index}>
                                                <td style={tdStyle}>{stat.user}</td>
-                                               <td style={tdStyle}>{stat.model}</td>
+                                               {/* Removed Model cell */}
                                                <td style={tdStyle}>{stat.count}</td>
                                            </tr>
                                        ))}

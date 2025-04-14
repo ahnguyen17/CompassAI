@@ -15,7 +15,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["vite/client", "@types/dom-speech-recognition"], // Added types array
+    // Let TS infer types from installed packages and Vite's client types
+    // "types": ["vite/client"], // Removed explicit types array or keep only vite/client if needed
     // Add typeRoots if needed, but usually not required with standard setup
     // "typeRoots": ["./node_modules/@types", "./src/types"]
   },

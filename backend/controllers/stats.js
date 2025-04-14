@@ -1,17 +1,16 @@
-const asyncHandler = require('../middleware/async'); // Assuming you have an asyncHandler middleware
-const ErrorResponse = require('../utils/errorResponse'); // Assuming you have an ErrorResponse utility
 const ChatMessage = require('../models/ChatMessage');
 const ChatSession = require('../models/ChatSession');
 const User = require('../models/User');
 const mongoose = require('mongoose');
 
 // @desc    Get monthly usage statistics per user and model
-// @route   GET /api/stats/usage/monthly
+// @route   GET /api/v1/stats/usage/monthly
 // @access  Private/Admin
-exports.getMonthlyUsageStats = asyncHandler(async (req, res, next) => {
-    const stats = await ChatMessage.aggregate([
-        // 1. Filter for AI messages that used a model
-        {
+exports.getMonthlyUsageStats = async (req, res, next) => {
+    try {
+        const stats = await ChatMessage.aggregate([
+            // 1. Filter for AI messages that used a model
+            {
             $match: {
                 sender: 'ai',
                 modelUsed: { $exists: true, $ne: null, $ne: "" }
@@ -84,23 +83,27 @@ exports.getMonthlyUsageStats = asyncHandler(async (req, res, next) => {
                 user: 1,   // Then by user ascending
                 model: 1   // Then by model ascending
             }
-        }
-    ]);
+        ]);
 
-    res.status(200).json({
-        success: true,
-        count: stats.length,
-        data: stats
-    });
-});
+        res.status(200).json({
+            success: true,
+            count: stats.length,
+            data: stats
+        });
+    } catch (error) {
+        console.error("Get Monthly Stats Error:", error);
+        res.status(500).json({ success: false, error: 'Server Error fetching monthly statistics' });
+    }
+}; // Added semicolon
 
 // @desc    Get all-time usage statistics per user and model
-// @route   GET /api/stats/usage/alltime
+// @route   GET /api/v1/stats/usage/alltime
 // @access  Private/Admin
-exports.getAllTimeUsageStats = asyncHandler(async (req, res, next) => {
-    const stats = await ChatMessage.aggregate([
-        // 1. Filter for AI messages that used a model
-        {
+exports.getAllTimeUsageStats = async (req, res, next) => {
+    try {
+        const stats = await ChatMessage.aggregate([
+            // 1. Filter for AI messages that used a model
+            {
             $match: {
                 sender: 'ai',
                 modelUsed: { $exists: true, $ne: null, $ne: "" }
@@ -165,12 +168,15 @@ exports.getAllTimeUsageStats = asyncHandler(async (req, res, next) => {
                 user: 1,
                 model: 1
             }
-        }
-    ]);
+        ]);
 
-    res.status(200).json({
-        success: true,
-        count: stats.length,
-        data: stats
-    });
-});
+        res.status(200).json({
+            success: true,
+            count: stats.length,
+            data: stats
+        });
+    } catch (error) {
+        console.error("Get All-Time Stats Error:", error);
+        res.status(500).json({ success: false, error: 'Server Error fetching all-time statistics' });
+    }
+}; // Added semicolon

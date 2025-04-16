@@ -1,6 +1,6 @@
 const Setting = require('../models/Setting');
-const asyncHandler = require('../middleware/async'); // Assuming you have an asyncHandler middleware
-const ErrorResponse = require('../utils/errorResponse'); // Assuming you have an ErrorResponse utility
+const asyncHandler = require('./../middleware/async'); // Corrected path
+const ErrorResponse = require('./../utils/errorResponse'); // Corrected path
 
 // @desc    Get global settings
 // @route   GET /api/settings

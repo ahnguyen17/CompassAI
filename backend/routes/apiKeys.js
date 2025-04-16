@@ -11,16 +11,16 @@ const router = express.Router();
 // Import protection middleware
 const { protect } = require('../middleware/auth');
 // Optional: Import authorization middleware if specific roles are needed
-// const { authorize } = require('../middleware/auth');
+const { authorize } = require('../middleware/auth'); // Uncommented authorize
 
 // Apply protect middleware to all routes in this file
-// Optional: Add role authorization like authorize('admin') if needed
+// Add role authorization to ensure only admins can manage global keys
 router.route('/')
-  .get(protect, getApiKeys)
-  .post(protect, addApiKey);
+  .get(protect, authorize('admin'), getApiKeys) // Added authorize('admin')
+  .post(protect, authorize('admin'), addApiKey); // Added authorize('admin')
 
 router.route('/:id')
-  .put(protect, updateApiKey)
-  .delete(protect, deleteApiKey);
+  .put(protect, authorize('admin'), updateApiKey) // Added authorize('admin')
+  .delete(protect, authorize('admin'), deleteApiKey); // Added authorize('admin')
 
 module.exports = router;

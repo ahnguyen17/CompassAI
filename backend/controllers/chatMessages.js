@@ -16,7 +16,7 @@ const AVAILABLE_MODELS = {
         "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307",
         "claude-2.1", "claude-2.0", "claude-instant-1.2" // Deprecated models re-added
     ],
-    'OpenAI': ["gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-3.5-turbo"],
+    'OpenAI': ["gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-3.5-turbo", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano"], // Added new models
     'Gemini': [
         "gemini-2.5-pro-experimental", "gemini-2.0-flash", "gemini-2.0-flash-lite",
         "gemini-1.5-pro-latest", "gemini-1.5-pro", "gemini-1.5-flash-latest",

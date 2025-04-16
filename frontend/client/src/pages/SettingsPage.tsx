@@ -902,8 +902,9 @@ const SettingsPage: React.FC = () => { // Removed props
 
       {/* User Management (Admin Only) */}
       {currentUser?.role === 'admin' && (
-          <section style={sectionStyle}>
-              <h3 style={h3Style}>{t('settings_users_title')}</h3>
+          <details open style={sectionStyle}> {/* Changed section to details */}
+              <summary style={{...h3Style, cursor: 'pointer', display: 'list-item'}}>{t('settings_users_title')}</summary> {/* Changed h3 to summary */}
+              {/* Content starts here */}
               {adminResetPwdError && <p style={{ color: 'red', marginBottom: '10px' }}>Admin Action Error: {adminResetPwdError}</p>}
               {loadingUsers && <p>Loading users...</p>}
               {fetchUsersError && <p style={{ color: 'red' }}>{fetchUsersError}</p>}
@@ -975,13 +976,14 @@ const SettingsPage: React.FC = () => { // Removed props
                   </form>
                   {userActionError && !editingUserId && <p style={{ color: 'red', marginTop: '10px' }}>{userActionError}</p>}
               </div>
-          </section>
+          </details> // Changed section to details
       )}
 
       {/* Model Visibility Management (Admin Only) - ADDED Section */}
       {currentUser?.role === 'admin' && (
-          <section style={sectionStyle}>
-              <h3 style={h3Style}>{t('settings_model_visibility_title', 'Model Visibility')}</h3>
+          <details open style={sectionStyle}> {/* Changed section to details */}
+              <summary style={{...h3Style, cursor: 'pointer', display: 'list-item'}}>{t('settings_model_visibility_title', 'Model Visibility')}</summary> {/* Changed h3 to summary */}
+              {/* Content starts here */}
               {loadingModelStatuses && <p>Loading model statuses...</p>}
               {fetchModelStatusError && <p style={{ color: 'red' }}>{fetchModelStatusError}</p>}
               {modelActionError && <p style={{ color: 'red' }}>{modelActionError}</p>}
@@ -1008,7 +1010,7 @@ const SettingsPage: React.FC = () => { // Removed props
                       ))}
                   </ul>
               ) : <p>No models found or failed to load statuses.</p> )}
-          </section>
+          </details> // Changed section to details
       )}
 
        {/* Referral Code Management (Admin Only) */}

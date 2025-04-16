@@ -51,6 +51,9 @@ const getMonthName = (monthNumber: number, locale: string = 'en-US'): string => 
     return date.toLocaleString(locale, { month: 'long' });
 };
 
+// Define the list of supported providers
+const SUPPORTED_API_PROVIDERS = ['Gemini', 'Deepseek', 'OpenAI', 'Perplexity', 'Anthropic'];
+
 
 const SettingsPage: React.FC = () => { // Removed props
   const { currentUser, isDarkMode } = useAuthStore(); // Get state from store
@@ -64,10 +67,16 @@ const SettingsPage: React.FC = () => { // Removed props
   const [addApiKeyLoading, setAddApiKeyLoading] = useState(false);
   const [apiKeyActionError, setApiKeyActionError] = useState('');
   const [apiKeyActionLoading, setApiKeyActionLoading] = useState<string | null>(null);
-  const [newProviderName, setNewProviderName] = useState('');
+  const [newProviderName, setNewProviderName] = useState(''); // Keep this state for the selected value
   const [newKeyValue, setNewKeyValue] = useState('');
   const [editingApiKeyId, setEditingApiKeyId] = useState<string | null>(null);
   const [editPriorityValue, setEditPriorityValue] = useState<number>(99);
+
+  // Calculate available providers for the dropdown
+  const existingProviderNames = new Set(apiKeys.map(key => key.providerName));
+  const availableProviders = SUPPORTED_API_PROVIDERS.filter(
+    provider => !existingProviderNames.has(provider)
+  );
 
   // User Management State (Admin)
   const [users, setUsers] = useState<User[]>([]);
@@ -857,11 +866,34 @@ const SettingsPage: React.FC = () => { // Removed props
                 </ul> ) : <p>No API keys found.</p> )}
              <div style={{ marginTop: '20px', borderTop: `1px solid ${isDarkMode ? '#444' : '#eee'}`, paddingTop: '15px' }}>
                 <h5 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit' }}>Add New API Key</h5>
-                <form onSubmit={handleAddKey} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <input type="text" placeholder="Provider Name (e.g., Anthropic)" value={newProviderName} onChange={(e) => setNewProviderName(e.target.value)} required style={{...inputStyle, flexGrow: 1, minWidth: '150px', maxWidth: 'none'}} />
-                    <input type="password" placeholder="API Key Value" value={newKeyValue} onChange={(e) => setNewKeyValue(e.target.value)} required style={{...inputStyle, flexGrow: 1, minWidth: '200px', maxWidth: 'none'}} />
-                    <button type="submit" disabled={addApiKeyLoading} style={addApiKeyLoading ? disabledButtonStyle : buttonStyle}> {addApiKeyLoading ? 'Adding...' : 'Add Key'} </button>
-                </form>
+                {availableProviders.length > 0 ? (
+                    <form onSubmit={handleAddKey} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <select
+                            value={newProviderName}
+                            onChange={(e) => setNewProviderName(e.target.value)}
+                            required
+                            style={{...inputStyle, flexGrow: 1, minWidth: '150px', maxWidth: 'none', height: 'auto', padding: '10px'}} // Reuse inputStyle, adjust height/padding
+                        >
+                            <option value="" disabled>-- Select Provider --</option>
+                            {availableProviders.map(provider => (
+                                <option key={provider} value={provider}>{provider}</option>
+                            ))}
+                        </select>
+                        <input
+                            type="password"
+                            placeholder="API Key Value"
+                            value={newKeyValue}
+                            onChange={(e) => setNewKeyValue(e.target.value)}
+                            required
+                            style={{...inputStyle, flexGrow: 1, minWidth: '200px', maxWidth: 'none'}}
+                        />
+                        <button type="submit" disabled={addApiKeyLoading || !newProviderName} style={(addApiKeyLoading || !newProviderName) ? disabledButtonStyle : buttonStyle}>
+                            {addApiKeyLoading ? 'Adding...' : 'Add Key'}
+                        </button>
+                    </form>
+                ) : (
+                    <p style={{ color: isDarkMode ? '#aaa' : '#666', fontStyle: 'italic' }}>All supported providers already have API keys configured.</p>
+                )}
                  {addApiKeyError && <p style={{ color: 'red', marginTop: '10px' }}>{addApiKeyError}</p>}
              </div>
              {apiKeyActionError && <p style={{ color: 'red', marginTop: '10px' }}>{apiKeyActionError}</p>}

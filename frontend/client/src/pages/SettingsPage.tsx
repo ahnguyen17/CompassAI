@@ -72,10 +72,10 @@ const SettingsPage: React.FC = () => { // Removed props
   const [editingApiKeyId, setEditingApiKeyId] = useState<string | null>(null);
   const [editPriorityValue, setEditPriorityValue] = useState<number>(99);
 
-  // Calculate available providers for the dropdown
-  const existingProviderNames = new Set(apiKeys.map(key => key.providerName));
+  // Calculate available providers for the dropdown (Case-Insensitive)
+  const existingProviderNamesLower = new Set(apiKeys.map(key => key.providerName.toLowerCase()));
   const availableProviders = SUPPORTED_API_PROVIDERS.filter(
-    provider => !existingProviderNames.has(provider)
+    provider => !existingProviderNamesLower.has(provider.toLowerCase())
   );
 
   // User Management State (Admin)

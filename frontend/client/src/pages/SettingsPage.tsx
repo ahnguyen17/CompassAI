@@ -9,6 +9,7 @@ import apiClient, {
     AllTimeModelStat  // New
 } from '../services/api';
 import useAuthStore from '../store/authStore'; // Import the store
+import Switch from 'react-switch'; // Import a toggle switch component
 
 // Interfaces (Keep existing local interfaces)
 interface ApiKey {
@@ -40,6 +41,14 @@ interface ReferralCode {
 interface ModelStatus {
     modelName: string;
     isDisabled: boolean;
+}
+
+// Interface for Global Settings
+interface GlobalSettings {
+    _id?: string; // Optional, might not be needed on frontend always
+    key?: string; // Optional
+    globalStreamingEnabled: boolean;
+    lastUpdatedAt?: string; // Optional
 }
 
 // Removed SettingsPageProps interface
@@ -138,6 +147,13 @@ const SettingsPage: React.FC = () => { // Removed props
   const [passwordChangeError, setPasswordChangeError] = useState('');
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
 
+  // --- Global Settings State (Admin) ---
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const [loadingGlobalSettings, setLoadingGlobalSettings] = useState(true);
+  const [fetchGlobalSettingsError, setFetchGlobalSettingsError] = useState('');
+  const [updateGlobalSettingsLoading, setUpdateGlobalSettingsLoading] = useState(false);
+  const [updateGlobalSettingsError, setUpdateGlobalSettingsError] = useState('');
+
 
   // --- Initialize Profile Form ---
   useEffect(() => {
@@ -181,6 +197,29 @@ const SettingsPage: React.FC = () => { // Removed props
           else setFetchReferralCodesError('Failed to load referral codes.');
       } catch (err: any) { setFetchReferralCodesError(err.response?.data?.error || 'Error loading referral codes.'); if (err.response?.status === 401) setFetchReferralCodesError('Unauthorized.'); if (err.response?.status === 403) setFetchReferralCodesError('Forbidden.');
       } finally { setLoadingReferralCodes(false); }
+  };
+
+  // --- Fetch Global Settings (Admin) ---
+  const fetchGlobalSettings = async () => {
+      if (currentUser?.role !== 'admin') {
+          setLoadingGlobalSettings(false); // Not applicable for non-admins
+          return;
+      }
+      setLoadingGlobalSettings(true); setFetchGlobalSettingsError('');
+      try {
+          const response = await apiClient.get('/settings'); // Use the new settings endpoint
+          if (response.data?.success) {
+              setGlobalSettings(response.data.data);
+          } else {
+              setFetchGlobalSettingsError('Failed to load global settings.');
+          }
+      } catch (err: any) {
+          setFetchGlobalSettingsError(err.response?.data?.error || 'Error loading global settings.');
+          if (err.response?.status === 401) setFetchGlobalSettingsError('Unauthorized.');
+          if (err.response?.status === 403) setFetchGlobalSettingsError('Forbidden.');
+      } finally {
+          setLoadingGlobalSettings(false);
+      }
   };
 
     // --- Fetch Model Statuses (Admin) ---
@@ -232,17 +271,19 @@ const SettingsPage: React.FC = () => { // Removed props
   useEffect(() => {
     fetchApiKeys(); // All users need API keys
     if (currentUser?.role === 'admin') {
-        fetchUsers();
-        fetchReferralCodes();
-        fetchModelStatuses(); // Fetch model statuses for admin
-        // Initial fetch for stats is handled by the stats useEffect below
-    } else {
+         fetchUsers();
+         fetchReferralCodes();
+         fetchModelStatuses(); // Fetch model statuses for admin
+         fetchGlobalSettings(); // Fetch global settings for admin
+         // Initial fetch for stats is handled by the stats useEffect below
+     } else {
         // Ensure loading states are false if not admin
         setLoadingUsers(false);
         setLoadingReferralCodes(false);
-        setLoadingModelStatuses(false); // Also set model status loading to false
-        setLoadingStats(false); // Also set stats loading to false if not admin
-    }
+         setLoadingModelStatuses(false); // Also set model status loading to false
+         setLoadingStats(false); // Also set stats loading to false if not admin
+         setLoadingGlobalSettings(false); // Also set global settings loading to false if not admin
+     }
   }, [currentUser]); // Refetch if currentUser changes (e.g., after login)
 
 
@@ -420,6 +461,36 @@ const SettingsPage: React.FC = () => { // Removed props
             setAdminResetPwdLoading(null);
         }
     };
+
+  // --- Global Settings Handler (Admin) ---
+  const handleToggleGlobalStreaming = async (checked: boolean) => {
+      if (!globalSettings || currentUser?.role !== 'admin') return;
+
+      setUpdateGlobalSettingsLoading(true);
+      setUpdateGlobalSettingsError('');
+
+      try {
+          // Optimistically update UI state first
+          setGlobalSettings(prev => prev ? { ...prev, globalStreamingEnabled: checked } : null);
+
+          const response = await apiClient.put('/settings', { globalStreamingEnabled: checked });
+          if (!response.data?.success) {
+              // Revert UI on failure and show error
+              setGlobalSettings(prev => prev ? { ...prev, globalStreamingEnabled: !checked } : null); // Revert
+              setUpdateGlobalSettingsError(response.data?.error || 'Failed to update setting.');
+              // Optionally refetch to be absolutely sure: fetchGlobalSettings();
+          }
+          // On success, the UI is already updated optimistically
+      } catch (err: any) {
+          // Revert UI on failure and show error
+          setGlobalSettings(prev => prev ? { ...prev, globalStreamingEnabled: !checked } : null); // Revert
+          setUpdateGlobalSettingsError(err.response?.data?.error || 'Error updating setting.');
+          // Optionally refetch to be absolutely sure: fetchGlobalSettings();
+      } finally {
+          setUpdateGlobalSettingsLoading(false);
+      }
+  };
+
 
   // --- Model Visibility Handler (Admin) --- ADDED
   const handleToggleModelVisibility = async (modelName: string, currentlyDisabled: boolean) => {
@@ -1194,6 +1265,40 @@ const SettingsPage: React.FC = () => { // Removed props
                            </>
                        )}
                    </>
+                )}
+            </section>
+        )}
+
+       {/* Global Settings (Admin Only) */}
+       {currentUser?.role === 'admin' && (
+           <section style={sectionStyle}>
+               <h3 style={h3Style}>Global Settings</h3>
+               {loadingGlobalSettings && <p>Loading settings...</p>}
+               {fetchGlobalSettingsError && <p style={{ color: 'red' }}>{fetchGlobalSettingsError}</p>}
+               {updateGlobalSettingsError && <p style={{ color: 'red', marginTop: '10px' }}>{updateGlobalSettingsError}</p>}
+               {!loadingGlobalSettings && !fetchGlobalSettingsError && globalSettings && (
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                       <label htmlFor="globalStreamingToggle" style={{ ...labelStyle, marginBottom: 0 }}>
+                           Enable Streaming Responses Globally:
+                       </label>
+                       <Switch
+                           id="globalStreamingToggle"
+                           onChange={handleToggleGlobalStreaming}
+                           checked={globalSettings.globalStreamingEnabled}
+                           disabled={updateGlobalSettingsLoading}
+                           onColor="#86d3ff"
+                           onHandleColor="#2693e6"
+                           handleDiameter={24}
+                           uncheckedIcon={false}
+                           checkedIcon={false}
+                           boxShadow="0px 1px 5px rgba(0, 0, 0, 0.6)"
+                           activeBoxShadow="0px 0px 1px 10px rgba(0, 0, 0, 0.2)"
+                           height={18}
+                           width={40}
+                           className="react-switch"
+                       />
+                       {updateGlobalSettingsLoading && <span style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#555' }}>Updating...</span>}
+                   </div>
                )}
            </section>
        )}

@@ -83,11 +83,15 @@ const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
           >
             {t('chat_model_default')}
           </div>
-          {/* Iterate through available models */}
-          {Object.entries(availableModels).map(([provider, models]) => (
-            <Fragment key={provider}>
-              <div className={styles.providerGroup}>{provider}</div>
-              {models.map(modelName => {
+          {/* Iterate through available models, sorting providers alphabetically */}
+          {Object.keys(availableModels) // Get provider names
+            .sort() // Sort provider names alphabetically
+            .map(provider => { // Iterate through sorted provider names
+              const models = availableModels[provider]; // Get models for the current provider
+              return (
+                <Fragment key={provider}>
+                  <div className={styles.providerGroup}>{provider}</div>
+                  {models.map(modelName => {
                 // Determine display text (same logic as before)
                 const displayText = provider.toLowerCase() === 'perplexity'
                     ? modelName.replace(/^perplexity\//, '')
@@ -105,7 +109,8 @@ const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
                 );
               })}
             </Fragment>
-          ))}
+              );
+          })}
         </div>
       )}
     </div>

@@ -29,7 +29,9 @@ const allowedOrigins = [
     'https://frolicking-elf-a41c93.netlify.app', // Previous Netlify URL
     'https://asianblvd.com',                     // New custom domain
     'https://compassai-dev.onrender.com',        // New Render dev site
-    'https://compass247.vn'                      // New VN domain
+    'https://compass247.vn',                     // New VN domain
+    'https://ai.compass247.vn',                  // New AI subdomain (https)
+    'http://ai.compass247.vn'                    // New AI subdomain (http)
 ];
 
 /* --- TEMPORARY DEBUGGING --- Allow all origins

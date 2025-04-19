@@ -9,6 +9,7 @@
 - Settings controller provides endpoints for getting and updating global settings.
 - SettingsPage.tsx manages various settings on the client side.
 - ChatPage.tsx handles chat functionality, including session management and message sending.
+- ChatPage.tsx now displays a "Start New Chat" button when there is no chat history, allowing users to easily initiate a new session.
 
 ## What's Left to Build
 - Complete implementation of chat functionality.

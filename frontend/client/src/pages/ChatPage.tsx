@@ -859,9 +859,20 @@ interface ChatMessage {
                             {/* User Button Removed from outside */}
                         </>
                     )}
-                    </div>
+                     </div>
                  ))
-               ) : <p>{t('chat_start_message')}</p>}
+               ) : (
+                   <div style={{ textAlign: 'center', marginTop: '20px' }}> {/* Center content */}
+                       <button
+                           onClick={handleNewChat}
+                           className={styles.sendButton} // Reuse existing style or create a new one
+                           style={{ marginBottom: '15px' }} // Add some space below the button
+                       >
+                           {t('chat_start_new_button', 'Start New Chat')} {/* Use translation or default text */}
+                       </button>
+                       <p>{t('chat_start_message')}</p>
+                   </div>
+               )}
                 {error && <p style={{ color: 'red' }}>Error: {error}</p>}
                 {/* Add empty div at the end for scrolling ref */}
                 <div ref={messagesEndRef} />

@@ -861,18 +861,7 @@ interface ChatMessage {
                     )}
                      </div>
                  ))
-               ) : (
-                   <div style={{ textAlign: 'center', marginTop: '20px' }}> {/* Center content */}
-                       <button
-                           onClick={handleNewChat}
-                           className={styles.sendButton} // Reuse existing style or create a new one
-                           style={{ marginBottom: '15px' }} // Add some space below the button
-                       >
-                           {t('chat_start_new_button', 'Start New Chat')} {/* Use translation or default text */}
-                       </button>
-                       <p>{t('chat_start_message')}</p>
-                   </div>
-               )}
+               ) : <p>{t('chat_start_message')}</p>}
                 {error && <p style={{ color: 'red' }}>Error: {error}</p>}
                 {/* Add empty div at the end for scrolling ref */}
                 <div ref={messagesEndRef} />
@@ -999,7 +988,18 @@ interface ChatMessage {
                 </div>
              </form>
            </>
-         ) : ( <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}> <p>{t('chat_select_prompt')}</p> </div> )}
+         ) : (
+             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}> {/* Use flex column and center */}
+                 <p>{t('chat_select_prompt')}</p>
+                 <button
+                     onClick={handleNewChat}
+                     className={styles.sendButton} // Reuse existing style
+                     style={{ marginTop: '15px' }} // Add space above the button
+                 >
+                     {t('chat_start_new_button', 'Start New Chat')} {/* Use translation or default text */}
+                 </button>
+             </div>
+         )}
        </div>
      </div>
    );

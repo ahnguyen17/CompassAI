@@ -72,7 +72,7 @@ interface ChatMessage {
    const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
    const [streamingMessageContent, setStreamingMessageContent] = useState<string>('');
   const [reasoningSteps, setReasoningSteps] = useState<{ [messageId: string]: string }>({}); // State for reasoning steps (store as string)
-  const [showReasoning, setShowReasoning] = useState(false); // State for showing/hiding reasoning AND enabling streaming
+  const [showReasoning, setShowReasoning] = useState(true); // State for showing/hiding reasoning AND enabling streaming
   // const [isStreamingEnabled, setIsStreamingEnabled] = useState(true); // REMOVED - Merged with showReasoning
   const { t } = useTranslation();
   const navigate = useNavigate();

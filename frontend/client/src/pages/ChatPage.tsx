@@ -74,7 +74,7 @@ interface ChatMessage {
   const [reasoningSteps, setReasoningSteps] = useState<{ [messageId: string]: string }>({}); // State for reasoning steps (store as string)
   const [showReasoning, setShowReasoning] = useState(true); // State for showing/hiding reasoning AND enabling streaming
   // const [isStreamingEnabled, setIsStreamingEnabled] = useState(true); // REMOVED - Merged with showReasoning
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation(); // Import i18n instance
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
    const abortControllerRef = useRef<AbortController | null>(null); // Restore AbortController ref
@@ -546,6 +546,16 @@ interface ChatMessage {
      // --- End Speech Recognition Setup ---
 
    }, []); // Run only once on mount
+
+   // Effect to update speech recognition language when app language changes
+   useEffect(() => {
+       if (recognitionRef.current) {
+           const currentLang = i18n.language;
+           const recognitionLang = currentLang === 'vi' ? 'vi-VN' : 'en-US';
+           console.log(`Setting speech recognition language to: ${recognitionLang} based on app language: ${currentLang}`);
+           recognitionRef.current.lang = recognitionLang;
+       }
+   }, [i18n.language]); // Re-run when language changes
 
    // --- Speech Recognition Toggle Function ---
    const handleToggleListening = () => {

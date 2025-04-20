@@ -11,6 +11,7 @@
 - ChatPage.tsx handles chat functionality, including session management and message sending.
 - ChatPage.tsx now displays a "Start New Chat" button below the prompt when no chat session is selected, allowing users to easily initiate a new session from the initial view.
 - ChatPage.tsx now defaults the "brain" toggle (reasoning/streaming) to the 'on' state.
+- ChatPage.tsx speech recognition now dynamically uses Vietnamese ('vi-VN') when the application language is set to Vietnamese ('vi'), otherwise defaults to English ('en-US').
 
 ## What's Left to Build
 - Complete implementation of chat functionality.

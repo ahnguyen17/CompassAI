@@ -196,13 +196,14 @@ interface ChatMessage {
        }
    };
 
-   // Handle keydown for textarea (Enter to send, Shift+Enter for newline)
+   // Handle keydown for textarea (Shift+Enter to send, Enter for newline)
    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-       if (e.key === 'Enter' && !e.shiftKey) {
-           e.preventDefault(); // Prevent default newline behavior
-           handleSendMessage(); // Call the send message function
+       if (e.key === 'Enter' && e.shiftKey) { // Check for Shift+Enter first
+           e.preventDefault(); // Prevent the default newline from Shift+Enter
+           handleSendMessage(); // Send the message
        }
-       // Allow Shift+Enter to create a newline (default behavior)
+       // If only Enter is pressed (without Shift), do nothing here,
+       // allowing the default newline behavior of the textarea.
    };
 
    // Combined Send Message Logic

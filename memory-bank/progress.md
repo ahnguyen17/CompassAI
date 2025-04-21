@@ -13,6 +13,7 @@
 - ChatPage.tsx now defaults the "brain" toggle (reasoning/streaming) to the 'on' state.
 - ChatPage.tsx speech recognition now dynamically uses Vietnamese ('vi-VN') when the application language is set to Vietnamese ('vi'), otherwise defaults to English ('en-US').
 - ChatPage.tsx microphone icon now glows when speech recognition is active, using CSS animations defined in `ChatPage.module.css`.
+- ChatPage.tsx input field now uses "Enter" for newline and "Shift+Enter" to send the message.
 
 ## What's Left to Build
 - Complete implementation of chat functionality.

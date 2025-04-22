@@ -24,13 +24,14 @@
 - **Settings Page UI:** Several admin panels ("User Management", "Model Visibility", "Usage Statistics", "Custom Providers & Models") are now collapsed by default using `<details>` elements for a cleaner initial view.
 - **Model Selector Dropdown UI:** Updated text color for model items in light mode to `#34495e` (dark slate blue) for better readability as requested, modified in `ModelSelectorDropdown.module.css`.
 - **Navbar "New Chat" Icon:** Added an SVG icon button next to the logo in the Navbar (`Navbar.tsx`). Clicking this button (visible when logged in) triggers a new chat session creation via a global state action (`authStore.ts`) and navigates the user to the new chat.
+- **Centralized Session State:** Moved chat session list management (state, loading, errors, fetch/delete actions) from `ChatPage.tsx` to the global store (`authStore.ts`) to fix UI update issues when creating new chats from the navbar. Refactored `ChatPage.tsx` accordingly.
 
 ## What's Left to Build
 - Further testing and refinement of existing features.
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent updates include adding a "New Chat" icon to the navbar, UI improvements to the settings page and model dropdown, backend logic for session loading, and a fix for custom model deletion.
+The project is actively being developed. Recent updates include centralizing chat session state management, adding a "New Chat" icon to the navbar, UI improvements to the settings page and model dropdown, backend logic for session loading, and a fix for custom model deletion.
 
 ## Known Issues
 - None documented yet.

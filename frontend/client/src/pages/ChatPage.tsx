@@ -7,9 +7,9 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
  import { prism, okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism';
  import apiClient from '../services/api';
  import CopyButton from '../components/CopyButton';
- import ModelSelectorDropdown from '../components/ModelSelectorDropdown'; // Import the new component
- import useAuthStore from '../store/authStore'; // Import the store
- import { useTranslation } from 'react-i18next';
+import ModelSelectorDropdown from '../components/ModelSelectorDropdown'; // Import the new component
+import useAuthStore from '../store/authStore'; // Import the store (ChatSession is defined within)
+import { useTranslation } from 'react-i18next';
 import styles from './ChatPage.module.css'; // Import CSS Module
 
 // --- Constants ---
@@ -42,6 +42,7 @@ interface CombinedAvailableModels {
   baseModels: { [provider: string]: string[] };
   customModels: CustomModelData[];
 }
+// Re-define ChatSession locally as it's used extensively here
 interface ChatSession { _id: string; title: string; createdAt: string; isShared?: boolean; shareId?: string; }
 // Update ChatMessage interface to include optional reasoningContent
 interface ChatMessage {
@@ -60,19 +61,26 @@ interface ChatMessage {
    isSidebarVisible: boolean;
    toggleSidebarVisibility: () => void; // Add toggle function prop
  }
- 
- const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisibility }) => { // Accept props
-   const { isDarkMode } = useAuthStore(); // Get state from store
-   const [sessions, setSessions] = useState<ChatSession[]>([]);
-   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisibility }) => { // Accept props
+  // Get state and actions from the global store
+  const {
+    isDarkMode,
+    sessions, // Use global sessions
+    sessionsLoading, // Use global loading state
+    sessionsError, // Use global error state
+    fetchSessions, // Use global fetch action
+    deleteSession, // Use global delete action
+    setSessions, // Use global setter action
+  } = useAuthStore();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null); // Keep local state for the *selected* session
   const [newMessage, setNewMessage] = useState('');
-  const [loadingSessions, setLoadingSessions] = useState(true);
+  // Removed local loadingSessions state
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(''); // Keep local error for component-specific errors (e.g., message send)
   const [sendingMessage, setSendingMessage] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null); // Keep local delete loading indicator for UI feedback
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
    // Update state to use the new combined interface and initialize appropriately
@@ -107,7 +115,7 @@ interface ChatMessage {
   };
 
   // --- Fetch Functions ---
-  const fetchSessions = async () => { setLoadingSessions(true); setError(''); try { const response = await apiClient.get('/chatsessions'); if (response.data?.success) setSessions(response.data.data); else setError('Failed to load chat sessions.'); } catch (err: any) { setError(err.response?.data?.error || 'Error loading sessions.'); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingSessions(false); } };
+  // Removed local fetchSessions function - will use global store's fetchSessions
   // Update fetchAvailableModels to handle the new combined structure
   const fetchAvailableModels = async () => {
       setLoadingModels(true);
@@ -151,50 +159,29 @@ interface ChatMessage {
           setLoadingModels(false);
       }
   };
-  // Updated handleDeleteSession with smoother transition logic
-  const handleDeleteSession = async (sessionId: string, sessionTitle: string) => {
-      if (!window.confirm(`Are you sure you want to delete the chat "${sessionTitle || 'Untitled Chat'}"?`)) return;
-      setDeleteLoading(sessionId);
-      setError('');
-      const originalSessions = [...sessions]; // Keep a copy before potential state update
-      const deletedSessionIndex = originalSessions.findIndex(s => s._id === sessionId);
-
-      try {
-          const response = await apiClient.delete(`/chatsessions/${sessionId}`);
-          if (response.data?.success) {
-              const remainingSessions = originalSessions.filter(s => s._id !== sessionId);
-              setSessions(remainingSessions); // Update the sessions list
-
-              // Determine which session to select next if the current one was deleted
-              if (currentSession?._id === sessionId) {
-                  let nextSessionToSelect: ChatSession | null = null;
-                  if (remainingSessions.length > 0) {
-                      // Try to select the session at the same index, or the previous one if it was the last
-                      const nextIndex = Math.min(deletedSessionIndex, remainingSessions.length - 1);
-                      nextSessionToSelect = remainingSessions[nextIndex];
-                  }
-
-                  if (nextSessionToSelect) {
-                      handleSelectSession(nextSessionToSelect); // Selects, navigates, and fetches messages
-                  } else {
-                      // No sessions left
-                      setCurrentSession(null);
-                      setMessages([]);
-                      navigate('/'); // Navigate to base route
-                  }
-              }
-              // If a different session was deleted, no need to change the current one
-          } else {
-              setError('Failed to delete chat session.');
-          }
-      } catch (err: any) {
-          setError(err.response?.data?.error || 'Error deleting session.');
-          if (err.response?.status === 401) navigate('/login');
-      } finally {
-          setDeleteLoading(null);
-      }
+  // Removed local handleDeleteSession - will use global store's deleteSession
+  const handleToggleShare = async () => { 
+      if (!currentSession) return; 
+      setShareLoading(true); 
+      setError(''); 
+      const newShareStatus = !currentSession.isShared; 
+      try { 
+          const response = await apiClient.put(`/chatsessions/${currentSession._id}`, { isShared: newShareStatus }); 
+          if (response.data?.success) { 
+              const updatedSession: ChatSession = response.data.data; // Ensure type
+              setCurrentSession(updatedSession); 
+              // Use the setter correctly: provide the new array
+              setSessions(sessions.map((s: ChatSession) => s._id === updatedSession._id ? updatedSession : s)); 
+          } else { 
+              setError('Failed to update sharing status.'); 
+          } 
+      } catch (err: any) { 
+          setError(err.response?.data?.error || 'Error updating sharing status.'); 
+          if (err.response?.status === 401) navigate('/login'); 
+      } finally { 
+          setShareLoading(false); 
+      } 
   };
-  const handleToggleShare = async () => { if (!currentSession) return; setShareLoading(true); setError(''); const newShareStatus = !currentSession.isShared; try { const response = await apiClient.put(`/chatsessions/${currentSession._id}`, { isShared: newShareStatus }); if (response.data?.success) { const updatedSession = response.data.data; setCurrentSession(updatedSession); setSessions(prev => prev.map(s => s._id === updatedSession._id ? updatedSession : s)); } else { setError('Failed to update sharing status.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error updating sharing status.'); if (err.response?.status === 401) navigate('/login'); } finally { setShareLoading(false); } };
   const fetchMessages = async (sessionId: string) => {
       if (!sessionId) return;
       setLoadingMessages(true);
@@ -231,24 +218,7 @@ interface ChatMessage {
            toggleSidebarVisibility();
        }
    };
-   const handleNewChat = async () => {
-      setError('');
-      try {
-          const response = await apiClient.post('/chatsessions', { title: 'New Chat' });
-          if (response.data?.success) {
-              const newSession: ChatSession = response.data.data;
-               setSessions([newSession, ...sessions]);
-               handleSelectSession(newSession); // This will select and fetch messages
-               setSelectedModel('');
-               // Removed setIsSidebarVisible(false); - State is controlled by App.tsx now
-           } else {
-               setError('Failed to create new chat.');
-          }
-      } catch (err: any) {
-          setError(err.response?.data?.error || 'Error creating chat.');
-          if (err.response?.status === 401) navigate('/login');
-       }
-   };
+   // Removed local handleNewChat function - Navbar icon uses global store action now
 
    // Handle keydown for textarea (Shift+Enter to send, Enter for newline)
    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -413,7 +383,8 @@ interface ChatMessage {
                                   }));
                               } else if (jsonData.type === 'title_update' && currentSession) {
                                   setCurrentSession(prev => prev ? { ...prev, title: jsonData.title } : null);
-                                  setSessions(prevSessions => prevSessions.map(s => s._id === currentSession._id ? { ...s, title: jsonData.title } : s ));
+                                  // Update global sessions list as well
+                                  setSessions(sessions.map((s: ChatSession) => s._id === currentSession._id ? { ...s, title: jsonData.title } : s ));
                               } else if (jsonData.type === 'error') {
                                   setError(`AI Error: ${jsonData.message}`); console.error('SSE Error Event:', jsonData.message); setStreamingMessageId(null); setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, content: `[Error: ${jsonData.message}]`, modelUsed: 'error' } : msg)); reader.cancel(); return;
                               } else if (jsonData.type === 'done') {
@@ -537,7 +508,8 @@ interface ChatMessage {
                   if (response.data.updatedSessionTitle && currentSession) {
                       const newTitle = response.data.updatedSessionTitle;
                       setCurrentSession(prev => prev ? { ...prev, title: newTitle } : null);
-                      setSessions(prevSessions => prevSessions.map(s => s._id === currentSession._id ? { ...s, title: newTitle } : s ));
+                      // Update global sessions list as well
+                      setSessions(sessions.map((s: ChatSession) => s._id === currentSession._id ? { ...s, title: newTitle } : s ));
                   }
               } else {
                   setError(response.data?.error || 'Failed to send message or get AI response.');
@@ -558,10 +530,10 @@ interface ChatMessage {
 
   // --- Effects ---
   useEffect(() => {
-    // Fetch initial data
+    // Fetch initial data using global store action
     const fetchInitialData = async () => {
         await fetchAvailableModels(); // Fetch models first
-        await fetchSessions(); // Then fetch sessions
+        await fetchSessions(); // Use global fetch action
     };
      fetchInitialData();
 
@@ -600,7 +572,7 @@ interface ChatMessage {
      }
      // --- End Speech Recognition Setup ---
 
-   }, []); // Run only once on mount
+   }, [fetchSessions]); // Depend on fetchSessions from store
 
    // Effect to update speech recognition language when app language changes
    useEffect(() => {
@@ -636,8 +608,8 @@ interface ChatMessage {
 
    // Effect to handle selecting session based on URL or loading the latest
   useEffect(() => {
-    // Don't run if sessions haven't loaded yet
-    if (loadingSessions) return;
+    // Don't run if sessions haven't loaded yet from the store
+    if (sessionsLoading) return;
 
     if (routeSessionId) {
         // If there's a session ID in the URL, try to load it
@@ -660,7 +632,7 @@ interface ChatMessage {
         console.log("No session in URL, loading most recent:", mostRecentSession._id);
         handleSelectSession(mostRecentSession); // This will navigate and fetch messages
     }
-  }, [routeSessionId, sessions, currentSession, loadingSessions, navigate]); // Dependencies
+  }, [routeSessionId, sessions, currentSession, sessionsLoading, navigate]); // Dependencies updated
 
   // Effect to scroll to bottom when messages change or loading finishes
   useEffect(() => {
@@ -687,10 +659,11 @@ interface ChatMessage {
       >
          {isSidebarVisible && (
              <>
-                 {/* Header with New Chat Button */}
+                 {/* Header with New Chat Button - Removed local handleNewChat */}
                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                     <button onClick={handleNewChat} className={styles.newChatButton}>{t('chat_new_button')}</button>
-                     {/* Close button removed from here */}
+                     {/* This button might need to use the global startNewChat action if kept */}
+                     {/* <button onClick={handleNewChat} className={styles.newChatButton}>{t('chat_new_button')}</button> */}
+                     {/* Placeholder or remove if Navbar icon is sufficient */}
                  </div>
                  {/* Chat History Title and Close Button */}
                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -704,9 +677,10 @@ interface ChatMessage {
                          &laquo; {/* Use left arrow icon */}
                      </button>
                  </div>
-                 {loadingSessions ? <p>{t('chat_loading')}</p> : error && !sessions.length ? <p style={{ color: 'red' }}>{error}</p> : sessions.length > 0 ? (
+                 {/* Use global sessionsLoading and sessionsError */}
+                 {sessionsLoading ? <p>{t('chat_loading')}</p> : sessionsError ? <p style={{ color: 'red' }}>{sessionsError}</p> : sessions.length > 0 ? (
                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                     {sessions.map((session) => ( <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}> <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}> {session.title || 'Untitled Chat'} </span> <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(session._id, session.title); }} disabled={deleteLoading === session._id} className={styles.deleteSessionButton} aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}> {deleteLoading === session._id ? '...' : '×'} </button> </li> ))}
+                     {sessions.map((session) => ( <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}> <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}> {session.title || 'Untitled Chat'} </span> <button onClick={(e) => { e.stopPropagation(); deleteSession(session._id, currentSession?._id ?? null, navigate); }} disabled={deleteLoading === session._id} className={styles.deleteSessionButton} aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}> {deleteLoading === session._id ? '...' : '×'} </button> </li> ))}
                 </ul> ) : <p>{t('chat_no_history')}</p>}
              </>
          )}
@@ -1057,13 +1031,7 @@ interface ChatMessage {
          ) : (
              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}> {/* Use flex column and center */}
                  <p>{t('chat_select_prompt')}</p>
-                 <button
-                     onClick={handleNewChat}
-                     className={styles.sendButton} // Reuse existing style
-                     style={{ marginTop: '15px' }} // Add space above the button
-                 >
-                     {t('chat_start_new_button', 'Start New Chat')} {/* Use translation or default text */}
-                 </button>
+                 {/* Removed local handleNewChat button */}
              </div>
          )}
        </div>

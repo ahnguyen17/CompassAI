@@ -227,6 +227,7 @@ interface ChatMessage {
 
     // Wrap handleSelectSession in useCallback
     const handleSelectSession = useCallback((session: ChatSession) => {
+        console.log("handleSelectSession received:", JSON.stringify(session)); // Log received session
         setCurrentSession(session);
         navigate(`/chat/${session._id}`);
         fetchMessages(session._id); // Call the useCallback version
@@ -699,6 +700,7 @@ interface ChatMessage {
    // Removed local toggleSidebarVisibility function
  
    // --- Render ---
+   console.log("Rendering ChatPage, currentSession:", JSON.stringify(currentSession)); // Log currentSession before render
   return (
     <div className={styles.chatPageContainer} style={{ backgroundColor: isDarkMode ? '#1a1a1a' : '#f8f9fa' }}> {/* Apply container background */}
       {/* Sidebar */}
@@ -727,7 +729,7 @@ interface ChatMessage {
                  </div>
                  {loadingSessions ? <p>{t('chat_loading')}</p> : error && !sessions.length ? <p style={{ color: 'red' }}>{error}</p> : sessions.length > 0 ? (
                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                     {sessions.map((session) => ( <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}> <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}> {session.title || 'Untitled Chat'} </span> <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(session._id, session.title); }} disabled={deleteLoading === session._id} className={styles.deleteSessionButton} aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}> {deleteLoading === session._id ? '...' : '×'} </button> </li> ))}
+                     {sessions.map((session) => ( <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}> <span onClick={() => { console.log("Sidebar onClick session:", JSON.stringify(session)); handleSelectSession(session); }} className={styles.sessionTitle}> {session.title || 'Untitled Chat'} </span> <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(session._id, session.title); }} disabled={deleteLoading === session._id} className={styles.deleteSessionButton} aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}> {deleteLoading === session._id ? '...' : '×'} </button> </li> ))}
                 </ul> ) : <p>{t('chat_no_history')}</p>}
              </>
          )}

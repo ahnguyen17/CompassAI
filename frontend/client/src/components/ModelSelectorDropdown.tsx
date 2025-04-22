@@ -109,7 +109,7 @@ const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
             .sort() // Sort custom provider names
             .map(customProviderName => (
               <Fragment key={`custom-${customProviderName}`}>
-                <div className={styles.providerGroup}>{customProviderName} (Custom)</div>
+                <div className={styles.providerGroup}>{customProviderName}</div> {/* Removed (Custom) */}
                 {groupedCustomModels[customProviderName]
                   .sort((a, b) => a.name.localeCompare(b.name)) // Sort models within provider
                   .map(customModel => (

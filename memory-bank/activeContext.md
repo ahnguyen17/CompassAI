@@ -1,16 +1,19 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Fixing issue where clicking the Navbar "New Chat" icon doesn't immediately update the chat window.
+Consolidating sidebar toggle functionality into the logo click.
 
 ## Recent Changes
-- **Centralized Session State:**
-    - Moved session list state (`sessions`), loading (`sessionsLoading`), error (`sessionsError`), and fetching/deleting logic (`fetchSessions`, `deleteSession`) from `ChatPage.tsx` to the global store (`frontend/client/src/store/authStore.ts`).
-    - Updated the `startNewChat` action in the store to prepend the new session to the global `sessions` list before navigating.
-    - Refactored `ChatPage.tsx` to use the global session state and actions from `useAuthStore`, removing local state/functions for sessions.
+- **Navbar Logo Sidebar Toggle:**
+    - Removed the hamburger icon button from `frontend/client/src/components/Navbar.tsx`.
+    - Added an `onClick` handler to the logo's `Link` component in `Navbar.tsx`.
+    - This handler now calls `toggleSidebarVisibility` (passed via props) if on a chat page (`/` or `/chat/...`) and prevents default navigation; otherwise, it allows default navigation to `/`.
+- **Centralized Session State:** (Previous Task)
+    - Moved session list state and logic from `ChatPage.tsx` to `frontend/client/src/store/authStore.ts`.
+    - Refactored `ChatPage.tsx` to use the global store.
 - **Navbar "New Chat" Icon:** (Previous Task)
-    - Added a `startNewChat` async function to `frontend/client/src/store/authStore.ts`.
-    - Modified `frontend/client/src/components/Navbar.tsx` to add the icon button and link it to the `startNewChat` action.
+    - Added a `startNewChat` action to `authStore.ts`.
+    - Added the icon button to `Navbar.tsx`.
 - **Model Dropdown Color Update:** (Previous Task)
     - Modified `frontend/client/src/components/ModelSelectorDropdown.module.css`.
     - Changed the `color` rule for `.modelItem` in light mode to `#34495e`.
@@ -20,11 +23,12 @@ Fixing issue where clicking the Navbar "New Chat" icon doesn't immediately updat
 - **Settings Page UI Update:** (Previous Task)
     - Modified `frontend/client/src/pages/SettingsPage.tsx` to use collapsed `<details>` elements.
 - **Load Last Viewed Session:** (Previous Task)
-    - Added `lastAccessedAt` to `ChatSession` model and updated controllers to use it for sorting and updates.
+    - Added `lastAccessedAt` to `ChatSession` model and updated controllers.
 
 ## Next Steps
 - Update `progress.md` in the Memory Bank.
-- Present the completed task (centralized session state) to the user.
+- Present the completed task (Navbar logo sidebar toggle) to the user.
 
 ## Active Decisions and Considerations
-- Centralized chat session list management in `authStore.ts` to ensure UI consistency when sessions are created or deleted from different components (like the Navbar).
+- Consolidated sidebar toggle into the logo click for chat pages, maintaining home link functionality elsewhere.
+- Centralized chat session list management in `authStore.ts` (Previous Task).

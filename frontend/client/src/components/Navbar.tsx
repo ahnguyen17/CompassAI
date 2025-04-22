@@ -110,29 +110,21 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarVisible, toggleSidebarVisibili
       // Removed transition
       // Removed marginBottom: '20px'
     }}>
-      {/* Left side: Hamburger (conditional) + Logo */}
+      {/* Left side: Logo (conditionally toggles sidebar) + New Chat Icon */}
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        {/* Hamburger Button - Show only on chat pages when logged in */}
-        {isLoggedIn && (location.pathname === '/' || location.pathname.startsWith('/chat/')) && (
-          <button
-            onClick={toggleSidebarVisibility}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#fff',
-              cursor: 'pointer',
-              fontSize: '1.2em', // Match other icons
-              marginRight: '10px', // Reduced space before logo
-              marginLeft: '-15px', // Pull button left into padding
-              padding: '0 5px' // Minimal padding
-            }}
-            title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
-            aria-label={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
-          >
-            ☰
-          </button>
-        )}
-        <Link to="/" style={{ color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+        {/* Logo Link - Conditionally toggles sidebar or navigates home */}
+        <Link 
+          to="/" 
+          style={{ color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+          onClick={(e) => {
+            // Only toggle sidebar if logged in and on a chat page
+            if (isLoggedIn && (location.pathname === '/' || location.pathname.startsWith('/chat/'))) {
+              e.preventDefault(); // Prevent navigation
+              toggleSidebarVisibility(); // Toggle the sidebar
+            }
+            // Otherwise, allow default navigation to '/'
+          }}
+        >
           <img src="/logo.png" alt={t('nav_title')} style={{ height: '30px', marginRight: '10px' }} />
         </Link>
         {/* New Chat Icon Button - Show only when logged in */}

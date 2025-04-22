@@ -1,10 +1,13 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Debugging and fixing the error encountered when deleting custom models.
+Improving UI contrast for the model selector dropdown.
 
 ## Recent Changes
-- **Custom Model Deletion Fix:**
+- **Model Dropdown Contrast Fix:**
+    - Modified `frontend/client/src/components/ModelSelectorDropdown.module.css`.
+    - Added an explicit `color: #333;` rule to the `.modelItem` style to ensure sufficient contrast in light mode.
+- **Custom Model Deletion Fix:** (Previous Task)
     - Modified `backend/controllers/customModels.js`.
     - Replaced the deprecated `model.remove()` method with the recommended `CustomModel.findByIdAndDelete(req.params.id)` in the `deleteCustomModel` function to potentially resolve a 500 Internal Server Error.
 - **Settings Page UI Update:** (Previous Task)
@@ -22,8 +25,7 @@ Debugging and fixing the error encountered when deleting custom models.
 
 ## Next Steps
 - Update `progress.md` in the Memory Bank.
-- Present the completed task (custom model deletion fix) to the user and ask them to test the deletion again.
+- Present the completed task (dropdown contrast fix) to the user.
 
 ## Active Decisions and Considerations
-- Identified the use of a deprecated Mongoose method (`.remove()`) as the likely cause of the 500 error during custom model deletion.
-- Switched to the modern `findByIdAndDelete()` method for better compatibility and reliability.
+- Addressed low contrast issue in the model dropdown for light mode by setting a specific dark text color (`#333`) for the `.modelItem` class. Dark mode styles were already handled separately and remain unchanged.

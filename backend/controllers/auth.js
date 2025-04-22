@@ -126,16 +126,8 @@ const sendTokenResponse = (user, statusCode, res) => {
     .json({
       success: true,
       token,
-      // Return user data (excluding password)
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        streamingEnabled: user.streamingEnabled,
-        lastActiveChatSessionId: user.lastActiveChatSessionId, // Include the new field
-        createdAt: user.createdAt
-      }
+      // Optionally return user data (excluding password)
+      // user: { _id: user._id, username: user.username, email: user.email }
     });
 };
 

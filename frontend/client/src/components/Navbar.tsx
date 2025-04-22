@@ -159,17 +159,8 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarVisible, toggleSidebarVisibili
         )}
       </div>
 
-      {/* Right side: Theme, Language, Auth Links/Dropdown */}
+      {/* Right side: Language, Theme, Auth Links/Dropdown */}
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        {/* Theme Toggle Button */}
-        <button
-            onClick={toggleTheme}
-            style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.2em', marginRight: '20px' }}
-            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-        >
-            {isDarkMode ? '☀️' : '🌙'}
-        </button>
-
         {/* Language Dropdown */}
         <div ref={langDropdownRef} style={{ position: 'relative', display: 'inline-block', marginRight: '20px' }}>
           <button 
@@ -214,6 +205,15 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarVisible, toggleSidebarVisibili
             </div>
           )}
         </div>
+
+        {/* Theme Toggle Button */}
+        <button
+            onClick={toggleTheme}
+            style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.2em', marginRight: '20px' }}
+            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+            {isDarkMode ? '☀️' : '🌙'}
+        </button>
 
         {isLoggedIn ? (
           <>

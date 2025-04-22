@@ -1,15 +1,16 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Consolidating sidebar toggle functionality into the logo click.
+Swapping language and theme icons in the Navbar.
 
 ## Recent Changes
-- **Navbar Logo Sidebar Toggle:**
-    - Removed the hamburger icon button from `frontend/client/src/components/Navbar.tsx`.
-    - Added an `onClick` handler to the logo's `Link` component in `Navbar.tsx`.
-    - This handler now calls `toggleSidebarVisibility` (passed via props) if on a chat page (`/` or `/chat/...`) and prevents default navigation; otherwise, it allows default navigation to `/`.
+- **Navbar Icon Swap:**
+    - Swapped the positions of the language dropdown (🌐) and the theme toggle button (☀️/🌙) in `frontend/client/src/components/Navbar.tsx`. The language dropdown now appears first on the right side.
+- **Navbar Logo Sidebar Toggle:** (Previous Task)
+    - Removed the hamburger icon button from `Navbar.tsx`.
+    - Added an `onClick` handler to the logo's `Link` component to toggle the sidebar on chat pages.
 - **Centralized Session State:** (Previous Task)
-    - Moved session list state and logic from `ChatPage.tsx` to `frontend/client/src/store/authStore.ts`.
+    - Moved session list state and logic from `ChatPage.tsx` to `authStore.ts`.
     - Refactored `ChatPage.tsx` to use the global store.
 - **Navbar "New Chat" Icon:** (Previous Task)
     - Added a `startNewChat` action to `authStore.ts`.
@@ -27,8 +28,9 @@ Consolidating sidebar toggle functionality into the logo click.
 
 ## Next Steps
 - Update `progress.md` in the Memory Bank.
-- Present the completed task (Navbar logo sidebar toggle) to the user.
+- Present the completed task (Navbar icon swap) to the user.
 
 ## Active Decisions and Considerations
-- Consolidated sidebar toggle into the logo click for chat pages, maintaining home link functionality elsewhere.
+- Swapped Navbar icons as requested.
+- Consolidated sidebar toggle into the logo click (Previous Task).
 - Centralized chat session list management in `authStore.ts` (Previous Task).

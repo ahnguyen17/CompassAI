@@ -16,7 +16,7 @@ The project follows a client-server architecture. The backend is built using Nod
 - `User`: Stores user authentication and profile data.
 - `Setting`: Stores global application settings (e.g., global streaming toggle).
 - `ApiKey`: Stores API keys for different providers, including priority and enabled status.
-- `ChatSession`: Represents a single chat conversation.
+- `ChatSession`: Represents a single chat conversation. Includes `lastAccessedAt` timestamp updated on view/interaction.
 - `ChatMessage`: Stores individual messages within a session, including sender, content, model used, file info, citations, and reasoning steps.
 - `DisabledModel`: Stores names of base models explicitly disabled by an admin.
 - `ReferralCode`: Stores referral codes for user registration.
@@ -35,8 +35,8 @@ The project follows a client-server architecture. The backend is built using Nod
 - `/auth`: User registration, login, password updates.
 - `/apikeys`: CRUD operations for provider API keys (Admin).
 - `/users`: User management (Admin).
-- `/chatsessions`: CRUD for chat sessions, message retrieval.
-- `/chatsessions/:sessionId/messages`: Add message to session, triggers AI response.
+- `/chatsessions`: CRUD for chat sessions, message retrieval. Sorted by `lastAccessedAt` descending.
+- `/chatsessions/:sessionId/messages`: Add message to session, triggers AI response. Updates session `lastAccessedAt`. Fetches messages and updates session `lastAccessedAt`.
 - `/providers/models`: Get available models (filtered base models + all custom models) for chat page dropdown.
 - `/providers/all-models`: Get all hardcoded base models for admin settings dropdowns.
 - `/referralcodes`: CRUD for referral codes (Admin).

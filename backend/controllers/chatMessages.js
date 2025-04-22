@@ -495,6 +495,12 @@ exports.getMessagesForSession = async (req, res, next) => {
         const session = await ChatSession.findById(sessionId);
         if (!session) return res.status(404).json({ success: false, error: `Chat session not found with id ${sessionId}` });
         if (session.user.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'User not authorized' });
+
+        // Update lastAccessedAt when messages are fetched (viewed)
+        session.lastAccessedAt = Date.now();
+        await session.save();
+        console.log(`Updated lastAccessedAt for session ${sessionId} on message fetch.`);
+
         const messages = await ChatMessage.find({ session: sessionId }).sort({ timestamp: 1 });
         res.status(200).json({ success: true, count: messages.length, data: messages });
     } catch (error) {
@@ -530,6 +536,11 @@ exports.addMessageToSession = async (req, res, next) => {
             success: false,
             error: 'User not authorized'
         });
+
+        // Update lastAccessedAt when a message is added (interacted)
+        session.lastAccessedAt = Date.now();
+        await session.save();
+        console.log(`Updated lastAccessedAt for session ${sessionId} on message add.`);
 
         // Prepare and save user message data
         const userMessageData = {

@@ -9,8 +9,8 @@ const { v4: uuidv4 } = require('uuid');
 exports.getChatSessions = async (req, res, next) => {
   try {
     // Find sessions belonging to the logged-in user (req.user set by protect middleware)
-    // Sort by creation date, newest first
-    const sessions = await ChatSession.find({ user: req.user.id }).sort({ createdAt: -1 });
+    // Sort by last accessed date, newest first
+    const sessions = await ChatSession.find({ user: req.user.id }).sort({ lastAccessedAt: -1 });
 
     res.status(200).json({
       success: true,

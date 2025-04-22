@@ -16,6 +16,10 @@ const ChatSessionSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  lastAccessedAt: { // Added field to track last access/interaction
+    type: Date,
+    default: Date.now,
+  },
   isShared: {
     type: Boolean,
     default: false,

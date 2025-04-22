@@ -19,6 +19,7 @@
     - Admins can create/edit/delete "Custom Models" under a provider, linking them to a base model and adding a custom system prompt.
     - Chat page model selector now displays both base models and custom models, grouped by provider.
     - Selecting a custom model in the chat page automatically applies its system prompt during AI response generation.
+- **Load Last Viewed Session:** The chat page now loads the most recently viewed or interacted with session by default, instead of the most recently created one. This is achieved by tracking and sorting sessions by a `lastAccessedAt` timestamp in the backend.
 
 ## What's Left to Build
 - Further testing and refinement of existing features.

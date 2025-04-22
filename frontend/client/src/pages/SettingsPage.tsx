@@ -51,6 +51,32 @@ interface GlobalSettings {
     lastUpdatedAt?: string; // Optional
 }
 
+// --- NEW Interfaces for Custom Models ---
+interface CustomProvider {
+    _id: string;
+    name: string;
+    createdAt?: string; // Optional from backend
+}
+
+interface CustomModel {
+    _id: string;
+    name: string;
+    provider: { // Populated from backend
+        _id: string;
+        name: string;
+    };
+    baseModelIdentifier: string;
+    systemPrompt: string;
+    createdAt?: string; // Optional from backend
+}
+
+// Interface for the base models dropdown structure
+interface BaseModelsForDropdown {
+    [provider: string]: string[];
+}
+// --- End NEW Interfaces ---
+
+
 // Removed SettingsPageProps interface
 
 // Helper to get month name
@@ -154,6 +180,32 @@ const SettingsPage: React.FC = () => { // Removed props
   const [updateGlobalSettingsLoading, setUpdateGlobalSettingsLoading] = useState(false);
   const [updateGlobalSettingsError, setUpdateGlobalSettingsError] = useState('');
 
+  // --- Custom Provider/Model State (Admin) --- NEW ---
+  const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
+  const [loadingCustomProviders, setLoadingCustomProviders] = useState(true);
+  const [fetchCustomProvidersError, setFetchCustomProvidersError] = useState('');
+  const [customProviderActionLoading, setCustomProviderActionLoading] = useState<string | null>(null); // For add/delete
+  const [customProviderActionError, setCustomProviderActionError] = useState('');
+  const [newCustomProviderName, setNewCustomProviderName] = useState('');
+
+  const [customModels, setCustomModels] = useState<CustomModel[]>([]);
+  const [loadingCustomModels, setLoadingCustomModels] = useState(false); // Only load when provider selected
+  const [fetchCustomModelsError, setFetchCustomModelsError] = useState('');
+  const [selectedCustomProviderId, setSelectedCustomProviderId] = useState<string>(''); // ID of provider whose models are shown
+
+  const [baseModelsForDropdown, setBaseModelsForDropdown] = useState<BaseModelsForDropdown>({});
+  const [loadingBaseModels, setLoadingBaseModels] = useState(true);
+  const [fetchBaseModelsError, setFetchBaseModelsError] = useState('');
+
+  const [showModelModal, setShowModelModal] = useState(false);
+  const [editingCustomModel, setEditingCustomModel] = useState<CustomModel | null>(null); // null for Add, object for Edit
+  const [modelFormName, setModelFormName] = useState('');
+  const [modelFormBaseIdentifier, setModelFormBaseIdentifier] = useState('');
+  const [modelFormSystemPrompt, setModelFormSystemPrompt] = useState('');
+  const [modelFormLoading, setModelFormLoading] = useState(false);
+  const [modelFormError, setModelFormError] = useState('');
+  // --- End Custom Provider/Model State ---
+
 
   // --- Initialize Profile Form ---
   useEffect(() => {
@@ -222,6 +274,71 @@ const SettingsPage: React.FC = () => { // Removed props
       }
   };
 
+  // --- Fetch Custom Providers (Admin) --- NEW ---
+  const fetchCustomProviders = async () => {
+      if (currentUser?.role !== 'admin') return;
+      setLoadingCustomProviders(true); setFetchCustomProvidersError('');
+      try {
+          const response = await apiClient.get('/customproviders');
+          if (response.data?.success) {
+              setCustomProviders(response.data.data);
+          } else {
+              setFetchCustomProvidersError('Failed to load custom providers.');
+          }
+      } catch (err: any) {
+          setFetchCustomProvidersError(err.response?.data?.error || 'Error loading custom providers.');
+          if (err.response?.status === 401) setFetchCustomProvidersError('Unauthorized.');
+          if (err.response?.status === 403) setFetchCustomProvidersError('Forbidden.');
+      } finally {
+          setLoadingCustomProviders(false);
+      }
+  };
+
+  // --- Fetch Custom Models for a Provider (Admin) --- NEW ---
+  const fetchCustomModels = async (providerId: string) => {
+      if (currentUser?.role !== 'admin' || !providerId) {
+          setCustomModels([]); // Clear models if no provider selected
+          return;
+      }
+      setLoadingCustomModels(true); setFetchCustomModelsError('');
+      try {
+          // Use the nested route structure if needed, or a query param
+          const response = await apiClient.get(`/custommodels?providerId=${providerId}`); // Using query param based on backend controller
+          if (response.data?.success) {
+              setCustomModels(response.data.data);
+          } else {
+              setFetchCustomModelsError(`Failed to load models for provider.`);
+          }
+      } catch (err: any) {
+          setFetchCustomModelsError(err.response?.data?.error || `Error loading models.`);
+          if (err.response?.status === 401) setFetchCustomModelsError('Unauthorized.');
+          if (err.response?.status === 403) setFetchCustomModelsError('Forbidden.');
+      } finally {
+          setLoadingCustomModels(false);
+      }
+  };
+
+  // --- Fetch Base Models for Dropdown (Admin) --- NEW ---
+   const fetchBaseModelsForDropdown = async () => {
+        if (currentUser?.role !== 'admin') return;
+        setLoadingBaseModels(true); setFetchBaseModelsError('');
+        try {
+            const response = await apiClient.get('/providers/all-models');
+            if (response.data?.success) {
+                setBaseModelsForDropdown(response.data.data);
+            } else {
+                setFetchBaseModelsError('Failed to load base models list.');
+            }
+        } catch (err: any) {
+            setFetchBaseModelsError(err.response?.data?.error || 'Error loading base models.');
+             if (err.response?.status === 401) setFetchBaseModelsError('Unauthorized.');
+             if (err.response?.status === 403) setFetchBaseModelsError('Forbidden.');
+        } finally {
+            setLoadingBaseModels(false);
+        }
+    };
+
+
     // --- Fetch Model Statuses (Admin) ---
     const fetchModelStatuses = async () => {
         if (currentUser?.role !== 'admin') return;
@@ -275,16 +392,29 @@ const SettingsPage: React.FC = () => { // Removed props
          fetchReferralCodes();
          fetchModelStatuses(); // Fetch model statuses for admin
          fetchGlobalSettings(); // Fetch global settings for admin
+         fetchCustomProviders(); // Fetch custom providers for admin
+         fetchBaseModelsForDropdown(); // Fetch base models for admin dropdown
          // Initial fetch for stats is handled by the stats useEffect below
      } else {
         // Ensure loading states are false if not admin
         setLoadingUsers(false);
+        setLoadingCustomProviders(false); // NEW
+        setLoadingBaseModels(false); // NEW
         setLoadingReferralCodes(false);
          setLoadingModelStatuses(false); // Also set model status loading to false
          setLoadingStats(false); // Also set stats loading to false if not admin
          setLoadingGlobalSettings(false); // Also set global settings loading to false if not admin
      }
   }, [currentUser]); // Refetch if currentUser changes (e.g., after login)
+
+  // --- Fetch Custom Models when selected provider changes --- NEW ---
+  useEffect(() => {
+      if (selectedCustomProviderId) {
+          fetchCustomModels(selectedCustomProviderId);
+      } else {
+          setCustomModels([]); // Clear models if no provider is selected
+      }
+  }, [selectedCustomProviderId]); // Dependency on selected provider ID
 
 
   // --- Fetch Usage Statistics (Admin) --- UPDATED
@@ -631,6 +761,141 @@ const SettingsPage: React.FC = () => { // Removed props
            setPasswordChangeLoading(false);
        }
   };
+
+  // --- Custom Provider Handlers (Admin) --- NEW ---
+  const handleAddCustomProvider = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newCustomProviderName.trim()) {
+          setCustomProviderActionError('Provider name cannot be empty.');
+          return;
+      }
+      setCustomProviderActionLoading('add');
+      setCustomProviderActionError('');
+      try {
+          const response = await apiClient.post('/customproviders', { name: newCustomProviderName });
+          if (response.data?.success) {
+              setNewCustomProviderName('');
+              fetchCustomProviders(); // Refresh list
+          } else {
+              setCustomProviderActionError(response.data?.error || 'Failed to add provider.');
+          }
+      } catch (err: any) {
+          setCustomProviderActionError(err.response?.data?.error || 'Error adding provider.');
+      } finally {
+          setCustomProviderActionLoading(null);
+      }
+  };
+
+  const handleDeleteCustomProvider = async (providerId: string, providerName: string) => {
+      if (!window.confirm(`Delete provider "${providerName}"? This will also delete ALL associated custom models.`)) return;
+      setCustomProviderActionLoading(providerId);
+      setCustomProviderActionError('');
+      try {
+          const response = await apiClient.delete(`/customproviders/${providerId}`);
+          if (response.data?.success) {
+              fetchCustomProviders(); // Refresh list
+              if (selectedCustomProviderId === providerId) {
+                  setSelectedCustomProviderId(''); // Clear selection if deleted provider was selected
+                  setCustomModels([]); // Clear models list
+              }
+          } else {
+              setCustomProviderActionError(response.data?.error || 'Failed to delete provider.');
+          }
+      } catch (err: any) {
+          setCustomProviderActionError(err.response?.data?.error || 'Error deleting provider.');
+      } finally {
+          setCustomProviderActionLoading(null);
+      }
+  };
+
+  // --- Custom Model Modal and Form Handlers (Admin) --- NEW ---
+  const openAddModelModal = () => {
+      if (!selectedCustomProviderId) {
+          alert("Please select a Custom Provider first.");
+          return;
+      }
+      setEditingCustomModel(null); // Ensure it's in 'Add' mode
+      setModelFormName('');
+      setModelFormBaseIdentifier('');
+      setModelFormSystemPrompt('');
+      setModelFormError('');
+      setShowModelModal(true);
+  };
+
+  const openEditModelModal = (model: CustomModel) => {
+      setEditingCustomModel(model);
+      setModelFormName(model.name);
+      setModelFormBaseIdentifier(model.baseModelIdentifier);
+      setModelFormSystemPrompt(model.systemPrompt);
+      setModelFormError('');
+      setShowModelModal(true);
+  };
+
+  const closeModelModal = () => {
+      setShowModelModal(false);
+      setEditingCustomModel(null); // Clear editing state
+  };
+
+  const handleSaveCustomModel = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setModelFormLoading(true);
+      setModelFormError('');
+
+      if (!modelFormName.trim() || !modelFormBaseIdentifier) {
+          setModelFormError('Model Name and Linked Base Model are required.');
+          setModelFormLoading(false);
+          return;
+      }
+
+      const payload = {
+          name: modelFormName,
+          provider: selectedCustomProviderId, // Required for create, ignored by update but good practice
+          baseModelIdentifier: modelFormBaseIdentifier,
+          systemPrompt: modelFormSystemPrompt
+      };
+
+      try {
+          let response;
+          if (editingCustomModel) {
+              // Update existing model
+              response = await apiClient.put(`/custommodels/${editingCustomModel._id}`, payload);
+          } else {
+              // Create new model
+              response = await apiClient.post('/custommodels', payload);
+          }
+
+          if (response.data?.success) {
+              closeModelModal();
+              fetchCustomModels(selectedCustomProviderId); // Refresh model list for the current provider
+          } else {
+              setModelFormError(response.data?.error || 'Failed to save custom model.');
+          }
+      } catch (err: any) {
+          setModelFormError(err.response?.data?.error || 'Error saving custom model.');
+      } finally {
+          setModelFormLoading(false);
+      }
+  };
+
+   const handleDeleteCustomModel = async (modelId: string, modelName: string) => {
+        if (!window.confirm(`Delete custom model "${modelName}"?`)) return;
+        // Use modelFormLoading and modelFormError for actions within the model list for simplicity
+        setModelFormLoading(true); // Indicate loading state
+        setModelFormError('');
+        try {
+            const response = await apiClient.delete(`/custommodels/${modelId}`);
+            if (response.data?.success) {
+                fetchCustomModels(selectedCustomProviderId); // Refresh list
+            } else {
+                 setModelFormError(response.data?.error || 'Failed to delete custom model.'); // Show error near the list
+            }
+        } catch (err: any) {
+             setModelFormError(err.response?.data?.error || 'Error deleting custom model.');
+        } finally {
+             setModelFormLoading(false);
+        }
+    };
+
 
   // --- Render Component ---
   // Define Styles *inside* the component to access isDarkMode
@@ -1267,7 +1532,111 @@ const SettingsPage: React.FC = () => { // Removed props
                    </>
                 )}
             </section>
+       )}
+
+        {/* Custom Providers & Models (Admin Only) --- NEW SECTION --- */}
+        {currentUser?.role === 'admin' && (
+            <details open style={sectionStyle}>
+                <summary style={{...h3Style, cursor: 'pointer', display: 'list-item'}}>Custom Providers & Models</summary>
+
+                {/* Provider Management */}
+                <div style={{ marginBottom: '25px', paddingBottom: '20px', borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}` }}>
+                    <h4 style={h4Style}>Custom Providers</h4>
+                    {loadingCustomProviders && <p>Loading providers...</p>}
+                    {fetchCustomProvidersError && <p style={{ color: 'red' }}>{fetchCustomProvidersError}</p>}
+                    {customProviderActionError && <p style={{ color: 'red' }}>{customProviderActionError}</p>}
+                    {!loadingCustomProviders && !fetchCustomProvidersError && (
+                        customProviders.length > 0 ? (
+                            <ul style={{ listStyle: 'none', padding: 0, marginBottom: '15px' }}>
+                                {customProviders.map((provider) => (
+                                    <li key={provider._id} style={{ borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}`, padding: '8px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span>{provider.name}</span>
+                                        <button
+                                            style={customProviderActionLoading === provider._id ? {...deleteButtonStyle, cursor: 'not-allowed', opacity: 0.6} : deleteButtonStyle}
+                                            onClick={() => handleDeleteCustomProvider(provider._id, provider.name)}
+                                            disabled={customProviderActionLoading === provider._id}
+                                        >
+                                            {customProviderActionLoading === provider._id ? '...' : 'Delete'}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : <p>No custom providers created yet.</p>
+                    )}
+                    {/* Add Provider Form */}
+                    <form onSubmit={handleAddCustomProvider} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '10px' }}>
+                        <input
+                            type="text"
+                            placeholder="New Provider Name"
+                            value={newCustomProviderName}
+                            onChange={(e) => setNewCustomProviderName(e.target.value)}
+                            required
+                            style={{...inputStyle, flexGrow: 1, minWidth: '200px', maxWidth: '300px'}}
+                        />
+                        <button type="submit" disabled={customProviderActionLoading === 'add'} style={customProviderActionLoading === 'add' ? disabledButtonStyle : buttonStyle}>
+                            {customProviderActionLoading === 'add' ? 'Adding...' : 'Add Provider'}
+                        </button>
+                    </form>
+                </div>
+
+                {/* Model Management */}
+                <div>
+                    <h4 style={h4Style}>Custom Models</h4>
+                    {/* Provider Selector */}
+                    <div style={{ marginBottom: '15px' }}>
+                        <label htmlFor="customProviderSelect" style={labelStyle}>Select Provider:</label>
+                        <select
+                            id="customProviderSelect"
+                            value={selectedCustomProviderId}
+                            onChange={(e) => setSelectedCustomProviderId(e.target.value)}
+                            style={{...inputStyle, maxWidth: '350px'}}
+                            disabled={loadingCustomProviders || customProviders.length === 0}
+                        >
+                            <option value="">-- Select a Custom Provider --</option>
+                            {customProviders.map(provider => (
+                                <option key={provider._id} value={provider._id}>{provider.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Model List & Add Button */}
+                    {selectedCustomProviderId && (
+                        <>
+                            {loadingCustomModels && <p>Loading models...</p>}
+                            {fetchCustomModelsError && <p style={{ color: 'red' }}>{fetchCustomModelsError}</p>}
+                             {/* Display model action error here */}
+                             {modelFormError && !showModelModal && <p style={{ color: 'red' }}>{modelFormError}</p>}
+                            {!loadingCustomModels && !fetchCustomModelsError && (
+                                customModels.length > 0 ? (
+                                    <ul style={{ listStyle: 'none', padding: 0, marginBottom: '15px' }}>
+                                        {customModels.map((model) => (
+                                            <li key={model._id} style={{ borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}`, padding: '10px 0', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                                                <div style={{ flexGrow: 1, minWidth: '250px' }}>
+                                                    <strong>{model.name}</strong>
+                                                    <span style={{ marginLeft: '10px', color: isDarkMode ? '#aaa' : '#666', fontSize: '0.9em' }}> (Links to: {model.baseModelIdentifier})</span>
+                                                    <p style={{ margin: '5px 0 0 0', fontSize: '0.85em', color: isDarkMode ? '#bbb' : '#555', whiteSpace: 'pre-wrap', maxHeight: '60px', overflow: 'auto' }}>
+                                                        <i>Prompt:</i> {model.systemPrompt || <i>(None)</i>}
+                                                    </p>
+                                                </div>
+                                                <div style={{ flexShrink: 0, display: 'flex', gap: '5px' }}>
+                                                    <button style={modelFormLoading ? {...smallButtonStyle, cursor: 'not-allowed', opacity: 0.6} : smallButtonStyle} onClick={() => openEditModelModal(model)} disabled={modelFormLoading}>Edit</button>
+                                                    <button style={modelFormLoading ? {...deleteButtonStyle, cursor: 'not-allowed', opacity: 0.6} : deleteButtonStyle} onClick={() => handleDeleteCustomModel(model._id, model.name)} disabled={modelFormLoading}>Delete</button>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : <p>No custom models found for this provider.</p>
+                            )}
+                            <button onClick={openAddModelModal} style={buttonStyle} disabled={modelFormLoading}>
+                                Add New Custom Model
+                            </button>
+                        </>
+                    )}
+                </div>
+            </details>
         )}
+        {/* --- End Custom Providers & Models Section --- */}
+
 
        {/* Global Settings (Admin Only) */}
        {currentUser?.role === 'admin' && (
@@ -1302,6 +1671,81 @@ const SettingsPage: React.FC = () => { // Removed props
                )}
            </section>
        )}
+
+        {/* Custom Model Add/Edit Modal --- NEW --- */}
+        {showModelModal && (
+            <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.6)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', zIndex: 1000
+            }}>
+                <div style={{
+                    background: isDarkMode ? '#333' : 'white', padding: '25px', borderRadius: '8px',
+                    width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto',
+                    color: isDarkMode ? '#e0e0e0' : 'inherit'
+                }}>
+                    <h4 style={{ marginTop: 0, marginBottom: '20px' }}>
+                        {editingCustomModel ? 'Edit Custom Model' : 'Add New Custom Model'}
+                    </h4>
+                    <form onSubmit={handleSaveCustomModel}>
+                        {modelFormError && <p style={{ color: 'red', marginBottom: '15px' }}>{modelFormError}</p>}
+                        <div style={{ marginBottom: '15px' }}>
+                            <label htmlFor="modelFormName" style={labelStyle}>Custom Model Name:</label>
+                            <input
+                                type="text"
+                                id="modelFormName"
+                                value={modelFormName}
+                                onChange={(e) => setModelFormName(e.target.value)}
+                                required
+                                style={inputStyle}
+                            />
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label htmlFor="modelFormBaseIdentifier" style={labelStyle}>Link to Base Model:</label>
+                            {loadingBaseModels ? <p>Loading base models...</p> : fetchBaseModelsError ? <p style={{color: 'red'}}>{fetchBaseModelsError}</p> : (
+                                <select
+                                    id="modelFormBaseIdentifier"
+                                    value={modelFormBaseIdentifier}
+                                    onChange={(e) => setModelFormBaseIdentifier(e.target.value)}
+                                    required
+                                    style={inputStyle}
+                                >
+                                    <option value="">-- Select Base Model --</option>
+                                    {Object.entries(baseModelsForDropdown)
+                                        .sort(([providerA], [providerB]) => providerA.localeCompare(providerB)) // Sort providers
+                                        .map(([provider, models]) => (
+                                            <optgroup label={provider} key={provider}>
+                                                {models
+                                                    .sort() // Sort models within provider
+                                                    .map(modelName => (
+                                                        <option key={modelName} value={modelName}>{modelName}</option>
+                                                ))}
+                                            </optgroup>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
+                        <div style={{ marginBottom: '20px' }}>
+                            <label htmlFor="modelFormSystemPrompt" style={labelStyle}>System Prompt (Optional):</label>
+                            <textarea
+                                id="modelFormSystemPrompt"
+                                value={modelFormSystemPrompt}
+                                onChange={(e) => setModelFormSystemPrompt(e.target.value)}
+                                rows={6}
+                                style={{...inputStyle, height: 'auto', maxWidth: '100%'}} // Adjust style for textarea
+                            />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                            <button type="button" onClick={closeModelModal} style={{...smallButtonStyle, background: isDarkMode ? '#555' : '#ccc'}}>Cancel</button>
+                            <button type="submit" disabled={modelFormLoading} style={modelFormLoading ? disabledButtonStyle : buttonStyle}>
+                                {modelFormLoading ? 'Saving...' : (editingCustomModel ? 'Save Changes' : 'Add Model')}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
+        {/* --- End Modal --- */}
 
     </div>
   );

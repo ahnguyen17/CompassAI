@@ -9,6 +9,8 @@ const pdf = require('pdf-parse');
 const ChatMessage = require('../models/ChatMessage');
 const ChatSession = require('../models/ChatSession');
 const ApiKey = require('../models/ApiKey');
+const CustomModel = require('../models/CustomModel'); // Import CustomModel
+const mongoose = require('mongoose'); // Import mongoose for ObjectId check
 
 // Define available models (Should match controllers/providers.js)
 const AVAILABLE_MODELS = {
@@ -97,21 +99,36 @@ const formatMessagesForProvider = (providerName, history, combinedContentForAI) 
 
 // Helper function for non-streaming API calls (used for title generation AND non-streaming responses)
 // Returns an object { content: string | null, citations: Array | null }
-const callApi = async (providerName, apiKey, modelToUse, history, combinedContentForAI) => {
+const callApi = async (providerName, apiKey, modelToUse, history, combinedContentForAI, systemPrompt = null) => { // Added systemPrompt
     let aiResponseContent = null;
     let extractedCitations = null; // Initialize citations as null
     // Pass the *full* history including the latest user message for formatting
-    const formattedMessages = formatMessagesForProvider(providerName, history, combinedContentForAI);
+    let formattedMessages = formatMessagesForProvider(providerName, history, combinedContentForAI);
+
+    // --- System Prompt Injection ---
+    // Note: Title generation calls won't have a system prompt, this is mainly for actual chat responses.
+    if (systemPrompt) {
+        console.log(`Injecting system prompt for ${providerName} (Non-Streaming)`);
+        if (providerName === 'OpenAI' || providerName === 'DeepSeek' || providerName === 'Perplexity') {
+            // Prepend system message for OpenAI compatible APIs
+            formattedMessages.unshift({ role: 'system', content: systemPrompt });
+        }
+        // Anthropic and Gemini handle system prompts via dedicated parameters below
+    }
+    // --- End System Prompt Injection ---
 
     try {
-        console.log(`Calling ${providerName} with model ${modelToUse} (Non-Streaming)`);
+        console.log(`Calling ${providerName} with model ${modelToUse} (Non-Streaming) with system prompt: ${!!systemPrompt}`);
         if (providerName === 'Anthropic') {
             const anthropic = new Anthropic({ apiKey });
-            const msg = await anthropic.messages.create({
+            const requestPayload = {
                 model: modelToUse,
                 max_tokens: 1024,
-                messages: formattedMessages
-            });
+                messages: formattedMessages,
+                ...(systemPrompt && { system: systemPrompt }) // Add system prompt if provided
+            };
+            console.log("Anthropic Non-Streaming Payload:", JSON.stringify(requestPayload, null, 2));
+            const msg = await anthropic.messages.create(requestPayload);
             if (msg.content?.[0]?.type === 'text') aiResponseContent = msg.content[0].text;
         } else if (providerName === 'OpenAI' || providerName === 'DeepSeek' || providerName === 'Perplexity') { // Combined OpenAI, DeepSeek, Perplexity
             const clientOptions = { apiKey };
@@ -185,11 +202,21 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
             }
         } else if (providerName === 'Gemini') {
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: modelToUse });
+            // Add system instruction if provided
+            const modelParams = { 
+                model: modelToUse,
+                ...(systemPrompt && { systemInstruction: systemPrompt }) 
+            };
+            console.log("Gemini Model Params (Non-Streaming):", modelParams);
+            const model = genAI.getGenerativeModel(modelParams);
+            
             // Gemini requires history and the last message separately for chat.sendMessage
             const chatHistoryForGemini = formattedMessages.slice(0, -1);
             const lastUserMessageParts = formattedMessages[formattedMessages.length - 1].parts;
+            
+            // Start chat with history (system prompt is part of model init)
             const chat = model.startChat({ history: chatHistoryForGemini });
+            console.log("Gemini Sending Message Parts (Non-Streaming):", JSON.stringify(lastUserMessageParts, null, 2));
             const result = await chat.sendMessage(lastUserMessageParts);
             if (result.response?.text) aiResponseContent = result.response.text();
         }
@@ -208,24 +235,39 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
 };
 
 // Helper function for streaming API calls
-const callApiStream = async (providerName, apiKey, modelToUse, history, combinedContentForAI, sendSse) => {
+const callApiStream = async (providerName, apiKey, modelToUse, history, combinedContentForAI, sendSse, systemPrompt = null) => { // Added systemPrompt
     let fullResponseContent = ''; // Accumulate full response
     let fullReasoningContent = ''; // Accumulate reasoning content
     let fullCitations = []; // Store citations for later use
     let errorOccurred = false;
     // Pass the *full* history including the latest user message for formatting
-    const formattedMessages = formatMessagesForProvider(providerName, history, combinedContentForAI);
+    let formattedMessages = formatMessagesForProvider(providerName, history, combinedContentForAI);
+
+    // --- System Prompt Injection ---
+    if (systemPrompt) {
+        console.log(`Injecting system prompt for ${providerName} (Streaming)`);
+        if (providerName === 'OpenAI' || providerName === 'DeepSeek' || providerName === 'Perplexity') {
+            // Prepend system message for OpenAI compatible APIs
+            formattedMessages.unshift({ role: 'system', content: systemPrompt });
+        }
+        // Anthropic and Gemini handle system prompts via dedicated parameters below
+    }
+    // --- End System Prompt Injection ---
 
     try {
-        console.log(`Calling ${providerName} with model ${modelToUse} for streaming...`);
+        console.log(`Calling ${providerName} with model ${modelToUse} for streaming with system prompt: ${!!systemPrompt}...`);
 
         if (providerName === 'Anthropic') {
             const anthropic = new Anthropic({ apiKey });
-            const stream = await anthropic.messages.stream({
+            const requestPayload = {
                 model: modelToUse,
                 max_tokens: 1024,
-                messages: formattedMessages
-            });
+                messages: formattedMessages,
+                stream: true,
+                ...(systemPrompt && { system: systemPrompt }) // Add system prompt if provided
+            };
+            console.log("Anthropic Streaming Payload:", JSON.stringify(requestPayload, null, 2));
+            const stream = await anthropic.messages.stream(requestPayload);
 
             for await (const event of stream) {
                 if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
@@ -414,8 +456,16 @@ const callApiStream = async (providerName, apiKey, modelToUse, history, combined
          }
         else if (providerName === 'Gemini') {
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: modelToUse });
+            // Add system instruction if provided
+             const modelParams = { 
+                model: modelToUse,
+                ...(systemPrompt && { systemInstruction: systemPrompt }) 
+            };
+            console.log("Gemini Model Params (Streaming):", modelParams);
+            const model = genAI.getGenerativeModel(modelParams);
+
             // Gemini stream API takes the full message list directly
+            console.log("Gemini Sending Contents (Streaming):", JSON.stringify(formattedMessages, null, 2));
             const result = await model.generateContentStream({
                 contents: formattedMessages // Send the whole formatted list
             });
@@ -583,6 +633,33 @@ exports.addMessageToSession = async (req, res, next) => {
         // Fetch history *including* the user message we just saved
         const history = await ChatMessage.find({ session: sessionId }).sort({ timestamp: 1 });
 
+        // --- Custom Model Handling ---
+        let customModelData = null;
+        let modelIdentifierForApi = requestedModel; // Start with the requested model
+        let systemPromptForApi = null;
+        let finalModelNameToSave = requestedModel; // What to save in DB (custom ID or base name)
+
+        if (requestedModel && mongoose.Types.ObjectId.isValid(requestedModel)) {
+            console.log(`Requested model '${requestedModel}' looks like an ObjectId. Checking for CustomModel...`);
+            customModelData = await CustomModel.findById(requestedModel);
+            if (customModelData) {
+                console.log(`Found CustomModel: ${customModelData.name}. Base Model: ${customModelData.baseModelIdentifier}`);
+                modelIdentifierForApi = customModelData.baseModelIdentifier; // Use the base model for API calls
+                systemPromptForApi = customModelData.systemPrompt; // Use the custom system prompt
+                finalModelNameToSave = requestedModel; // Keep the custom model ID for saving
+            } else {
+                console.warn(`Requested model ID '${requestedModel}' not found in CustomModels. Treating as base model name.`);
+                modelIdentifierForApi = requestedModel; // Fallback to treating it as a base model name
+                finalModelNameToSave = requestedModel;
+            }
+        } else {
+             console.log(`Requested model '${requestedModel || 'None'}' is not an ObjectId. Treating as base model name.`);
+             modelIdentifierForApi = requestedModel; // Treat as base model name
+             finalModelNameToSave = requestedModel;
+        }
+        // --- End Custom Model Handling ---
+
+
         if (shouldStream) {
             // --- Streaming Logic ---
             console.log("Processing request with streaming enabled.");
@@ -609,50 +686,61 @@ exports.addMessageToSession = async (req, res, next) => {
             };
 
             try {
-                console.log(`User requested model: ${requestedModel || 'None (use default)'}`);
+                // Use modelIdentifierForApi (base model) for finding provider and making calls
+                console.log(`Attempting API call with base model: ${modelIdentifierForApi || 'None (use default)'}`);
                 let providerToTry = null;
-                let modelToTry = null;
+                let modelToTry = modelIdentifierForApi; // Use the base model identifier here
                 let apiKeyToUse = null;
 
-                // 1. Determine initial provider and model
-                if (requestedModel) {
-                    const targetProvider = findProviderForModel(requestedModel);
+                // 1. Determine initial provider and model (using base model identifier)
+                if (modelToTry) {
+                    const targetProvider = findProviderForModel(modelToTry); // Find provider for the base model
                     if (targetProvider) {
                         const apiKeyEntry = await ApiKey.findOne({ providerName: targetProvider, isEnabled: true });
                         if (apiKeyEntry?.keyValue) {
-                            providerToTry = targetProvider; modelToTry = requestedModel; apiKeyToUse = apiKeyEntry.keyValue;
-                            console.log(`Streaming: Found key for requested provider ${providerToTry}. Will try model ${modelToTry}.`);
-                        } else { console.warn(`Streaming: API key for ${targetProvider} disabled/missing. Falling back...`); }
-                    } else { console.warn(`Streaming: Requested model ${requestedModel} not found. Falling back...`); }
+                            providerToTry = targetProvider; 
+                            // modelToTry is already set to baseModelIdentifier
+                            apiKeyToUse = apiKeyEntry.keyValue;
+                            console.log(`Streaming: Found key for provider ${providerToTry}. Will try base model ${modelToTry}. System Prompt: ${!!systemPromptForApi}`);
+                        } else { console.warn(`Streaming: API key for ${targetProvider} (provider for base model ${modelToTry}) disabled/missing. Falling back...`); }
+                    } else { console.warn(`Streaming: Provider for base model ${modelToTry} not found. Falling back...`); }
+                } else {
+                     console.log("Streaming: No specific model requested or derived. Will proceed to fallback.");
                 }
 
-                // 2. Attempt API call (or fallback if needed)
+                // 2. Attempt API call (or fallback if needed) - Pass systemPromptForApi
                 if (providerToTry && modelToTry && apiKeyToUse) {
-                    const result = await callApiStream(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI, sendSse);
+                    // Pass systemPromptForApi to callApiStream
+                    const result = await callApiStream(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI, sendSse, systemPromptForApi); 
                     if (!result.errorOccurred) {
                         providerUsed = providerToTry;
-                        actualModelUsed = modelToTry;
+                        actualModelUsed = modelToTry; // Store the base model used for the API call
                         finalAiContent = result.fullResponseContent;
                         finalReasoningContent = result.fullReasoningContent;
                         fullCitations = result.fullCitations; // Capture citations
+                        // If successful with custom model's base, keep finalModelNameToSave as the custom ID
                     } else {
-                        console.warn(`Streaming: Initial attempt ${providerToTry}/${modelToTry} failed. Trying default...`);
+                        console.warn(`Streaming: Initial attempt ${providerToTry}/${modelToTry} (Base Model) failed. Trying default for provider...`);
+                        finalModelNameToSave = null; // Reset as we are falling back
                         const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
                         if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
-                            const defaultResult = await callApiStream(providerToTry, apiKeyToUse, defaultModelForProvider, history, combinedContentForAI, sendSse);
+                             // Try default model for the *same provider*, still pass original system prompt if any
+                            const defaultResult = await callApiStream(providerToTry, apiKeyToUse, defaultModelForProvider, history, combinedContentForAI, sendSse, systemPromptForApi);
                             if (!defaultResult.errorOccurred) {
                                 providerUsed = providerToTry;
-                                actualModelUsed = defaultModelForProvider;
+                                actualModelUsed = defaultModelForProvider; // Store the default base model used
                                 finalAiContent = defaultResult.fullResponseContent;
                                 finalReasoningContent = defaultResult.fullReasoningContent;
                                 fullCitations = defaultResult.fullCitations; // Capture citations
-                            } else { console.warn(`Streaming: Default model ${defaultModelForProvider} for ${providerToTry} also failed. Falling back...`); }
-                        } else { console.warn(`Streaming: No different default model for ${providerToTry}. Falling back...`); }
+                                finalModelNameToSave = actualModelUsed; // Save the default base model name
+                            } else { console.warn(`Streaming: Default model ${defaultModelForProvider} for ${providerToTry} also failed. Falling back further...`); }
+                        } else { console.warn(`Streaming: No different default model for ${providerToTry}. Falling back further...`); }
                     }
                 }
 
-                // 3. Sequential Fallback
+                // 3. Sequential Fallback (if initial attempts failed)
                 if (!providerUsed) {
+                    finalModelNameToSave = null; // Reset as we are falling back completely
                     console.log("Streaming: Attempting sequential provider fallback...");
                     const enabledKeysSorted = await ApiKey.find({ isEnabled: true }).sort({ priority: 1 });
                     if (!enabledKeysSorted || enabledKeysSorted.length === 0) {
@@ -664,13 +752,15 @@ exports.addMessageToSession = async (req, res, next) => {
                             console.log(`Streaming Fallback: Trying ${fallbackProvider} (Priority: ${apiKeyEntry.priority})`);
                             const fallbackModel = DEFAULT_MODELS[fallbackProvider];
                             if (!fallbackModel) continue;
-                            const fallbackResult = await callApiStream(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, combinedContentForAI, sendSse);
+                            // Fallback uses default models, so no custom system prompt is passed
+                            const fallbackResult = await callApiStream(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, combinedContentForAI, sendSse, null); 
                             if (!fallbackResult.errorOccurred) {
                                 providerUsed = fallbackProvider;
-                                actualModelUsed = fallbackModel;
+                                actualModelUsed = fallbackModel; // Store the fallback base model used
                                 finalAiContent = fallbackResult.fullResponseContent;
                                 finalReasoningContent = fallbackResult.fullReasoningContent;
                                 fullCitations = fallbackResult.fullCitations; // Capture citations
+                                finalModelNameToSave = actualModelUsed; // Save the fallback base model name
                                 console.log(`Streaming Fallback successful: ${providerUsed}/${actualModelUsed}.`);
                                 break;
                             } else { console.warn(`Streaming Fallback failed for ${fallbackProvider}.`); }
@@ -684,7 +774,8 @@ exports.addMessageToSession = async (req, res, next) => {
                 }
 
                 // 5. Send initial info and finalize SSE
-                if (actualModelUsed) sendSse({ type: 'model_info', modelUsed: actualModelUsed });
+                // Send the model name/ID that should be displayed/saved (custom ID or base name)
+                if (finalModelNameToSave) sendSse({ type: 'model_info', modelUsed: finalModelNameToSave }); 
                 if (titleUpdated) sendSse({ type: 'title_update', title: generatedTitle });
                 sendSse({ type: 'done' });
 
@@ -697,10 +788,11 @@ exports.addMessageToSession = async (req, res, next) => {
             }
 
             // 6. Save final AI message to DB *after* streaming
-            if (!streamError && finalAiContent !== null && actualModelUsed) {
+            // Use finalModelNameToSave (custom ID or base name) for the modelUsed field
+            if (!streamError && finalAiContent !== null && finalModelNameToSave) { 
                 try {
                     // Add more detailed logging for citations in streaming mode
-                    console.log(`Streaming citations before saving: Provider=${providerUsed}, Citations count=${fullCitations.length}`);
+                    console.log(`Streaming citations before saving: Provider=${providerUsed}, Base Model Used=${actualModelUsed}, Saved Model ID/Name=${finalModelNameToSave}, Citations count=${fullCitations.length}`);
                     if (fullCitations.length > 0) {
                         console.log("Citations to save:", JSON.stringify(fullCitations, null, 2));
                     }
@@ -709,7 +801,7 @@ exports.addMessageToSession = async (req, res, next) => {
                         session: sessionId,
                         sender: 'ai',
                         content: finalAiContent,
-                        modelUsed: actualModelUsed,
+                        modelUsed: finalModelNameToSave, // Save custom ID or base name
                         // Only add reasoningContent if it's not empty
                         ...(finalReasoningContent && { reasoningContent: finalReasoningContent }),
                         // Add citations if we have them (not just for Perplexity)
@@ -737,39 +829,52 @@ exports.addMessageToSession = async (req, res, next) => {
             let providerUsed = null;
             let actualModelUsed = null;
 
-            console.log(`User requested model: ${requestedModel || 'None (use default)'}`);
+            // Use modelIdentifierForApi (base model) for finding provider and making calls
+            console.log(`Attempting API call with base model: ${modelIdentifierForApi || 'None (use default)'}`);
             let providerToTry = null;
-            let modelToTry = null;
+            let modelToTry = modelIdentifierForApi; // Use the base model identifier here
             let apiKeyToUse = null;
 
-            // 1. Determine initial provider and model
-            if (requestedModel) {
-                const targetProvider = findProviderForModel(requestedModel);
+            // 1. Determine initial provider and model (using base model identifier)
+             if (modelToTry) {
+                const targetProvider = findProviderForModel(modelToTry); // Find provider for the base model
                 if (targetProvider) {
                     const apiKeyEntry = await ApiKey.findOne({ providerName: targetProvider, isEnabled: true });
                     if (apiKeyEntry?.keyValue) {
-                        providerToTry = targetProvider; modelToTry = requestedModel; apiKeyToUse = apiKeyEntry.keyValue;
-                        console.log(`Non-Streaming: Found key for requested provider ${providerToTry}. Will try model ${modelToTry}.`);
-                    } else { console.warn(`Non-Streaming: API key for ${targetProvider} disabled/missing. Falling back...`); }
-                } else { console.warn(`Non-Streaming: Requested model ${requestedModel} not found. Falling back...`); }
+                        providerToTry = targetProvider;
+                        // modelToTry is already set to baseModelIdentifier
+                        apiKeyToUse = apiKeyEntry.keyValue;
+                        console.log(`Non-Streaming: Found key for provider ${providerToTry}. Will try base model ${modelToTry}. System Prompt: ${!!systemPromptForApi}`);
+                    } else { console.warn(`Non-Streaming: API key for ${targetProvider} (provider for base model ${modelToTry}) disabled/missing. Falling back...`); }
+                } else { console.warn(`Non-Streaming: Provider for base model ${modelToTry} not found. Falling back...`); }
+            } else {
+                 console.log("Non-Streaming: No specific model requested or derived. Will proceed to fallback.");
             }
 
-            // 2. Attempt API call (or fallback if needed)
+
+            // 2. Attempt API call (or fallback if needed) - Pass systemPromptForApi
             if (providerToTry && modelToTry && apiKeyToUse) {
-                apiResult = await callApi(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI);
+                // Pass systemPromptForApi to callApi
+                apiResult = await callApi(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI, systemPromptForApi); 
                 if (apiResult && apiResult.content !== null) {
-                    providerUsed = providerToTry; actualModelUsed = modelToTry;
-                    console.log(`Non-Streaming: Success ${providerUsed}/${actualModelUsed}`);
+                    providerUsed = providerToTry; 
+                    actualModelUsed = modelToTry; // Store the base model used for the API call
+                    // If successful with custom model's base, keep finalModelNameToSave as the custom ID
+                    console.log(`Non-Streaming: Success ${providerUsed}/${actualModelUsed} (Base Model)`);
                 } else {
-                    console.warn(`Non-Streaming: Initial attempt ${providerToTry}/${modelToTry} failed. Trying default...`);
+                    console.warn(`Non-Streaming: Initial attempt ${providerToTry}/${modelToTry} (Base Model) failed. Trying default for provider...`);
+                    finalModelNameToSave = null; // Reset as we are falling back
                     const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
                     if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
-                        apiResult = await callApi(providerToTry, apiKeyToUse, defaultModelForProvider, history, combinedContentForAI);
+                        // Try default model for the *same provider*, still pass original system prompt if any
+                        apiResult = await callApi(providerToTry, apiKeyToUse, defaultModelForProvider, history, combinedContentForAI, systemPromptForApi);
                         if (apiResult && apiResult.content !== null) {
-                            providerUsed = providerToTry; actualModelUsed = defaultModelForProvider;
+                            providerUsed = providerToTry; 
+                            actualModelUsed = defaultModelForProvider; // Store the default base model used
+                            finalModelNameToSave = actualModelUsed; // Save the default base model name
                             console.log(`Non-Streaming: Success ${providerUsed}/DEFAULT ${actualModelUsed}`);
-                        } else { console.warn(`Non-Streaming: Default model ${defaultModelForProvider} for ${providerToTry} also failed. Falling back...`); }
-                    } else { console.warn(`Non-Streaming: No different default model for ${providerToTry}. Falling back...`); }
+                        } else { console.warn(`Non-Streaming: Default model ${defaultModelForProvider} for ${providerToTry} also failed. Falling back further...`); }
+                    } else { console.warn(`Non-Streaming: No different default model for ${providerToTry}. Falling back further...`); }
                 }
             }
 

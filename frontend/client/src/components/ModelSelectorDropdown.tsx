@@ -1,14 +1,24 @@
 import React, { useState, useEffect, useRef, Fragment } from 'react'; // Added Fragment
 import styles from './ModelSelectorDropdown.module.css';
 import useAuthStore from '../store/authStore';
-import { useTranslation } from 'react-i18next'; // Import useTranslation
+import { useTranslation } from 'react-i18next';
 
-interface AvailableModels {
-  [provider: string]: string[];
+// Interface for a single Custom Model (matching backend structure)
+interface CustomModelData {
+    _id: string;
+    name: string;
+    providerName: string;
+    baseModelIdentifier: string;
+}
+
+// Interface for the combined data structure from the backend
+interface CombinedAvailableModels {
+  baseModels: { [provider: string]: string[] };
+  customModels: CustomModelData[];
 }
 
 interface ModelSelectorDropdownProps {
-  availableModels: AvailableModels;
+  availableModels: CombinedAvailableModels; // Updated prop type
   selectedModel: string;
   onModelChange: (model: string) => void;
   disabled?: boolean;
@@ -23,7 +33,17 @@ const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const { isDarkMode } = useAuthStore(); // Keep for potential future dark mode specific logic if needed
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation(); // Initialize translation hook
+  const { t } = useTranslation();
+
+  // Group custom models by their provider name
+  const groupedCustomModels: { [providerName: string]: CustomModelData[] } = availableModels.customModels.reduce((acc, model) => {
+      const provider = model.providerName || 'Custom'; // Group under 'Custom' if provider name missing
+      if (!acc[provider]) {
+          acc[provider] = [];
+      }
+      acc[provider].push(model);
+      return acc;
+  }, {} as { [providerName: string]: CustomModelData[] });
 
   // Close dropdown if clicked outside
   useEffect(() => {
@@ -83,32 +103,63 @@ const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
           >
             {t('chat_model_default')}
           </div>
-          {/* Iterate through available models, sorting providers alphabetically */}
-          {Object.keys(availableModels) // Get provider names
-            .sort() // Sort provider names alphabetically
-            .map(provider => { // Iterate through sorted provider names
-              const models = availableModels[provider]; // Get models for the current provider
+
+          {/* --- Render Custom Models First --- */}
+          {Object.keys(groupedCustomModels)
+            .sort() // Sort custom provider names
+            .map(customProviderName => (
+              <Fragment key={`custom-${customProviderName}`}>
+                <div className={styles.providerGroup}>{customProviderName} (Custom)</div>
+                {groupedCustomModels[customProviderName]
+                  .sort((a, b) => a.name.localeCompare(b.name)) // Sort models within provider
+                  .map(customModel => (
+                    <div
+                      key={customModel._id} // Use custom model ID as key
+                      className={`${styles.modelItem} ${selectedModel === customModel._id ? styles.modelItemSelected : ''}`}
+                      onClick={() => handleSelect(customModel._id)} // Pass custom model ID on select
+                      role="option"
+                      aria-selected={selectedModel === customModel._id}
+                      title={`Base: ${customModel.baseModelIdentifier}`} // Show base model on hover
+                    >
+                      {customModel.name} {/* Display custom model name */}
+                    </div>
+                  ))}
+              </Fragment>
+            ))}
+
+          {/* Divider if both custom and base models exist */}
+          {availableModels.customModels.length > 0 && Object.keys(availableModels.baseModels).length > 0 && (
+              <hr className={styles.divider} />
+          )}
+
+          {/* --- Render Base Models --- */}
+          {Object.keys(availableModels.baseModels) // Get base provider names
+            .sort() // Sort base provider names alphabetically
+            .map(baseProvider => { // Iterate through sorted base provider names
+              const baseModelsList = availableModels.baseModels[baseProvider]; // Get models for the current base provider
               return (
-                <Fragment key={provider}>
-                  <div className={styles.providerGroup}>{provider}</div>
-                  {models.map(modelName => {
-                // Determine display text (same logic as before)
-                const displayText = provider.toLowerCase() === 'perplexity'
-                    ? modelName.replace(/^perplexity\//, '')
-                    : modelName;
-                return (
-                  <div
-                    key={modelName}
-                    className={`${styles.modelItem} ${selectedModel === modelName ? styles.modelItemSelected : ''}`}
-                    onClick={() => handleSelect(modelName)}
-                    role="option"
-                    aria-selected={selectedModel === modelName}
-                  >
-                    {displayText}
-                  </div>
-                );
-              })}
-            </Fragment>
+                <Fragment key={`base-${baseProvider}`}>
+                  <div className={styles.providerGroup}>{baseProvider}</div>
+                  {baseModelsList
+                    .sort() // Sort models within provider
+                    .map(baseModelName => {
+                      // Determine display text (same logic as before)
+                      const displayText = baseProvider.toLowerCase() === 'perplexity'
+                          ? baseModelName.replace(/^perplexity\//, '')
+                          : baseModelName;
+                      return (
+                        <div
+                          key={baseModelName} // Use base model name as key
+                          className={`${styles.modelItem} ${selectedModel === baseModelName ? styles.modelItemSelected : ''}`}
+                          onClick={() => handleSelect(baseModelName)} // Pass base model name on select
+                          role="option"
+                          aria-selected={selectedModel === baseModelName}
+                        >
+                          {displayText}
+                        </div>
+                      );
+                  })}
+                </Fragment>
               );
           })}
         </div>

@@ -30,7 +30,18 @@ const THINK_TAG_MODELS = [
 ];
 
 // --- Interfaces ---
-interface AvailableModels { [provider: string]: string[]; }
+// Interface for a single Custom Model (matching dropdown component)
+interface CustomModelData {
+    _id: string;
+    name: string;
+    providerName: string;
+    baseModelIdentifier: string;
+}
+// Interface for the combined data structure from the backend (matching dropdown component)
+interface CombinedAvailableModels {
+  baseModels: { [provider: string]: string[] };
+  customModels: CustomModelData[];
+}
 interface ChatSession { _id: string; title: string; createdAt: string; isShared?: boolean; shareId?: string; }
 // Update ChatMessage interface to include optional reasoningContent
 interface ChatMessage {
@@ -64,8 +75,9 @@ interface ChatMessage {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-   const [availableModels, setAvailableModels] = useState<AvailableModels>({});
-   const [selectedModel, setSelectedModel] = useState<string>('');
+   // Update state to use the new combined interface and initialize appropriately
+   const [availableModels, setAvailableModels] = useState<CombinedAvailableModels>({ baseModels: {}, customModels: [] });
+   const [selectedModel, setSelectedModel] = useState<string>(''); // This will hold either base model name or custom model ID
    const [loadingModels, setLoadingModels] = useState(true);
    // Removed local isSidebarVisible state
    // State for streaming response
@@ -96,7 +108,49 @@ interface ChatMessage {
 
   // --- Fetch Functions ---
   const fetchSessions = async () => { setLoadingSessions(true); setError(''); try { const response = await apiClient.get('/chatsessions'); if (response.data?.success) setSessions(response.data.data); else setError('Failed to load chat sessions.'); } catch (err: any) { setError(err.response?.data?.error || 'Error loading sessions.'); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingSessions(false); } };
-  const fetchAvailableModels = async () => { setLoadingModels(true); try { const response = await apiClient.get('/providers/models'); if (response.data?.success) setAvailableModels(response.data.data); else console.error("Failed to fetch available models"); } catch (err: any) { console.error("Error fetching available models:", err); if (err.response?.status === 401) navigate('/login'); } finally { setLoadingModels(false); } };
+  // Update fetchAvailableModels to handle the new combined structure
+  const fetchAvailableModels = async () => {
+      setLoadingModels(true);
+      try {
+          const response = await apiClient.get('/providers/models'); // Endpoint now returns combined data
+          if (response.data?.success) {
+              // Ensure the data structure matches CombinedAvailableModels
+              const data = response.data.data;
+              // Perform more robust checking
+              if (data && 
+                  typeof data.baseModels === 'object' && 
+                  data.baseModels !== null && // Check not null
+                  !Array.isArray(data.baseModels) && // Check not an array
+                  Array.isArray(data.customModels)) 
+              {
+                   // Validate customModels structure minimally
+                   const isValidCustomModels = data.customModels.every((item: any) => 
+                       typeof item === 'object' && item !== null && '_id' in item && 'name' in item && 'providerName' in item && 'baseModelIdentifier' in item
+                   );
+
+                   if (isValidCustomModels) {
+                       setAvailableModels(data as CombinedAvailableModels);
+                       console.log("Successfully fetched and set combined models:", data);
+                   } else {
+                       console.error("Fetched custom models data structure is incorrect:", data.customModels);
+                       setAvailableModels({ baseModels: data.baseModels, customModels: [] }); // Keep base models if custom are bad
+                   }
+              } else {
+                  console.error("Fetched available models data structure is incorrect:", data);
+                  setAvailableModels({ baseModels: {}, customModels: [] }); // Set to default empty state
+              }
+          } else {
+              console.error("Failed to fetch available models (API error):", response.data?.error);
+              setAvailableModels({ baseModels: {}, customModels: [] }); // Set to default empty state on failure
+          }
+      } catch (err: any) {
+          console.error("Error fetching available models (Network/Server error):", err);
+          setAvailableModels({ baseModels: {}, customModels: [] }); // Set to default empty state on error
+          if (err.response?.status === 401) navigate('/login');
+      } finally {
+          setLoadingModels(false);
+      }
+  };
   // Updated handleDeleteSession with smoother transition logic
   const handleDeleteSession = async (sessionId: string, sessionTitle: string) => {
       if (!window.confirm(`Are you sure you want to delete the chat "${sessionTitle || 'Untitled Chat'}"?`)) return;
@@ -882,10 +936,11 @@ interface ChatMessage {
               <form onSubmit={handleSendMessage} className={styles.inputForm}>
                    {/* Model Select, Mic, and Reasoning Toggle Row */}
                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}> {/* Changed gap to space-between */}
-                        {/* Model Selector */}
-                        {!loadingModels && Object.keys(availableModels).length > 0 ? (
+                        {/* Model Selector - Pass the combined state */}
+                        {/* Check if either baseModels or customModels have entries before rendering */}
+                        {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) ? (
                             <ModelSelectorDropdown
-                                availableModels={availableModels}
+                                availableModels={availableModels} // Pass the state variable directly
                                selectedModel={selectedModel}
                                onModelChange={(newModel) => {
                                    setSelectedModel(newModel);

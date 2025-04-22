@@ -16,6 +16,8 @@ const referralCodeRoutes = require('./routes/referralCodes'); // Import referral
 const disabledModelRoutes = require('./routes/disabledModels'); // Import disabled models routes
 const statsRoutes = require('./routes/stats'); // Import stats routes
 const settingsRoutes = require('./routes/settings'); // Import settings routes
+const customProviderRoutes = require('./routes/customProviders'); // Import custom provider routes
+const customModelRoutes = require('./routes/customModels'); // Import custom model routes
 
 // Connect to Database
 connectDB();
@@ -77,6 +79,8 @@ app.use('/api/v1/referralcodes', referralCodeRoutes); // Mount referral code rou
 app.use('/api/v1/disabledmodels', disabledModelRoutes); // Mount disabled models routes
 app.use('/api/v1/stats', statsRoutes); // Mount stats routes
 app.use('/api/v1/settings', settingsRoutes); // Mount settings routes
+app.use('/api/v1/customproviders', customProviderRoutes); // Mount custom provider routes
+app.use('/api/v1/custommodels', customModelRoutes); // Mount custom model routes (handles nested too)
 
 // Define the port
 const PORT = process.env.PORT || 5000; // Use port from .env or default to 5000

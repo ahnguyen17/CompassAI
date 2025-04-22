@@ -14,11 +14,15 @@
 - ChatPage.tsx speech recognition now dynamically uses Vietnamese ('vi-VN') when the application language is set to Vietnamese ('vi'), otherwise defaults to English ('en-US').
 - ChatPage.tsx microphone icon now glows when speech recognition is active, using CSS animations defined in `ChatPage.module.css`.
 - ChatPage.tsx input field now uses "Enter" for newline and "Shift+Enter" to send the message.
+- **Custom Models Feature:** (NEW)
+    - Admins can create/delete "Custom Providers" in settings.
+    - Admins can create/edit/delete "Custom Models" under a provider, linking them to a base model and adding a custom system prompt.
+    - Chat page model selector now displays both base models and custom models, grouped by provider.
+    - Selecting a custom model in the chat page automatically applies its system prompt during AI response generation.
 
 ## What's Left to Build
-- Complete implementation of chat functionality.
-- Finalize user settings management.
-- Ensure proper authentication and authorization.
+- Further testing and refinement of existing features.
+- Potential new features based on user feedback.
 
 ## Current Status
 The project is in its initial stages with basic structures in place. The Memory Bank has been initialized and updated with insights from the codebase analysis.

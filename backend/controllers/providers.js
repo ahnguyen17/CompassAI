@@ -49,37 +49,64 @@ const AVAILABLE_MODELS = {
     ]
 };
 
+// Export the constant for use in other controllers (e.g., customModels)
+exports.AVAILABLE_MODELS = AVAILABLE_MODELS;
+
 // @desc    Get available models for enabled providers
+const CustomModel = require('../models/CustomModel'); // Import CustomModel
+
 // @route   GET /api/v1/providers/models
 // @access  Private
 exports.getAvailableModels = async (req, res, next) => {
     try {
-        // Fetch enabled API keys and disabled model names concurrently
-        const [enabledKeys, disabledModels] = await Promise.all([
+        // Fetch enabled API keys, disabled model names, and all custom models concurrently
+        const [enabledKeys, disabledModelsList, customModelsList] = await Promise.all([
             ApiKey.find({ isEnabled: true }).select('providerName'),
-            DisabledModel.find().select('modelName')
+            DisabledModel.find().select('modelName'),
+            CustomModel.find().populate({ path: 'provider', select: 'name' }).sort({ name: 1 }) // Fetch all custom models and populate provider name
         ]);
 
+        // --- Process Base Models ---
         const enabledProviders = enabledKeys.map(key => key.providerName);
-        const disabledModelNamesSet = new Set(disabledModels.map(m => m.modelName));
+        const disabledModelNamesSet = new Set(disabledModelsList.map(m => m.modelName));
 
-        const availableModels = {};
+        const filteredBaseModels = {};
         for (const provider of enabledProviders) {
             if (AVAILABLE_MODELS[provider]) {
                 // Filter out disabled models for this provider
-                availableModels[provider] = AVAILABLE_MODELS[provider].filter(
+                const providerModels = AVAILABLE_MODELS[provider].filter(
                     modelName => !disabledModelNamesSet.has(modelName)
                 );
+                // Only include provider if they have at least one enabled model
+                if (providerModels.length > 0) {
+                    filteredBaseModels[provider] = providerModels;
+                }
             }
         }
 
+        // --- Process Custom Models ---
+        // Format custom models for the response
+        const formattedCustomModels = customModelsList.map(model => ({
+            _id: model._id,
+            name: model.name,
+            providerName: model.provider?.name || 'Unknown Provider', // Use populated provider name
+            baseModelIdentifier: model.baseModelIdentifier
+            // Do not include systemPrompt here for security/privacy
+        }));
+
+        // --- Combine Results ---
+        const responseData = {
+            baseModels: filteredBaseModels,
+            customModels: formattedCustomModels
+        };
+
         res.status(200).json({
             success: true,
-            data: availableModels
+            data: responseData
         });
 
     } catch (error) {
-        console.error("Error fetching available models:", error);
+        console.error("Error fetching available models (including custom):", error);
         res.status(500).json({ success: false, error: 'Server Error fetching models' });
     }
 };

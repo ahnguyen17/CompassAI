@@ -195,7 +195,9 @@ interface ChatMessage {
       }
   };
   const handleToggleShare = async () => { if (!currentSession) return; setShareLoading(true); setError(''); const newShareStatus = !currentSession.isShared; try { const response = await apiClient.put(`/chatsessions/${currentSession._id}`, { isShared: newShareStatus }); if (response.data?.success) { const updatedSession = response.data.data; setCurrentSession(updatedSession); setSessions(prev => prev.map(s => s._id === updatedSession._id ? updatedSession : s)); } else { setError('Failed to update sharing status.'); } } catch (err: any) { setError(err.response?.data?.error || 'Error updating sharing status.'); if (err.response?.status === 401) navigate('/login'); } finally { setShareLoading(false); } };
-  const fetchMessages = async (sessionId: string) => {
+  
+  // Wrap fetchMessages in useCallback
+  const fetchMessages = useCallback(async (sessionId: string) => {
       if (!sessionId) return;
       setLoadingMessages(true);
       setError('');
@@ -221,17 +223,18 @@ interface ChatMessage {
       } finally {
           setLoadingMessages(false);
        }
-    };
+    }, [navigate]); // Add navigate dependency
+
     // Wrap handleSelectSession in useCallback
     const handleSelectSession = useCallback((session: ChatSession) => {
         setCurrentSession(session);
         navigate(`/chat/${session._id}`);
-        fetchMessages(session._id);
+        fetchMessages(session._id); // Call the useCallback version
        // Close sidebar if it's currently visible
        if (isSidebarVisible) {
             toggleSidebarVisibility();
         }
-    }, [navigate, isSidebarVisible, toggleSidebarVisibility]); // Add dependencies for useCallback
+    }, [navigate, isSidebarVisible, toggleSidebarVisibility, fetchMessages]); // Add fetchMessages dependency
 
     const handleNewChat = async () => {
       setError('');

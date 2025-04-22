@@ -34,6 +34,11 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  lastActiveChatSessionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ChatSession',
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now,

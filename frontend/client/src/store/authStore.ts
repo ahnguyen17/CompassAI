@@ -8,6 +8,7 @@ interface CurrentUser {
     username: string;
     email: string;
     role: 'user' | 'admin';
+    lastActiveChatSessionId?: string | null; // Add optional field
     createdAt: string;
 }
 

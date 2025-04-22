@@ -19,6 +19,10 @@
     - Admins can create/edit/delete "Custom Models" under a provider, linking them to a base model and adding a custom system prompt.
     - Chat page model selector now displays both base models and custom models, grouped by provider.
     - Selecting a custom model in the chat page automatically applies its system prompt during AI response generation.
+- **Auto-Load Last Chat:** (NEW)
+    - The ID of the last interacted chat session is stored per user (`User.lastActiveChatSessionId`).
+    - This ID is updated whenever a user sends a message in a session.
+    - The frontend (`ChatPage.tsx`) now automatically loads the session corresponding to this ID when the page loads (after login or navigating back), provided no specific session ID is present in the URL.
 
 ## What's Left to Build
 - Further testing and refinement of existing features.

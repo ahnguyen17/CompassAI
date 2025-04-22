@@ -10,6 +10,7 @@ const ChatMessage = require('../models/ChatMessage');
 const ChatSession = require('../models/ChatSession');
 const ApiKey = require('../models/ApiKey');
 const CustomModel = require('../models/CustomModel'); // Import CustomModel
+const User = require('../models/User'); // Import User model
 const mongoose = require('mongoose'); // Import mongoose for ObjectId check
 
 // Define available models (Should match controllers/providers.js)
@@ -553,6 +554,15 @@ exports.addMessageToSession = async (req, res, next) => {
         }
         const savedUserMessage = await ChatMessage.create(userMessageData);
         console.log("Saved user message to DB:", savedUserMessage._id);
+
+        // Update user's last active session ID
+        try {
+            await User.findByIdAndUpdate(req.user.id, { lastActiveChatSessionId: sessionId });
+            console.log(`Updated lastActiveChatSessionId for user ${req.user.id} to ${sessionId}`);
+        } catch (userUpdateError) {
+            console.error(`Error updating lastActiveChatSessionId for user ${req.user.id}:`, userUpdateError);
+            // Continue processing the message even if user update fails
+        }
 
         // Prepare combined content for AI (including potential file content)
         let combinedContentForAI = content || '';

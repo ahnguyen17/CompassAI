@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react'; // Import useCallback
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -8,7 +8,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
  import apiClient from '../services/api';
  import CopyButton from '../components/CopyButton';
  import ModelSelectorDropdown from '../components/ModelSelectorDropdown'; // Import the new component
- import useAuthStore from '../store/authStore'; // Import the store
+ import useAuthStore from '../store/authStore'; // Import the store (currentUser, authLoading)
  import { useTranslation } from 'react-i18next';
 import styles from './ChatPage.module.css'; // Import CSS Module
 
@@ -60,9 +60,9 @@ interface ChatMessage {
    isSidebarVisible: boolean;
    toggleSidebarVisibility: () => void; // Add toggle function prop
  }
- 
+
  const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisibility }) => { // Accept props
-   const { isDarkMode } = useAuthStore(); // Get state from store
+   const { isDarkMode, currentUser, authLoading } = useAuthStore(); // Get state and user data from store
    const [sessions, setSessions] = useState<ChatSession[]>([]);
    const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
@@ -220,18 +220,20 @@ interface ChatMessage {
           if (err.response?.status === 401) navigate('/login');
       } finally {
           setLoadingMessages(false);
-      }
-  };
-   const handleSelectSession = (session: ChatSession) => {
-       setCurrentSession(session);
-       navigate(`/chat/${session._id}`);
-       fetchMessages(session._id);
+       }
+    };
+    // Wrap handleSelectSession in useCallback
+    const handleSelectSession = useCallback((session: ChatSession) => {
+        setCurrentSession(session);
+        navigate(`/chat/${session._id}`);
+        fetchMessages(session._id);
        // Close sidebar if it's currently visible
        if (isSidebarVisible) {
-           toggleSidebarVisibility();
-       }
-   };
-   const handleNewChat = async () => {
+            toggleSidebarVisibility();
+        }
+    }, [navigate, isSidebarVisible, toggleSidebarVisibility]); // Add dependencies for useCallback
+
+    const handleNewChat = async () => {
       setError('');
       try {
           const response = await apiClient.post('/chatsessions', { title: 'New Chat' });
@@ -634,35 +636,51 @@ interface ChatMessage {
    // --- End Speech Recognition Toggle Function ---
 
 
-   // Effect to handle selecting session based on URL or loading the latest
-  useEffect(() => {
-    // Don't run if sessions haven't loaded yet
-    if (loadingSessions) return;
+    // Effect to handle selecting session based on URL, last active, or loading the latest
+    useEffect(() => {
+        // Don't run if sessions or auth state haven't loaded yet
+        if (loadingSessions || authLoading) return;
 
-    if (routeSessionId) {
-        // If there's a session ID in the URL, try to load it
-        if (routeSessionId !== currentSession?._id) {
-            const sessionFromRoute = sessions.find(s => s._id === routeSessionId);
-            if (sessionFromRoute) {
-                console.log("Loading session from URL:", routeSessionId);
-                setCurrentSession(sessionFromRoute);
-                fetchMessages(sessionFromRoute._id);
-            } else {
-                console.warn(`Session ID ${routeSessionId} from URL not found in fetched sessions.`);
-                // Optional: Navigate to base chat page or show error?
-                // navigate('/chat');
+        const lastActiveId = currentUser?.lastActiveChatSessionId;
+
+        if (routeSessionId) {
+            // Priority 1: Load session from URL if different from current
+            if (routeSessionId !== currentSession?._id) {
+                const sessionFromRoute = sessions.find(s => s._id === routeSessionId);
+                if (sessionFromRoute) {
+                    console.log("Loading session from URL:", routeSessionId);
+                    handleSelectSession(sessionFromRoute); // Selects, navigates, fetches
+                } else {
+                    console.warn(`Session ID ${routeSessionId} from URL not found.`);
+                    // Optional: Navigate away or show error
+                }
             }
+        } else if (!currentSession && lastActiveId) {
+            // Priority 2: Load last active session if no URL session and none selected
+            const sessionFromLastActive = sessions.find(s => s._id === lastActiveId);
+            if (sessionFromLastActive) {
+                console.log("Loading last active session:", lastActiveId);
+                handleSelectSession(sessionFromLastActive); // Selects, navigates, fetches
+            } else {
+                console.warn(`Last active session ID ${lastActiveId} not found in sessions list. Falling back.`);
+                // Fallback to most recent if last active not found
+                if (sessions.length > 0) {
+                    const mostRecentSession = sessions[0]; // Assuming sorted by backend
+                    console.log("Falling back to most recent session:", mostRecentSession._id);
+                    handleSelectSession(mostRecentSession);
+                }
+            }
+        } else if (!currentSession && sessions.length > 0) {
+            // Priority 3: Load most recent session if no URL, no last active, and none selected
+            const mostRecentSession = sessions[0]; // Assuming sorted by backend
+            console.log("No session in URL or last active, loading most recent:", mostRecentSession._id);
+            handleSelectSession(mostRecentSession);
         }
-    } else if (!currentSession && sessions.length > 0) {
-        // If no session ID in URL and no session currently selected, load the most recent one
-        // Assuming sessions are sorted by backend (or sort here if needed: [...sessions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-        const mostRecentSession = sessions[0]; // Assuming the first one is the most recent
-        console.log("No session in URL, loading most recent:", mostRecentSession._id);
-        handleSelectSession(mostRecentSession); // This will navigate and fetch messages
-    }
-  }, [routeSessionId, sessions, currentSession, loadingSessions, navigate]); // Dependencies
+        // If a session is already selected and there's no routeSessionId forcing a change, do nothing.
 
-  // Effect to scroll to bottom when messages change or loading finishes
+    }, [routeSessionId, sessions, currentSession, loadingSessions, authLoading, currentUser, navigate, handleSelectSession]); // Updated dependencies
+
+    // Effect to scroll to bottom when messages change or loading finishes
   useEffect(() => {
     // Scroll to bottom smoothly after messages load or a new message is added
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

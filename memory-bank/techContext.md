@@ -3,7 +3,11 @@
 ## Technologies Used
 1. Backend: Node.js, Express, MongoDB (likely), Mongoose.
 2. Frontend: React, Vite, TypeScript.
-3. Other: npm for package management.
+3. Tooling:
+    - npm for package management.
+    - `sequentialthinking` MCP for detailed task planning and breakdown.
+    - `context7` MCP for retrieving up-to-date documentation for libraries/APIs.
+4. Other: npm for package management.
 
 ## Development Setup
 1. Backend and frontend are separate directories within the project.

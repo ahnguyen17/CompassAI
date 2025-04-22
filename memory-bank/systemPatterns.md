@@ -16,3 +16,7 @@ The project follows a client-server architecture. The backend is built using Nod
 - Backend controllers handle business logic and interact with models.
 - Backend routes expose APIs consumed by the frontend.
 - Frontend components make API calls to the backend to perform various operations.
+
+## Development Workflow Patterns
+1.  **Planning:** Utilize the `sequentialthinking` MCP to break down complex tasks or new features into detailed, logical steps before implementation.
+2.  **Research & Integration:** Before integrating new third-party libraries/APIs or making significant structural changes, use the `context7` MCP (`resolve-library-id` then `get-library-docs`) to consult the latest documentation. This ensures adherence to current best practices and avoids deprecated features.

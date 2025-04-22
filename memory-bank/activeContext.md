@@ -1,10 +1,14 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Implementing logic to load the most recently viewed/interacted chat session by default.
+Completed the task to make several admin panels in the Settings page collapsed by default.
 
 ## Recent Changes
-- **Load Last Viewed Session:**
+- **Settings Page UI Update:**
+    - Modified `frontend/client/src/pages/SettingsPage.tsx`.
+    - Removed the `open` attribute from the `<details>` tags for the "User Management", "Model Visibility", and "Custom Providers & Models" sections, making them collapsed by default.
+    - Converted the "Usage Statistics" section from a `<section>` to a collapsed `<details>` element.
+- **Load Last Viewed Session:** (Previous Task)
     - Added `lastAccessedAt` field (Date, default: `Date.now`) to `backend/models/ChatSession.js`.
     - Modified `backend/controllers/chatMessages.js`:
         - Updated `lastAccessedAt` to `Date.now()` in `getMessagesForSession` (when viewing).
@@ -14,10 +18,9 @@ Implementing logic to load the most recently viewed/interacted chat session by d
 - Updated Memory Bank (`systemPatterns.md`, `progress.md`).
 
 ## Next Steps
+- Update `progress.md` in the Memory Bank.
 - Present the completed task to the user.
 
 ## Active Decisions and Considerations
-- The frontend (`ChatPage.tsx`) already had logic to load the first session from the list returned by the API. By changing the backend sorting order to use `lastAccessedAt`, the frontend automatically picks up the most recently accessed session without needing modification.
-- Setting `lastAccessedAt` default to `Date.now` ensures existing sessions have a value and new sessions initially sort by creation time until accessed.
-- Updating the timestamp on both message fetch (`getMessagesForSession`) and message add (`addMessageToSession`) covers both viewing and interaction scenarios.
-- Ensured the Memory Bank is comprehensive and up-to-date with these changes.
+- Used `<details>` HTML element for collapsible sections in the Settings page for semantic correctness and browser-native functionality.
+- Ensured all relevant admin panels ("User Management", "Model Visibility", "Usage Statistics", "Custom Providers & Models") are now collapsed by default for a cleaner initial view.

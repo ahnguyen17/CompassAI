@@ -349,7 +349,7 @@ const SettingsPage: React.FC = () => { // Removed props
                 apiClient.get('/providers/all-models'), // Use the new endpoint
                 apiClient.get('/disabledmodels')        // Fetch just the names of disabled models
             ]);
-  
+
             if (allModelsResponse.data?.success && disabledModelsResponse.data?.success) {
                 const allModelsData: { [provider: string]: string[] } = allModelsResponse.data.data;
                 // Correctly type the response data as an array of strings
@@ -367,7 +367,7 @@ const SettingsPage: React.FC = () => { // Removed props
                         });
                     });
                 }
-  
+
                 // Sort models alphabetically for consistent display
                 setModelStatuses(statuses.sort((a, b) => a.modelName.localeCompare(b.modelName)));
             } else {
@@ -381,9 +381,9 @@ const SettingsPage: React.FC = () => { // Removed props
             setLoadingModelStatuses(false);
         }
     };
-  
-  
-  
+
+
+
   // Initial data fetching
   useEffect(() => {
     fetchApiKeys(); // All users need API keys
@@ -1238,7 +1238,7 @@ const SettingsPage: React.FC = () => { // Removed props
 
       {/* User Management (Admin Only) */}
       {currentUser?.role === 'admin' && (
-          <details open style={sectionStyle}> {/* Changed section to details */}
+          <details style={sectionStyle}> {/* Removed 'open' */}
               <summary style={{...h3Style, cursor: 'pointer', display: 'list-item'}}>{t('settings_users_title')}</summary> {/* Changed h3 to summary */}
               {/* Content starts here */}
               {adminResetPwdError && <p style={{ color: 'red', marginBottom: '10px' }}>Admin Action Error: {adminResetPwdError}</p>}
@@ -1312,12 +1312,12 @@ const SettingsPage: React.FC = () => { // Removed props
                   </form>
                   {userActionError && !editingUserId && <p style={{ color: 'red', marginTop: '10px' }}>{userActionError}</p>}
               </div>
-          </details> // Changed section to details
+          </details>
       )}
 
       {/* Model Visibility Management (Admin Only) - ADDED Section */}
       {currentUser?.role === 'admin' && (
-          <details open style={sectionStyle}> {/* Changed section to details */}
+          <details style={sectionStyle}> {/* Removed 'open' */}
               <summary style={{...h3Style, cursor: 'pointer', display: 'list-item'}}>{t('settings_model_visibility_title', 'Model Visibility')}</summary> {/* Changed h3 to summary */}
               {/* Content starts here */}
               {loadingModelStatuses && <p>Loading model statuses...</p>}
@@ -1346,7 +1346,7 @@ const SettingsPage: React.FC = () => { // Removed props
                       ))}
                   </ul>
               ) : <p>No models found or failed to load statuses.</p> )}
-          </details> // Changed section to details
+          </details>
       )}
 
        {/* Referral Code Management (Admin Only) */}
@@ -1388,10 +1388,10 @@ const SettingsPage: React.FC = () => { // Removed props
 
        {/* Usage Statistics (Admin Only) */}
        {currentUser?.role === 'admin' && (
-           <section style={sectionStyle}>
-               <h3 style={h3Style}>Usage Statistics</h3>
+           <details style={sectionStyle}> {/* Changed section to details */}
+               <summary style={{...h3Style, cursor: 'pointer', display: 'list-item'}}>Usage Statistics</summary> {/* Changed h3 to summary */}
                {/* Type Selection (User/Model) */}
-               <div style={{ marginBottom: '10px' }}>
+               <div style={{ marginBottom: '10px', marginTop: '20px' }}> {/* Added marginTop to space content from summary */}
                    <button
                        style={statsTypeView === 'user' ? activeTabButtonStyle : inactiveTabButtonStyle}
                        onClick={() => setStatsTypeView('user')}
@@ -1531,12 +1531,12 @@ const SettingsPage: React.FC = () => { // Removed props
                        )}
                    </>
                 )}
-            </section>
+            </details>
        )}
 
         {/* Custom Providers & Models (Admin Only) --- NEW SECTION --- */}
         {currentUser?.role === 'admin' && (
-            <details open style={sectionStyle}>
+            <details style={sectionStyle}> {/* Removed 'open' */}
                 <summary style={{...h3Style, cursor: 'pointer', display: 'list-item'}}>Custom Providers & Models</summary>
 
                 {/* Provider Management */}

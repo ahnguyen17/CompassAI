@@ -157,7 +157,8 @@ exports.deleteCustomModel = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`Custom Model not found with id of ${req.params.id}`, 404));
     }
 
-    await model.remove(); // Use remove() instead of findByIdAndDelete
+    // Use findByIdAndDelete instead of the deprecated remove()
+    await CustomModel.findByIdAndDelete(req.params.id); 
 
     res.status(200).json({ success: true, data: {} });
 });

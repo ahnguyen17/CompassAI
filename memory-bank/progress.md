@@ -22,7 +22,7 @@
     - Selecting a custom model in the chat page automatically applies its system prompt during AI response generation.
 - **Load Last Viewed Session:** The chat page now loads the most recently viewed or interacted with session by default, instead of the most recently created one. This is achieved by tracking and sorting sessions by a `lastAccessedAt` timestamp in the backend.
 - **Settings Page UI:** Several admin panels ("User Management", "Model Visibility", "Usage Statistics", "Custom Providers & Models") are now collapsed by default using `<details>` elements for a cleaner initial view.
-- **Model Selector Dropdown UI:** Improved text contrast for model items in light mode by adding a default dark text color (`#333`) in `ModelSelectorDropdown.module.css`.
+- **Model Selector Dropdown UI:** Updated text color for model items in light mode to `#34495e` (dark slate blue) for better readability as requested, modified in `ModelSelectorDropdown.module.css`.
 
 ## What's Left to Build
 - Further testing and refinement of existing features.

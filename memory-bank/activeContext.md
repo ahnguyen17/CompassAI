@@ -1,12 +1,12 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Improving UI contrast for the model selector dropdown.
+Adjusting UI color for the model selector dropdown text.
 
 ## Recent Changes
-- **Model Dropdown Contrast Fix:**
+- **Model Dropdown Color Update:**
     - Modified `frontend/client/src/components/ModelSelectorDropdown.module.css`.
-    - Added an explicit `color: #333;` rule to the `.modelItem` style to ensure sufficient contrast in light mode.
+    - Changed the `color` rule for `.modelItem` in light mode from `#333` to `#34495e` (dark slate blue) as requested.
 - **Custom Model Deletion Fix:** (Previous Task)
     - Modified `backend/controllers/customModels.js`.
     - Replaced the deprecated `model.remove()` method with the recommended `CustomModel.findByIdAndDelete(req.params.id)` in the `deleteCustomModel` function to potentially resolve a 500 Internal Server Error.
@@ -25,7 +25,7 @@ Improving UI contrast for the model selector dropdown.
 
 ## Next Steps
 - Update `progress.md` in the Memory Bank.
-- Present the completed task (dropdown contrast fix) to the user.
+- Present the completed task (dropdown color update) to the user.
 
 ## Active Decisions and Considerations
-- Addressed low contrast issue in the model dropdown for light mode by setting a specific dark text color (`#333`) for the `.modelItem` class. Dark mode styles were already handled separately and remain unchanged.
+- Updated the light mode text color for model dropdown items to `#34495e` based on user request and image provided.

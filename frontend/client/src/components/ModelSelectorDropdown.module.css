@@ -49,7 +49,7 @@
   cursor: pointer;
   white-space: nowrap;
   font-size: 0.95em;
-  color: #333; /* Add default dark color for light mode */
+  color: #34495e; /* Updated light mode color */
 }
 
 .modelItem:hover {

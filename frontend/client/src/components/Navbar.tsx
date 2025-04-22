@@ -19,6 +19,7 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarVisible, toggleSidebarVisibili
     isDarkMode,
     handleLogout: storeLogout, // Rename to avoid conflict
     toggleTheme,
+    startNewChat, // Import the new action
   } = useAuthStore();
   const navigate = useNavigate(); // Hook for navigation
   const location = useLocation(); // Hook for location
@@ -134,6 +135,36 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarVisible, toggleSidebarVisibili
         <Link to="/" style={{ color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
           <img src="/logo.png" alt={t('nav_title')} style={{ height: '30px', marginRight: '10px' }} />
         </Link>
+        {/* New Chat Icon Button - Show only when logged in */}
+        {isLoggedIn && (
+          <button
+            onClick={() => startNewChat(navigate)}
+            title="New Chat"
+            aria-label="Start New Chat"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#fff', // Sets SVG stroke color via currentColor
+              cursor: 'pointer',
+              padding: '0', // Remove padding
+              marginLeft: '10px', // Space after logo
+              display: 'flex', // Align SVG vertically
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '30px', // Match logo height for alignment
+              width: '30px' // Match logo height for alignment
+            }}
+          >
+            {/* Prepared SVG Icon */}
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ height: '24px', width: '24px' }}>
+              <path d="M12 4V4C16.4183 4 20 7.58172 20 12V17.0909C20 17.9375 20 18.3608 19.8739 18.6989C19.6712 19.2425 19.2425 19.6712 18.6989 19.8739C18.3608 20 17.9375 20 17.0909 20H12C7.58172 20 4 16.4183 4 12V12" stroke="currentColor" strokeWidth="1.2"/>
+              <path d="M9 11L15 11" stroke="currentColor" strokeOpacity="0.24" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5 8L5 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2 5L8 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M12 15H15" stroke="currentColor" strokeOpacity="0.24" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Right side: Theme, Language, Auth Links/Dropdown */}

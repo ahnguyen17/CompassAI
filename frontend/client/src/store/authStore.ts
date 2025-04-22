@@ -22,7 +22,11 @@ interface AuthState {
     toggleTheme: () => void;
     setIsLoggedIn: (status: boolean) => void; // Added for direct control if needed
     setCurrentUser: (user: CurrentUser | null) => void; // Added for direct control
+    startNewChat: (navigate: (path: string) => void) => Promise<void>; // Add new function signature
 }
+
+// Define NavigateFunction type locally if not imported globally
+type NavigateFunction = (path: string) => void;
 
 // Create the store with persist middleware for dark mode
 const useAuthStore = create<AuthState>()(
@@ -102,6 +106,31 @@ const useAuthStore = create<AuthState>()(
             // Direct setters (optional, but can be useful)
             setIsLoggedIn: (status: boolean) => set({ isLoggedIn: status }),
             setCurrentUser: (user: CurrentUser | null) => set({ currentUser: user }),
+
+            // --- New Chat Action ---
+            startNewChat: async (navigate) => {
+                console.log("Attempting to start new chat via store action...");
+                try {
+                    const response = await apiClient.post('/chatsessions', { title: 'New Chat' });
+                    if (response.data?.success) {
+                        const newSession = response.data.data;
+                        console.log("New chat session created:", newSession._id);
+                        // Trigger navigation to the new chat page
+                        navigate(`/chat/${newSession._id}`);
+                        // Optionally, update sessions list if managed globally (currently not in this store)
+                    } else {
+                        console.error('Failed to create new chat session (API Error):', response.data?.error);
+                        // Handle error display to user if needed
+                    }
+                } catch (err: any) {
+                    console.error('Error creating new chat session (Network/Server Error):', err);
+                    if (err.response?.status === 401) {
+                        // Handle unauthorized error, maybe logout user
+                        get().handleLogout(navigate);
+                    }
+                    // Handle other errors
+                }
+            },
 
         }),
         {

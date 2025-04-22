@@ -1,31 +1,31 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Adjusting UI color for the model selector dropdown text.
+Adding a "New Chat" icon to the navigation bar.
 
 ## Recent Changes
-- **Model Dropdown Color Update:**
+- **Navbar "New Chat" Icon:**
+    - Added a `startNewChat` async function to `frontend/client/src/store/authStore.ts` to handle API calls and navigation for creating a new chat.
+    - Modified `frontend/client/src/components/Navbar.tsx`:
+        - Imported `startNewChat` from the store and `useNavigate`.
+        - Added an SVG icon button next to the logo, visible only when logged in.
+        - Linked the button's `onClick` to the `startNewChat` store action.
+        - Styled the SVG to use `currentColor` and set the button color to white.
+- **Model Dropdown Color Update:** (Previous Task)
     - Modified `frontend/client/src/components/ModelSelectorDropdown.module.css`.
-    - Changed the `color` rule for `.modelItem` in light mode from `#333` to `#34495e` (dark slate blue) as requested.
+    - Changed the `color` rule for `.modelItem` in light mode from `#333` to `#34495e`.
 - **Custom Model Deletion Fix:** (Previous Task)
     - Modified `backend/controllers/customModels.js`.
-    - Replaced the deprecated `model.remove()` method with the recommended `CustomModel.findByIdAndDelete(req.params.id)` in the `deleteCustomModel` function to potentially resolve a 500 Internal Server Error.
+    - Replaced `model.remove()` with `CustomModel.findByIdAndDelete()`.
 - **Settings Page UI Update:** (Previous Task)
-    - Modified `frontend/client/src/pages/SettingsPage.tsx`.
-    - Removed the `open` attribute from the `<details>` tags for the "User Management", "Model Visibility", and "Custom Providers & Models" sections, making them collapsed by default.
-    - Converted the "Usage Statistics" section from a `<section>` to a collapsed `<details>` element.
+    - Modified `frontend/client/src/pages/SettingsPage.tsx` to use collapsed `<details>` elements.
 - **Load Last Viewed Session:** (Previous Task)
-    - Added `lastAccessedAt` field (Date, default: `Date.now`) to `backend/models/ChatSession.js`.
-    - Modified `backend/controllers/chatMessages.js`:
-        - Updated `lastAccessedAt` to `Date.now()` in `getMessagesForSession` (when viewing).
-        - Updated `lastAccessedAt` to `Date.now()` in `addMessageToSession` (when interacting).
-    - Modified `backend/controllers/chatSessions.js`:
-        - Changed sorting in `getChatSessions` from `createdAt: -1` to `lastAccessedAt: -1`.
-- Updated Memory Bank (`systemPatterns.md`, `progress.md`).
+    - Added `lastAccessedAt` to `ChatSession` model and updated controllers to use it for sorting and updates.
 
 ## Next Steps
 - Update `progress.md` in the Memory Bank.
-- Present the completed task (dropdown color update) to the user.
+- Present the completed task (Navbar "New Chat" icon) to the user.
 
 ## Active Decisions and Considerations
-- Updated the light mode text color for model dropdown items to `#34495e` based on user request and image provided.
+- Used global state (`authStore.ts`) to handle the "New Chat" action initiated from the Navbar.
+- Styled the SVG icon using `currentColor` for theme adaptability.

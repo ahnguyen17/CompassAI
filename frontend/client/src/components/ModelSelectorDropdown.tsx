@@ -119,7 +119,7 @@ const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
                       onClick={() => handleSelect(customModel._id)} // Pass custom model ID on select
                       role="option"
                       aria-selected={selectedModel === customModel._id}
-                      title={`Base: ${customModel.baseModelIdentifier}`} // Show base model on hover
+                      // title attribute removed
                     >
                       {customModel.name} {/* Display custom model name */}
                     </div>

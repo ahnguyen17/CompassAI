@@ -1,14 +1,17 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Swapping language and theme icons in the Navbar.
+Making chat title generation language-aware based on the first message.
 
 ## Recent Changes
-- **Navbar Icon Swap:**
-    - Swapped the positions of the language dropdown (🌐) and the theme toggle button (☀️/🌙) in `frontend/client/src/components/Navbar.tsx`. The language dropdown now appears first on the right side.
+- **Multilingual Title Generation:**
+    - Modified the title generation prompt in `backend/controllers/chatMessages.js`.
+    - The prompt now instructs the AI to detect the language of the first user message and generate the title in that same language.
+- **Navbar Icon Swap:** (Previous Task)
+    - Swapped the language and theme icons in `frontend/client/src/components/Navbar.tsx`.
 - **Navbar Logo Sidebar Toggle:** (Previous Task)
-    - Removed the hamburger icon button from `Navbar.tsx`.
-    - Added an `onClick` handler to the logo's `Link` component to toggle the sidebar on chat pages.
+    - Removed the hamburger icon from `Navbar.tsx`.
+    - Made the logo toggle the sidebar on chat pages.
 - **Centralized Session State:** (Previous Task)
     - Moved session list state and logic from `ChatPage.tsx` to `authStore.ts`.
     - Refactored `ChatPage.tsx` to use the global store.
@@ -28,9 +31,10 @@ Swapping language and theme icons in the Navbar.
 
 ## Next Steps
 - Update `progress.md` in the Memory Bank.
-- Present the completed task (Navbar icon swap) to the user.
+- Present the completed task (multilingual title generation) to the user.
 
 ## Active Decisions and Considerations
-- Swapped Navbar icons as requested.
+- Implemented title language detection and generation via backend prompt modification, requiring no frontend changes for this specific feature.
+- Swapped Navbar icons (Previous Task).
 - Consolidated sidebar toggle into the logo click (Previous Task).
 - Centralized chat session list management in `authStore.ts` (Previous Task).

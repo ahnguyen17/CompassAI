@@ -604,7 +604,8 @@ exports.addMessageToSession = async (req, res, next) => {
                 const titleProvider = successfulApiKeyEntryForTitle.providerName;
                 const titleModel = DEFAULT_MODELS[titleProvider]; // Use default model for title
                 try {
-                    const titlePrompt = `Generate a very concise title (3-5 words max) for a chat that starts with this message: "${combinedContentForAI.substring(0, 100)}..."`; // Use snippet
+                    // Revised prompt: Detect language, then generate title in that language
+                    const titlePrompt = `First, detect the primary language of the following message snippet. Then, generate a very concise title (3-5 words max) for a chat starting with this message, IN THE DETECTED LANGUAGE: "${combinedContentForAI.substring(0, 150)}..."`; 
                     const titleApiKey = successfulApiKeyEntryForTitle.keyValue;
                     // Use non-streaming callApi for title generation
                     // Pass only the titlePrompt as the history/content for this specific call

@@ -27,14 +27,14 @@
 - **Centralized Session State:** Moved chat session list management (state, loading, errors, fetch/delete actions) from `ChatPage.tsx` to the global store (`authStore.ts`) to fix UI update issues when creating new chats from the navbar. Refactored `ChatPage.tsx` accordingly.
 - **Navbar Logo Sidebar Toggle:** Removed the hamburger icon. The logo in `Navbar.tsx` now toggles the sidebar visibility when clicked on chat pages (`/` or `/chat/...`) and acts as a home link on other pages.
 - **Navbar Icon Order:** Swapped the positions of the language dropdown and theme toggle icons in `Navbar.tsx`.
-- **Multilingual Title Generation:** Updated the backend (`chatMessages.js`) to instruct the AI to detect the language of the first message and generate the chat title in that same language.
+- **Multilingual Title Generation:** Refined the backend prompt (`chatMessages.js`) to instruct the AI to detect the language of the first message and generate *only* the chat title in that same language, preventing extraneous text in the title.
 
 ## What's Left to Build
 - Further testing and refinement of existing features.
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent updates include implementing language-aware title generation, swapping navbar icons, consolidating the sidebar toggle into the logo click, centralizing chat session state management, adding a "New Chat" icon to the navbar, UI improvements, backend logic for session loading, and a fix for custom model deletion.
+The project is actively being developed. Recent updates include refining language-aware title generation, swapping navbar icons, consolidating the sidebar toggle into the logo click, centralizing chat session state management, adding a "New Chat" icon to the navbar, UI improvements, backend logic for session loading, and a fix for custom model deletion.
 
 ## Known Issues
 - None documented yet.

@@ -1,12 +1,12 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Making chat title generation language-aware based on the first message.
+Refining multilingual chat title generation prompt.
 
 ## Recent Changes
-- **Multilingual Title Generation:**
-    - Modified the title generation prompt in `backend/controllers/chatMessages.js`.
-    - The prompt now instructs the AI to detect the language of the first user message and generate the title in that same language.
+- **Multilingual Title Generation Refinement:**
+    - Further refined the title generation prompt in `backend/controllers/chatMessages.js`.
+    - The prompt now explicitly instructs the AI to respond *only* with the title in the detected language, avoiding extraneous text.
 - **Navbar Icon Swap:** (Previous Task)
     - Swapped the language and theme icons in `frontend/client/src/components/Navbar.tsx`.
 - **Navbar Logo Sidebar Toggle:** (Previous Task)
@@ -31,10 +31,10 @@ Making chat title generation language-aware based on the first message.
 
 ## Next Steps
 - Update `progress.md` in the Memory Bank.
-- Present the completed task (multilingual title generation) to the user.
+- Present the completed task (refined multilingual title generation) to the user.
 
 ## Active Decisions and Considerations
-- Implemented title language detection and generation via backend prompt modification, requiring no frontend changes for this specific feature.
+- Refined backend prompt for title generation to ensure only the title is returned in the detected language.
 - Swapped Navbar icons (Previous Task).
 - Consolidated sidebar toggle into the logo click (Previous Task).
 - Centralized chat session list management in `authStore.ts` (Previous Task).

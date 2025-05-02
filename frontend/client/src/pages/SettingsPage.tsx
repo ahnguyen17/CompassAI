@@ -158,6 +158,11 @@ const SettingsPage: React.FC = () => { // Removed props
   const [monthlyModelStats, setMonthlyModelStats] = useState<MonthlyModelStat[]>([]);
   const [allTimeModelStats, setAllTimeModelStats] = useState<AllTimeModelStat[]>([]);
 
+  // --- Usage Statistics Filtering State --- NEW
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
+  const [selectedMonth, setSelectedMonth] = useState<string>(''); // Empty string for "All Months"
+
   // --- User Profile Update State (Self) ---
   const [profileUsername, setProfileUsername] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
@@ -428,6 +433,7 @@ const SettingsPage: React.FC = () => { // Removed props
           setFetchStatsError('');
           let endpoint = '';
           let statType = ''; // For error messages
+          const params: any = {}; // Object to hold query parameters
 
           // Determine endpoint based on view selections
           if (statsTypeView === 'user') {
@@ -438,8 +444,14 @@ const SettingsPage: React.FC = () => { // Removed props
               statType = `model ${statsTimeView}`;
           }
 
+          // Add year and month parameters for monthly view
+          if (statsTimeView === 'monthly') {
+              if (selectedYear) params.year = selectedYear;
+              if (selectedMonth) params.month = selectedMonth;
+          }
+
           try {
-              const response = await apiClient.get(endpoint); // Fetch data
+              const response = await apiClient.get(endpoint, { params }); // Fetch data with parameters
 
               if (response.data?.success) {
                   // Update the correct state based on the view
@@ -469,8 +481,8 @@ const SettingsPage: React.FC = () => { // Removed props
       };
 
       fetchStats();
-  // Refetch when user changes or any view selection changes
-  }, [currentUser, statsTypeView, statsTimeView]);
+  // Refetch when user changes or any view selection changes, including year/month
+  }, [currentUser, statsTypeView, statsTimeView, selectedYear, selectedMonth]);
 
 
   // --- API Key Handlers ---
@@ -1425,6 +1437,45 @@ const SettingsPage: React.FC = () => { // Removed props
                    </button>
                </div>
 
+               {/* Year and Month Selectors for Monthly View */}
+               {statsTimeView === 'monthly' && (
+                   <div style={{ marginBottom: '15px', display: 'flex', gap: '15px', alignItems: 'center' }}>
+                       <div>
+                           <label htmlFor="yearSelect" style={labelStyle}>Year:</label>
+                           <select
+                               id="yearSelect"
+                               value={selectedYear}
+                               onChange={(e) => setSelectedYear(e.target.value)}
+                               style={{...inputStyle, width: 'auto', minWidth: '100px'}}
+                               disabled={loadingStats}
+                           >
+                               {/* Generate years - e.g., current year and a few past years */}
+                               {[...Array(5)].map((_, i) => {
+                                   const year = currentYear - i;
+                                   return <option key={year} value={year.toString()}>{year}</option>;
+                               })}
+                           </select>
+                       </div>
+                       <div>
+                           <label htmlFor="monthSelect" style={labelStyle}>Month:</label>
+                           <select
+                               id="monthSelect"
+                               value={selectedMonth}
+                               onChange={(e) => setSelectedMonth(e.target.value)}
+                               style={{...inputStyle, width: 'auto', minWidth: '120px'}}
+                               disabled={loadingStats}
+                           >
+                               <option value="">All Months</option> {/* Option for all months */}
+                               {[...Array(12)].map((_, i) => {
+                                   const monthNumber = i + 1;
+                                   return <option key={monthNumber} value={monthNumber.toString()}>{getMonthName(monthNumber)}</option>;
+                               })}
+                           </select>
+                       </div>
+                   </div>
+               )}
+
+
                {loadingStats && <p>Loading statistics...</p>}
                {fetchStatsError && <p style={{ color: 'red' }}>{fetchStatsError}</p>}
 
@@ -1455,7 +1506,7 @@ const SettingsPage: React.FC = () => { // Removed props
                                                ))}
                                            </tbody>
                                        </table>
-                                   ) : <p>No monthly user usage data available.</p>
+                                   ) : <p>No monthly user usage data available for the selected period.</p>
                                )}
                                {statsTimeView === 'alltime' && (
                                    allTimeUserStats.length > 0 ? (
@@ -1505,7 +1556,7 @@ const SettingsPage: React.FC = () => { // Removed props
                                                ))}
                                            </tbody>
                                        </table>
-                                   ) : <p>No monthly model usage data available.</p>
+                                   ) : <p>No monthly model usage data available for the selected period.</p>
                                )}
                                {statsTimeView === 'alltime' && (
                                    allTimeModelStats.length > 0 ? (

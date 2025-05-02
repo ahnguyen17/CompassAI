@@ -8,13 +8,31 @@ const mongoose = require('mongoose');
 // @access  Private/Admin
 exports.getMonthlyUsageStats = async (req, res, next) => {
     try {
+        const { year, month } = req.query;
+        const matchConditions = {
+            sender: 'ai',
+            modelUsed: { $exists: true, $ne: null, $ne: "" }
+        };
+
+        // Add year and month filtering if provided
+        if (year && month) {
+            matchConditions.$expr = {
+                $and: [
+                    { $eq: [{ $year: '$timestamp' }, parseInt(year)] },
+                    { $eq: [{ $month: '$timestamp' }, parseInt(month)] }
+                ]
+            };
+        } else if (year) {
+             matchConditions.$expr = { $eq: [{ $year: '$timestamp' }, parseInt(year)] };
+        } else if (month) {
+             matchConditions.$expr = { $eq: [{ $month: '$timestamp' }, parseInt(month)] };
+        }
+
+
         const stats = await ChatMessage.aggregate([
-            // 1. Filter for AI messages that used a model
+            // 1. Filter for AI messages that used a model and apply year/month filter
             {
-                $match: {
-                    sender: 'ai',
-                    modelUsed: { $exists: true, $ne: null, $ne: "" }
-                }
+                $match: matchConditions
             },
             // 2. Lookup the session to get the user ID
             {
@@ -172,13 +190,30 @@ exports.getAllTimeUsageStats = async (req, res, next) => {
 // @access  Private/Admin
 exports.getMonthlyModelStats = async (req, res, next) => {
     try {
+        const { year, month } = req.query;
+         const matchConditions = {
+            sender: 'ai',
+            modelUsed: { $exists: true, $ne: null, $ne: "" }
+        };
+
+        // Add year and month filtering if provided
+        if (year && month) {
+            matchConditions.$expr = {
+                $and: [
+                    { $eq: [{ $year: '$timestamp' }, parseInt(year)] },
+                    { $eq: [{ $month: '$timestamp' }, parseInt(month)] }
+                ]
+            };
+        } else if (year) {
+             matchConditions.$expr = { $eq: [{ $year: '$timestamp' }, parseInt(year)] };
+        } else if (month) {
+             matchConditions.$expr = { $eq: [{ $month: '$timestamp' }, parseInt(month)] };
+        }
+
         const stats = await ChatMessage.aggregate([
-            // 1. Filter for AI messages that used a model
+            // 1. Filter for AI messages that used a model and apply year/month filter
             {
-                $match: {
-                    sender: 'ai',
-                    modelUsed: { $exists: true, $ne: null, $ne: "" }
-                }
+                $match: matchConditions
             },
             // 2. Project necessary fields and extract year/month *before* lookup
             {

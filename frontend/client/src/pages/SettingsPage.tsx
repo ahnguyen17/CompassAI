@@ -1437,44 +1437,6 @@ const SettingsPage: React.FC = () => { // Removed props
                    </button>
                </div>
 
-               {/* Year and Month Selectors for Monthly View */}
-               {statsTimeView === 'monthly' && (
-                   <div style={{ marginBottom: '15px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                       <div>
-                           <label htmlFor="yearSelect" style={labelStyle}>Year:</label>
-                           <select
-                               id="yearSelect"
-                               value={selectedYear}
-                               onChange={(e) => setSelectedYear(e.target.value)}
-                               style={{...inputStyle, width: 'auto', minWidth: '100px'}}
-                               disabled={loadingStats}
-                           >
-                               {/* Generate years - e.g., current year and a few past years */}
-                               {[...Array(5)].map((_, i) => {
-                                   const year = currentYear - i;
-                                   return <option key={year} value={year.toString()}>{year}</option>;
-                               })}
-                           </select>
-                       </div>
-                       <div>
-                           <label htmlFor="monthSelect" style={labelStyle}>Month:</label>
-                           <select
-                               id="monthSelect"
-                               value={selectedMonth}
-                               onChange={(e) => setSelectedMonth(e.target.value)}
-                               style={{...inputStyle, width: 'auto', minWidth: '120px'}}
-                               disabled={loadingStats}
-                           >
-                               <option value="">All Months</option> {/* Option for all months */}
-                               {[...Array(12)].map((_, i) => {
-                                   const monthNumber = i + 1;
-                                   return <option key={monthNumber} value={monthNumber.toString()}>{getMonthName(monthNumber)}</option>;
-                               })}
-                           </select>
-                       </div>
-                   </div>
-               )}
-
 
                {loadingStats && <p>Loading statistics...</p>}
                {fetchStatsError && <p style={{ color: 'red' }}>{fetchStatsError}</p>}
@@ -1489,8 +1451,38 @@ const SettingsPage: React.FC = () => { // Removed props
                                        <table style={tableStyle}>
                                            <thead>
                                                <tr>
-                                                   <th style={thStyle}>Year</th>
-                                                   <th style={thStyle}>Month</th>
+                                                   <th style={thStyle}>
+                                                       Year:
+                                                       <select
+                                                           id="yearSelect"
+                                                           value={selectedYear}
+                                                           onChange={(e) => setSelectedYear(e.target.value)}
+                                                           style={{...inputStyle, width: 'auto', minWidth: '80px', marginLeft: '5px', display: 'inline-block'}}
+                                                           disabled={loadingStats}
+                                                       >
+                                                           {/* Generate years - e.g., current year and a few past years */}
+                                                           {[...Array(5)].map((_, i) => {
+                                                               const year = currentYear - i;
+                                                               return <option key={year} value={year.toString()}>{year}</option>;
+                                                           })}
+                                                       </select>
+                                                   </th>
+                                                   <th style={thStyle}>
+                                                       Month:
+                                                        <select
+                                                           id="monthSelect"
+                                                           value={selectedMonth}
+                                                           onChange={(e) => setSelectedMonth(e.target.value)}
+                                                           style={{...inputStyle, width: 'auto', minWidth: '100px', marginLeft: '5px', display: 'inline-block'}}
+                                                           disabled={loadingStats}
+                                                       >
+                                                           <option value="">All Months</option> {/* Option for all months */}
+                                                           {[...Array(12)].map((_, i) => {
+                                                               const monthNumber = i + 1;
+                                                               return <option key={monthNumber} value={monthNumber.toString()}>{getMonthName(monthNumber)}</option>;
+                                                           })}
+                                                       </select>
+                                                   </th>
                                                    <th style={thStyle}>User</th>
                                                    <th style={thStyle}>Count</th>
                                                </tr>
@@ -1539,8 +1531,38 @@ const SettingsPage: React.FC = () => { // Removed props
                                        <table style={tableStyle}>
                                            <thead>
                                                <tr>
-                                                   <th style={thStyle}>Year</th>
-                                                   <th style={thStyle}>Month</th>
+                                                   <th style={thStyle}>
+                                                        Year:
+                                                        <select
+                                                           id="yearSelect"
+                                                           value={selectedYear}
+                                                           onChange={(e) => setSelectedYear(e.target.value)}
+                                                           style={{...inputStyle, width: 'auto', minWidth: '80px', marginLeft: '5px', display: 'inline-block'}}
+                                                           disabled={loadingStats}
+                                                       >
+                                                           {/* Generate years - e.g., current year and a few past years */}
+                                                           {[...Array(5)].map((_, i) => {
+                                                               const year = currentYear - i;
+                                                               return <option key={year} value={year.toString()}>{year}</option>;
+                                                           })}
+                                                       </select>
+                                                   </th>
+                                                   <th style={thStyle}>
+                                                        Month:
+                                                        <select
+                                                           id="monthSelect"
+                                                           value={selectedMonth}
+                                                           onChange={(e) => setSelectedMonth(e.target.value)}
+                                                           style={{...inputStyle, width: 'auto', minWidth: '100px', marginLeft: '5px', display: 'inline-block'}}
+                                                           disabled={loadingStats}
+                                                       >
+                                                           <option value="">All Months</option> {/* Option for all months */}
+                                                           {[...Array(12)].map((_, i) => {
+                                                               const monthNumber = i + 1;
+                                                               return <option key={monthNumber} value={monthNumber.toString()}>{getMonthName(monthNumber)}</option>;
+                                                           })}
+                                                       </select>
+                                                   </th>
                                                    <th style={thStyle}>Model</th>
                                                    <th style={thStyle}>Count</th>
                                                </tr>

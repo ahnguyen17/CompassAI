@@ -180,27 +180,56 @@ exports.getMonthlyModelStats = async (req, res, next) => {
                     modelUsed: { $exists: true, $ne: null, $ne: "" }
                 }
             },
-            // 2. Project necessary fields and extract year/month
+            // 2. Check if modelUsed is a valid ObjectId (for custom models)
+            {
+                $addFields: {
+                    isCustomModelId: {
+                        $cond: {
+                            if: { $regexMatch: { input: "$modelUsed", regex: /^[0-9a-fA-F]{24}$/ } },
+                            then: { $toObjectId: "$modelUsed" },
+                            else: null
+                        }
+                    }
+                }
+            },
+            // 3. Lookup the custom model if modelUsed is a valid ObjectId
+            {
+                $lookup: {
+                    from: 'custommodels',
+                    localField: 'isCustomModelId',
+                    foreignField: '_id',
+                    as: 'customModelInfo'
+                }
+            },
+            // 4. Deconstruct the customModelInfo array
+            { $unwind: { path: '$customModelInfo', preserveNullAndEmptyArrays: true } }, // preserveNullAndEmptyArrays to keep messages without a custom model match
+            // 5. Project necessary fields and extract year/month, using custom model name if available
             {
                 $project: {
                     _id: 0,
                     year: { $year: '$timestamp' },
                     month: { $month: '$timestamp' },
-                    model: '$modelUsed'
+                    model: {
+                        $cond: {
+                            if: '$customModelInfo', // Check if customModelInfo exists (meaning a custom model was found)
+                            then: '$customModelInfo.name', // Use custom model name
+                            else: '$modelUsed' // Otherwise use the original modelUsed value (base model identifier)
+                        }
+                    }
                 }
             },
-            // 3. Group by year, month, and model to count occurrences
+            // 6. Group by year, month, and model to count occurrences
             {
                 $group: {
                     _id: {
-                        year: '$year',
-                        month: '$month',
-                        model: '$model'
+                        year: '$_id.year',
+                        month: '$_id.month',
+                        model: '$_id.model'
                     },
                     count: { $sum: 1 }
                 }
             },
-            // 4. Project into a more readable format
+            // 7. Project into a more readable format
             {
                 $project: {
                     _id: 0,
@@ -210,7 +239,7 @@ exports.getMonthlyModelStats = async (req, res, next) => {
                     count: '$count'
                 }
             },
-            // 5. Sort the results
+            // 8. Sort the results
             {
                 $sort: {
                     year: -1,
@@ -244,14 +273,43 @@ exports.getAllTimeModelStats = async (req, res, next) => {
                     modelUsed: { $exists: true, $ne: null, $ne: "" }
                 }
             },
-            // 2. Project necessary fields
+            // 2. Check if modelUsed is a valid ObjectId (for custom models)
+            {
+                $addFields: {
+                    isCustomModelId: {
+                        $cond: {
+                            if: { $regexMatch: { input: "$modelUsed", regex: /^[0-9a-fA-F]{24}$/ } },
+                            then: { $toObjectId: "$modelUsed" },
+                            else: null
+                        }
+                    }
+                }
+            },
+            // 3. Lookup the custom model if modelUsed is a valid ObjectId
+            {
+                $lookup: {
+                    from: 'custommodels',
+                    localField: 'isCustomModelId',
+                    foreignField: '_id',
+                    as: 'customModelInfo'
+                }
+            },
+            // 4. Deconstruct the customModelInfo array
+            { $unwind: { path: '$customModelInfo', preserveNullAndEmptyArrays: true } }, // preserveNullAndEmptyArrays to keep messages without a custom model match
+            // 5. Project necessary fields, using custom model name if available
             {
                 $project: {
                     _id: 0,
-                    model: '$modelUsed'
+                    model: {
+                        $cond: {
+                            if: '$customModelInfo', // Check if customModelInfo exists
+                            then: '$customModelInfo.name', // Use custom model name
+                            else: '$modelUsed' // Otherwise use the original modelUsed value
+                        }
+                    }
                 }
             },
-            // 3. Group by model to count occurrences
+            // 6. Group by model to count occurrences
             {
                 $group: {
                     _id: {
@@ -260,7 +318,7 @@ exports.getAllTimeModelStats = async (req, res, next) => {
                     count: { $sum: 1 }
                 }
             },
-            // 4. Project into a more readable format
+            // 7. Project into a more readable format
             {
                 $project: {
                     _id: 0,
@@ -268,7 +326,7 @@ exports.getAllTimeModelStats = async (req, res, next) => {
                     count: '$count'
                 }
             },
-            // 5. Sort the results
+            // 8. Sort the results
             {
                 $sort: {
                     model: 1

@@ -7,6 +7,8 @@ Refining multilingual chat title generation prompt to restrict output languages.
 - **Multilingual Title Generation Language Constraint:**
     - Updated the title generation prompt in `backend/controllers/chatMessages.js` again.
     - The prompt now instructs the AI to detect the language, generate the title in Vietnamese if detected as Vietnamese, otherwise generate the title in English. It also strongly emphasizes responding *only* with the title text.
+- **Custom Model Usage Stats Name Fix:**
+    - Modified the aggregation pipelines in `backend/controllers/stats.js` to include custom model names instead of IDs in the usage statistics.
 - **Navbar Icon Swap:** (Previous Task)
     - Swapped the language and theme icons in `frontend/client/src/components/Navbar.tsx`.
 - **Navbar Logo Sidebar Toggle:** (Previous Task)
@@ -31,9 +33,10 @@ Refining multilingual chat title generation prompt to restrict output languages.
 
 ## Next Steps
 - Update `progress.md` in the Memory Bank.
-- Present the completed task (language-constrained title generation) to the user.
+- Present the completed task (Custom Model Usage Stats Name Fix) to the user.
 
 ## Active Decisions and Considerations
+- Modified backend stats aggregation to show custom model names instead of IDs.
 - Refined backend prompt for title generation to restrict output to English or Vietnamese and prevent extraneous text.
 - Swapped Navbar icons (Previous Task).
 - Consolidated sidebar toggle into the logo click (Previous Task).

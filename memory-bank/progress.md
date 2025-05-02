@@ -28,13 +28,14 @@
 - **Navbar Logo Sidebar Toggle:** Removed the hamburger icon. The logo in `Navbar.tsx` now toggles the sidebar visibility when clicked on chat pages (`/` or `/chat/...`) and acts as a home link on other pages.
 - **Navbar Icon Order:** Swapped the positions of the language dropdown and theme toggle icons in `Navbar.tsx`.
 - **Multilingual Title Generation:** Refined the backend prompt (`chatMessages.js`) again to instruct the AI to detect the language of the first message, generate the title in Vietnamese if detected, otherwise generate it in English, and respond *only* with the title text.
+- **Custom Model Usage Stats Name Fix:** Modified the backend aggregation pipelines in `backend/controllers/stats.js` to include custom model names instead of IDs in the usage statistics.
 
 ## What's Left to Build
 - Further testing and refinement of existing features.
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent updates include further refining language-aware title generation (English/Vietnamese constraint), swapping navbar icons, consolidating the sidebar toggle into the logo click, centralizing chat session state management, adding a "New Chat" icon to the navbar, UI improvements, backend logic for session loading, and a fix for custom model deletion.
+The project is actively being developed. Recent updates include fixing the display of custom model names in usage statistics, further refining language-aware title generation (English/Vietnamese constraint), swapping navbar icons, consolidating the sidebar toggle into the logo click, centralizing chat session state management, adding a "New Chat" icon to the navbar, UI improvements, backend logic for session loading, and a fix for custom model deletion.
 
 ## Known Issues
 - None documented yet.

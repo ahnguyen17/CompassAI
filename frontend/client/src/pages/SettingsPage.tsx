@@ -410,7 +410,7 @@ const SettingsPage: React.FC = () => { // Removed props
          setLoadingStats(false); // Also set stats loading to false if not admin
          setLoadingGlobalSettings(false); // Also set global settings loading to false if not admin
      }
-  }, [currentUser]); // Refetch if currentUser changes (e.g., after login)
+  }, [currentUser]); // Refetch if currentUser changes (e.e., after login)
 
   // --- Fetch Custom Models when selected provider changes --- NEW ---
   useEffect(() => {
@@ -1459,11 +1459,10 @@ const SettingsPage: React.FC = () => { // Removed props
                                                        style={{...inputStyle, width: 'auto', minWidth: '80px', marginLeft: '5px', display: 'inline-block'}}
                                                        disabled={loadingStats}
                                                    >
-                                                       {/* Generate years - e.g., current year and a few past years */}
-                                                       {[...Array(5)].map((_, i) => {
-                                                           const year = currentYear - i;
-                                                           return <option key={year} value={year.toString()}>{year}</option>;
-                                                       })}
+                                                       {/* Generate years - starting from 2025 up to current year */}
+                                                       {Array.from({ length: currentYear - 2025 + 1 }, (_, i) => 2025 + i).map((year) => (
+                                                           <option key={year} value={year.toString()}>{year}</option>
+                                                       ))}
                                                    </select>
                                                </th>
                                                <th style={thStyle}>
@@ -1545,14 +1544,13 @@ const SettingsPage: React.FC = () => { // Removed props
                                                        onChange={(e) => setSelectedYear(e.target.value)}
                                                        style={{...inputStyle, width: 'auto', minWidth: '80px', marginLeft: '5px', display: 'inline-block'}}
                                                        disabled={loadingStats}
-                                                   >
-                                                       {/* Generate years - e.g., current year and a few past years */}
-                                                       {[...Array(5)].map((_, i) => {
-                                                           const year = currentYear - i;
-                                                           return <option key={year} value={year.toString()}>{year}</option>;
-                                                       })}
-                                                   </select>
-                                               </th>
+                                                    >
+                                                       {/* Generate years - starting from 2025 up to current year */}
+                                                       {Array.from({ length: currentYear - 2025 + 1 }, (_, i) => 2025 + i).map((year) => (
+                                                           <option key={year} value={year.toString()}>{year}</option>;
+                                                       ))}
+                                                    </select>
+                                                </th>
                                                <th style={thStyle}>
                                                     Month:
                                                     <select
@@ -1561,14 +1559,14 @@ const SettingsPage: React.FC = () => { // Removed props
                                                        onChange={(e) => setSelectedMonth(e.target.value)}
                                                        style={{...inputStyle, width: 'auto', minWidth: '100px', marginLeft: '5px', display: 'inline-block'}}
                                                        disabled={loadingStats}
-                                                   >
+                                                    >
                                                        <option value="">All Months</option> {/* Option for all months */}
                                                        {[...Array(12)].map((_, i) => {
                                                            const monthNumber = i + 1;
                                                            return <option key={monthNumber} value={monthNumber.toString()}>{getMonthName(monthNumber)}</option>;
                                                        })}
-                                                   </select>
-                                               </th>
+                                                    </select>
+                                                </th>
                                                <th style={thStyle}>Model</th>
                                                <th style={thStyle}>Count</th>
                                            </tr>
@@ -1839,3 +1837,65 @@ const SettingsPage: React.FC = () => { // Removed props
 };
 
 export default SettingsPage;
+
+</final_file_content>
+
+IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.<environment_details>
+# VSCode Visible Files
+backend/controllers/chatMessages.js
+backend/controllers/chatMessages.js
+memory-bank/activeContext.md
+memory-bank/activeContext.md
+../../../../../response_7323f5ba-bc97-4b13-acb6-396ca97376ad/0
+../../../../../response_7323f5ba-bc97-4b13-acb6-396ca97376ad/1
+../../../../../response_7323f5ba-bc97-4b13-acb6-396ca97376ad/2
+../../../../../response_7323f5ba-bc97-4b13-acb6-396ca97376ad/3
+../../../../../response_7323f5ba-bc97-4b13-acb6-396ca97376ad/4
+../../../../../response_7323f5ba-bc97-4b13-acb6-396ca97376ad/5
+../../../AppData/Local/Programs/Microsoft VS Code/GitHub.copilot.GitHub Copilot
+frontend/client/src/pages/SettingsPage.tsx
+
+# VSCode Open Tabs
+backend/routes/settings.js
+backend/middleware/async.js
+backend/utils/errorResponse.js
+backend/models/Setting.js
+backend/controllers/settings.js
+memory-bank/projectbrief.md
+memory-bank/productContext.md
+frontend/client/src/pages/ChatPage.module.css
+backend/models/CustomProvider.js
+backend/models/CustomModel.js
+backend/controllers/customProviders.js
+backend/routes/customProviders.js
+backend/routes/customModels.js
+backend/server.js
+backend/controllers/providers.js
+memory-bank/activeContext.md
+memory-bank/progress.md
+backend/controllers/stats.js
+frontend/client/src/pages/SettingsPage.tsx
+backend/models/User.js
+backend/controllers/auth.js
+backend/models/ChatSession.js
+backend/controllers/chatSessions.js
+memory-bank/systemPatterns.md
+frontend/client/src/components/ModelSelectorDropdown.tsx
+backend/controllers/customModels.js
+frontend/client/src/components/ModelSelectorDropdown.module.css
+frontend/client/src/store/authStore.ts
+frontend/client/src/pages/ChatPage.tsx
+frontend/client/src/components/Navbar.tsx
+../../../AppData/Roaming/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
+memory-bank/techContext.md
+backend/controllers/chatMessages.js
+
+# Current Time
+5/2/2025, 10:00:10 AM (America/Los_Angeles, UTC-7:00)
+
+# Context Window Usage
+257,333 / 1,048.576K tokens used (25%)
+
+# Current Mode
+ACT MODE
+</environment_details>

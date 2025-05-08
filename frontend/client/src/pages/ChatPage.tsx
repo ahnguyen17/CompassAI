@@ -37,9 +37,16 @@ interface CustomModelData {
     providerName: string;
     baseModelIdentifier: string;
 }
-// Interface for the combined data structure from the backend (matching dropdown component)
+
+// ADD THIS: Interface for a single Base Model object (new structure)
+interface BaseModelData {
+    name: string;
+    supportsVision: boolean;
+}
+
+// UPDATE THIS: Interface for the combined data structure from the backend
 interface CombinedAvailableModels {
-  baseModels: { [provider: string]: string[] };
+  baseModels: { [provider: string]: BaseModelData[] }; // Changed string[] to BaseModelData[]
   customModels: CustomModelData[];
 }
 // Re-define ChatSession locally as it's used extensively here

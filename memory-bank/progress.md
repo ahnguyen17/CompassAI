@@ -40,7 +40,7 @@
     - Backend (`providers.js`) updated to flag vision-capable models (OpenAI GPT-4o/Turbo/4.1 series, Anthropic Claude 3 series, Gemini 1.5 series) and to enrich custom model data with a `baseModelSupportsVision` flag.
     - Backend (`chatMessages.js`) updated to read uploaded images, base64 encode them, and format API requests with image data for supported providers/models.
     - Frontend (`ModelSelectorDropdown.tsx`) updated to display an icon (`👁️`) next to vision-capable base models and custom models (if their base model supports vision).
-    - **Fixed:** Resolved TypeScript build error (`TS2719`) in `ChatPage.tsx` by updating type definitions.
+    - **Fixed:** Resolved TypeScript build error (`TS2719`) in `ChatPage.tsx` by updating its local `CustomModelData` interface definition to include `baseModelSupportsVision`, aligning it with `ModelSelectorDropdown.tsx` and backend data.
     - **Fixed:** Resolved backend ReferenceError in `chatMessages.js` by ensuring `modelIdentifierForApi` is initialized before use in vision checks.
     - **Fixed:** Corrected OpenAI/Perplexity API request formatting for `image_url` to send an object `{ "url": "data:..." }` instead of a string, resolving 400 errors.
 

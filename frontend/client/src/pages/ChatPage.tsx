@@ -36,6 +36,7 @@ interface CustomModelData {
     name: string;
     providerName: string;
     baseModelIdentifier: string;
+    baseModelSupportsVision: boolean; // Added to match ModelSelectorDropdown and backend
 }
 
 // ADD THIS: Interface for a single Base Model object (new structure)
@@ -141,7 +142,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
               {
                    // Validate customModels structure minimally
                    const isValidCustomModels = data.customModels.every((item: any) =>
-                       typeof item === 'object' && item !== null && '_id' in item && 'name' in item && 'providerName' in item && 'baseModelIdentifier' in item
+                       typeof item === 'object' && item !== null && '_id' in item && 'name' in item && 'providerName' in item && 'baseModelIdentifier' in item && 'baseModelSupportsVision' in item
                    );
 
                    if (isValidCustomModels) {

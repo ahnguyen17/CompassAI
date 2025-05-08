@@ -1,10 +1,12 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Adding vision icon (👁️) to custom models in the model selector dropdown if their underlying base model supports vision.
+Resolving TypeScript error TS2719 in `ChatPage.tsx` related to `CustomModelData` type mismatch.
 
 ## Recent Changes
-- **Add Vision Icon to Custom Models:**
+- **Fix TS2719 Error in ChatPage:**
+    - **Frontend (`ChatPage.tsx`):** Updated the local `CustomModelData` interface definition to include the `baseModelSupportsVision: boolean;` property, aligning it with the definition in `ModelSelectorDropdown.tsx` and the backend data structure. Also updated the `isValidCustomModels` check in `fetchAvailableModels` to include the new property.
+- **Add Vision Icon to Custom Models:** (Previous sub-task)
     - **Backend (`providers.js`):** Modified `getAvailableModels` to check if the `baseModelIdentifier` of each custom model corresponds to a base model with `supportsVision: true`. Added a `baseModelSupportsVision` boolean flag to the custom model data sent to the frontend.
     - **Frontend (`ModelSelectorDropdown.tsx`):** Updated the `CustomModelData` interface to include `baseModelSupportsVision`. Modified rendering logic to display the vision icon next to custom models if this flag is true.
 - **Implement Immediate Image Display:** (Previous Task)
@@ -24,10 +26,11 @@ Adding vision icon (👁️) to custom models in the model selector dropdown if 
 
 ## Next Steps
 - Update `progress.md`.
-- Update `systemPatterns.md`.
-- Update `techContext.md`.
-- Present the completed task to the user.
+- Update `systemPatterns.md` (if necessary, though this fix is minor and might not warrant a change).
+- Update `techContext.md` (if necessary, though this fix is minor and might not warrant a change).
+- Present the completed task (TS2719 fix) to the user.
 
 ## Active Decisions and Considerations
+- Aligned `CustomModelData` interface definition in `ChatPage.tsx` with `ModelSelectorDropdown.tsx` to resolve type conflicts.
 - Backend now enriches custom model data with a `baseModelSupportsVision` flag.
 - Frontend model selector dropdown uses this flag to conditionally render the vision icon for custom models.

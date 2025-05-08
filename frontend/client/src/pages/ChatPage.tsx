@@ -887,13 +887,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                             <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${isDarkMode ? '#555' : '#ddd'}` }}>
                                                 {msg.fileInfo.mimetype.startsWith('image/') ? (
                                                     <img
-                                                        src={`${import.meta.env.VITE_API_BASE_URL || ''}/${msg.fileInfo.path}`} // Construct URL
+                                                        // Corrected URL Construction: Remove /api/v1 if present
+                                                        src={`${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/v1$/, '')}/${msg.fileInfo.path}`}
                                                         alt={msg.fileInfo.originalname}
                                                         style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '4px', marginTop: '5px' }}
                                                     />
                                                 ) : (
                                                     <a
-                                                        href={`${import.meta.env.VITE_API_BASE_URL || ''}/${msg.fileInfo.path}`} // Construct URL
+                                                        // Corrected URL Construction: Remove /api/v1 if present
+                                                        href={`${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/v1$/, '')}/${msg.fileInfo.path}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         download={msg.fileInfo.originalname}
@@ -976,13 +978,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                     <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${isDarkMode ? '#3a87fd' : '#3390ff'}` }}>
                                         {msg.fileInfo.mimetype.startsWith('image/') ? (
                                             <img
-                                                src={`${import.meta.env.VITE_API_BASE_URL || ''}/${msg.fileInfo.path}`}
+                                                // Corrected URL Construction: Remove /api/v1 if present
+                                                src={`${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/v1$/, '')}/${msg.fileInfo.path}`}
                                                 alt={msg.fileInfo.originalname}
                                                 style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '4px', marginTop: '5px' }}
                                             />
                                         ) : (
                                             <a
-                                                href={`${import.meta.env.VITE_API_BASE_URL || ''}/${msg.fileInfo.path}`}
+                                                // Corrected URL Construction: Remove /api/v1 if present
+                                                href={`${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/v1$/, '')}/${msg.fileInfo.path}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 download={msg.fileInfo.originalname}

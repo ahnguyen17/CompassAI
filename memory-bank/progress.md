@@ -34,6 +34,7 @@
     - Frontend (`ChatPage.tsx`) allows pasting images, selecting files, and shows previews before sending.
     - Uploaded images are displayed in chat messages; other file types are shown as downloadable links.
     - CSS (`ChatPage.module.css`) updated for preview elements.
+    - **Fixed:** Corrected image URL construction in `ChatPage.tsx` to properly display uploaded images.
 - **AI Vision Input (Multimodal):**
     - Backend (`providers.js`) updated to flag vision-capable models (OpenAI GPT-4o/Turbo/4.1 series, Anthropic Claude 3 series, Gemini 1.5 series).
     - Backend (`chatMessages.js`) updated to read uploaded images, base64 encode them, and format API requests with image data for supported providers/models.
@@ -49,7 +50,7 @@
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent work focused on implementing and refining AI vision input capabilities, including enabling support for the GPT-4.1 series and fixing related backend runtime and API formatting errors. User-facing file/image previews and paste support are also functional.
+The project is actively being developed. Recent work focused on implementing and refining AI vision input capabilities, including enabling support for the GPT-4.1 series and fixing related backend runtime errors and API formatting issues. A bug preventing uploaded images from displaying correctly in the chat has also been fixed. User-facing file/image previews and paste support are functional.
 
 ## Known Issues
 - Numerous TypeScript errors (mostly implicit 'any' types and missing module declarations) remain in `ChatPage.tsx` and `ModelSelectorDropdown.tsx`. These should be reviewed.
@@ -62,3 +63,4 @@ The project is actively being developed. Recent work focused on implementing and
 - Updated the frontend model selector to clearly indicate vision capabilities.
 - The `ChatMessage` model already had a suitable `fileInfo` structure, simplifying backend changes for file metadata storage.
 - Corrected variable initialization order and API payload formatting in `chatMessages.js` to prevent runtime errors when handling vision models.
+- Refactored frontend image URL construction to correctly use the base server URL without the API path prefix.

@@ -39,15 +39,16 @@
     - Backend (`chatMessages.js`) updated to read uploaded images, base64 encode them, and format API requests with image data for supported providers/models.
     - Frontend (`ModelSelectorDropdown.tsx`) updated to display an icon (`👁️`) next to vision-capable models.
     - **Fixed:** Resolved TypeScript build error (`TS2719`) in `ChatPage.tsx` by updating type definitions.
+    - **Fixed:** Resolved backend ReferenceError in `chatMessages.js` by ensuring `modelIdentifierForApi` is initialized before use in vision checks.
 
 ## What's Left to Build
-- Further testing and refinement of existing features, especially AI vision input across different providers/models (including the newly enabled GPT-4.1 series).
+- Further testing and refinement of existing features, especially AI vision input across different providers/models.
 - Address remaining TypeScript errors in `ChatPage.tsx` and `ModelSelectorDropdown.tsx` if they cause runtime issues or for better code quality.
 - Confirm which specific Perplexity models support vision via API and update backend/frontend accordingly.
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. The latest update enabled vision capabilities for the OpenAI GPT-4.1 model series (`gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`) by updating the backend configuration. This builds upon the previously implemented multimodal support for other OpenAI, Anthropic, and Gemini models. User-facing file/image previews and paste support are also functional.
+The project is actively being developed. Recent work focused on implementing and refining AI vision input capabilities, including enabling support for the GPT-4.1 series and fixing a related backend runtime error. User-facing file/image previews and paste support are also functional.
 
 ## Known Issues
 - Numerous TypeScript errors (mostly implicit 'any' types and missing module declarations) remain in `ChatPage.tsx` and `ModelSelectorDropdown.tsx`. These should be reviewed.
@@ -59,3 +60,4 @@ The project is actively being developed. The latest update enabled vision capabi
 - Used base64 encoding as the primary method for sending image data to AI APIs.
 - Updated the frontend model selector to clearly indicate vision capabilities.
 - The `ChatMessage` model already had a suitable `fileInfo` structure, simplifying backend changes for file metadata storage.
+- Corrected variable initialization order in `chatMessages.js` to prevent runtime errors when handling vision models.

@@ -574,11 +574,40 @@ exports.addMessageToSession = async (req, res, next) => {
         const savedUserMessage = await ChatMessage.create(userMessageData);
         console.log("Saved user message to DB:", savedUserMessage._id);
 
+        // --- Determine Model Identifiers and System Prompt ---
+        // This block MUST run before preparing content for AI
+        let customModelData = null;
+        let modelIdentifierForApi = requestedModel; // Start with the requested model ID/name
+        let systemPromptForApi = null;
+        let finalModelNameToSave = requestedModel; // What to save in DB (custom ID or base name)
+
+        if (requestedModel && mongoose.Types.ObjectId.isValid(requestedModel)) {
+            console.log(`Requested model '${requestedModel}' looks like an ObjectId. Checking for CustomModel...`);
+            customModelData = await CustomModel.findById(requestedModel);
+            if (customModelData) {
+                console.log(`Found CustomModel: ${customModelData.name}. Base Model: ${customModelData.baseModelIdentifier}`);
+                modelIdentifierForApi = customModelData.baseModelIdentifier; // Use the base model for API calls
+                systemPromptForApi = customModelData.systemPrompt; // Use the custom system prompt
+                finalModelNameToSave = requestedModel; // Keep the custom model ID for saving
+            } else {
+                console.warn(`Requested model ID '${requestedModel}' not found in CustomModels. Treating as base model name.`);
+                modelIdentifierForApi = requestedModel; // Fallback to treating it as a base model name
+                finalModelNameToSave = requestedModel;
+            }
+        } else {
+             console.log(`Requested model '${requestedModel || 'None'}' is not an ObjectId. Treating as base model name.`);
+             modelIdentifierForApi = requestedModel; // Treat as base model name
+             finalModelNameToSave = requestedModel;
+        }
+        // --- End Determine Model Identifiers ---
+
+
         // --- Prepare Content for AI (Text + Optional Image) ---
         let finalUserMessageContentForApi; // This will hold either string or multimodal array
         const userTextContent = content || ''; // User's text input
 
-        // Check if a file was uploaded and if the selected model supports vision
+        // Check if a file was uploaded and if the determined model supports vision
+        // modelIdentifierForApi is now guaranteed to be initialized
         const isVisionModel = modelSupportsVision(modelIdentifierForApi); // Check vision support for the *base* model
         const isImageFile = uploadedFile && uploadedFile.mimetype.startsWith('image/');
 
@@ -717,31 +746,7 @@ exports.addMessageToSession = async (req, res, next) => {
         // Fetch history *including* the user message we just saved
         const history = await ChatMessage.find({ session: sessionId }).sort({ timestamp: 1 });
 
-        // --- Custom Model Handling ---
-        let customModelData = null;
-        let modelIdentifierForApi = requestedModel; // Start with the requested model
-        let systemPromptForApi = null;
-        let finalModelNameToSave = requestedModel; // What to save in DB (custom ID or base name)
-
-        if (requestedModel && mongoose.Types.ObjectId.isValid(requestedModel)) {
-            console.log(`Requested model '${requestedModel}' looks like an ObjectId. Checking for CustomModel...`);
-            customModelData = await CustomModel.findById(requestedModel);
-            if (customModelData) {
-                console.log(`Found CustomModel: ${customModelData.name}. Base Model: ${customModelData.baseModelIdentifier}`);
-                modelIdentifierForApi = customModelData.baseModelIdentifier; // Use the base model for API calls
-                systemPromptForApi = customModelData.systemPrompt; // Use the custom system prompt
-                finalModelNameToSave = requestedModel; // Keep the custom model ID for saving
-            } else {
-                console.warn(`Requested model ID '${requestedModel}' not found in CustomModels. Treating as base model name.`);
-                modelIdentifierForApi = requestedModel; // Fallback to treating it as a base model name
-                finalModelNameToSave = requestedModel;
-            }
-        } else {
-             console.log(`Requested model '${requestedModel || 'None'}' is not an ObjectId. Treating as base model name.`);
-             modelIdentifierForApi = requestedModel; // Treat as base model name
-             finalModelNameToSave = requestedModel;
-        }
-        // --- End Custom Model Handling ---
+        // --- Custom Model Handling Block Removed From Here ---
 
 
         if (shouldStream) {

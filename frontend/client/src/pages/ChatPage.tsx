@@ -102,6 +102,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
     const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for textarea
     const [isListening, setIsListening] = useState(false); // State for speech recognition
     const recognitionRef = useRef<SpeechRecognition | null>(null); // Ref to hold recognition instance
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null); // For image previews
 
     // --- Helper Function for Parsing Perplexity Content ---
   const parsePerplexityContent = (content: string): { reasoning: string | null; mainContent: string } => {
@@ -230,6 +231,51 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
        // allowing the default newline behavior of the textarea.
    };
 
+    // Handle pasting images
+    const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+        const items = event.clipboardData?.items;
+        if (items) {
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    if (blob) {
+                        setSelectedFile(blob);
+                        // Create a preview URL for the pasted image
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            setPreviewUrl(reader.result as string);
+                        };
+                        reader.readAsDataURL(blob);
+                    }
+                    event.preventDefault(); // Prevent pasting as text
+                    break;
+                }
+            }
+        }
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files ? event.target.files[0] : null;
+        setSelectedFile(file);
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            setPreviewUrl(null); // Clear preview if not an image or no file
+        }
+    };
+
+    const clearSelectedFile = () => {
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ''; // Reset file input
+        }
+    };
+
    // Combined Send Message Logic
    const handleSendMessage = async (e?: React.FormEvent) => {
       if (e) e.preventDefault();
@@ -245,6 +291,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
       const fileToSend = selectedFile;
       setNewMessage('');
       setSelectedFile(null);
+      setPreviewUrl(null); // Clear preview after sending
       if (fileInputRef.current) fileInputRef.current.value = '';
 
       const formData = new FormData();
@@ -828,6 +875,29 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                             : (streamingMessageId === msg._id ? streamingMessageContent : msg.content)
                                         }
                                         </ReactMarkdown>
+                                        {/* Display file if present */}
+                                        {msg.fileInfo && (
+                                            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${isDarkMode ? '#555' : '#ddd'}` }}>
+                                                {msg.fileInfo.mimetype.startsWith('image/') ? (
+                                                    <img
+                                                        src={`${import.meta.env.VITE_API_BASE_URL || ''}/${msg.fileInfo.path}`} // Construct URL
+                                                        alt={msg.fileInfo.originalname}
+                                                        style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '4px', marginTop: '5px' }}
+                                                    />
+                                                ) : (
+                                                    <a
+                                                        href={`${import.meta.env.VITE_API_BASE_URL || ''}/${msg.fileInfo.path}`} // Construct URL
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        download={msg.fileInfo.originalname}
+                                                        className={styles.fileLink} // Add a class for styling if needed
+                                                        style={{ color: isDarkMode ? '#8ab4f8' : '#007bff' }}
+                                                    >
+                                                        📄 {msg.fileInfo.originalname} ({(msg.fileInfo.size / 1024).toFixed(1)} KB)
+                                                    </a>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     {/* End AI Bubble */}
 
@@ -894,6 +964,29 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                     className={styles.copyButtonInside} // Apply new class
                                 />
                                 <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                                {/* Display file if present for user messages too */}
+                                {msg.fileInfo && (
+                                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${isDarkMode ? '#3a87fd' : '#3390ff'}` }}>
+                                        {msg.fileInfo.mimetype.startsWith('image/') ? (
+                                            <img
+                                                src={`${import.meta.env.VITE_API_BASE_URL || ''}/${msg.fileInfo.path}`}
+                                                alt={msg.fileInfo.originalname}
+                                                style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '4px', marginTop: '5px' }}
+                                            />
+                                        ) : (
+                                            <a
+                                                href={`${import.meta.env.VITE_API_BASE_URL || ''}/${msg.fileInfo.path}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                download={msg.fileInfo.originalname}
+                                                className={styles.fileLink}
+                                                style={{ color: isDarkMode ? '#cce0ff' : '#e6f2ff' }} // Lighter color for user bubble
+                                            >
+                                                📄 {msg.fileInfo.originalname} ({(msg.fileInfo.size / 1024).toFixed(1)} KB)
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                             {/* User Button Removed from outside */}
                         </>
@@ -962,10 +1055,25 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                          🧠 {/* Brain icon */}
                      </button>
                  </div>
+                 {/* Preview Area */}
+                 {previewUrl && selectedFile && selectedFile.type.startsWith('image/') && (
+                    <div style={{ marginBottom: '10px', position: 'relative', maxWidth: '150px' }}>
+                        <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '4px' }} />
+                        <button onClick={clearSelectedFile} className={styles.clearPreviewButton} title="Remove image">×</button>
+                    </div>
+                 )}
+                 {selectedFile && !selectedFile.type.startsWith('image/') && (
+                    <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span className={styles.fileNamePreview} style={{ color: isDarkMode ? '#bbb' : '#6c757d' }}>
+                            📄 {selectedFile.name}
+                        </span>
+                        <button onClick={clearSelectedFile} className={styles.clearPreviewButtonSmall} title="Remove file">×</button>
+                    </div>
+                 )}
 
                  {/* Input Controls Row */}
                  <div className={styles.inputControls}>
-                     <input type="file" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)} style={{ display: 'none' }} id="file-upload" />
+                     <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} id="file-upload" />
                      <button
                          type="button"
                          onClick={() => fileInputRef.current?.click()}
@@ -997,17 +1105,18 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                           onKeyDown={handleKeyDown} // Add keydown handler
                          placeholder={t('chat_input_placeholder')}
                          disabled={sendingMessage || loadingMessages || !currentSession}
-                          className={styles.messageInput}
-                          style={{
-                              background: isDarkMode ? '#3a3d41' : 'white',
-                              border: `1px solid ${isDarkMode ? '#555' : '#ced4da'}`,
-                              color: isDarkMode ? '#e0e0e0' : 'inherit',
-                              resize: 'vertical', // Allow vertical resize
-                              minHeight: '40px', // Set a minimum height
-                              maxHeight: '150px', // Optional: Limit max height
-                              overflowY: 'auto' // Add scroll if content exceeds max height
-                          }}
-                          rows={1} // Start with 1 row, auto-expands with CSS potentially or JS
+                         className={styles.messageInput}
+                         onPaste={handlePaste} // Add paste handler
+                         style={{
+                             background: isDarkMode ? '#3a3d41' : 'white',
+                             border: `1px solid ${isDarkMode ? '#555' : '#ced4da'}`,
+                             color: isDarkMode ? '#e0e0e0' : 'inherit',
+                             resize: 'vertical', // Allow vertical resize
+                             minHeight: '40px', // Set a minimum height
+                             maxHeight: '150px', // Optional: Limit max height
+                             overflowY: 'auto' // Add scroll if content exceeds max height
+                         }}
+                         rows={1} // Start with 1 row, auto-expands with CSS potentially or JS
                       />
                       <button
                           type="submit"

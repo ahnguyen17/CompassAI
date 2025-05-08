@@ -1,43 +1,31 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Refining multilingual chat title generation prompt to restrict output languages.
+Implemented file and image previews in chat, and the ability to paste images.
 
 ## Recent Changes
-- **Multilingual Title Generation Language Constraint:**
+- **File/Image Previews & Paste Functionality:**
+    - Modified `backend/server.js` to statically serve the `uploads` directory, making uploaded files accessible via URL.
+    - Updated `frontend/client/src/pages/ChatPage.tsx` to:
+        - Handle pasting images into the chat input.
+        - Display a preview of selected/pasted files (image thumbnail or file icon/name) near the input area.
+        - Allow removal of the selected/pasted file before sending.
+        - Display uploaded images directly in chat messages.
+        - Display links to other uploaded file types in chat messages.
+        - Construct file URLs using `VITE_API_BASE_URL` for proper pathing.
+    - Added CSS styles to `frontend/client/src/pages/ChatPage.module.css` for the new preview elements (image previews, file name previews, clear buttons) and file links within messages.
+- **Multilingual Title Generation Language Constraint:** (Previous Task)
     - Updated the title generation prompt in `backend/controllers/chatMessages.js` again.
     - The prompt now instructs the AI to detect the language, generate the title in Vietnamese if detected as Vietnamese, otherwise generate the title in English. It also strongly emphasizes responding *only* with the title text.
-- **Custom Model Usage Stats Name Fix:**
+- **Custom Model Usage Stats Name Fix:** (Previous Task)
     - Modified the aggregation pipelines in `backend/controllers/stats.js` to include custom model names instead of IDs in the usage statistics.
-- **Navbar Icon Swap:** (Previous Task)
-    - Swapped the language and theme icons in `frontend/client/src/components/Navbar.tsx`.
-- **Navbar Logo Sidebar Toggle:** (Previous Task)
-    - Removed the hamburger icon from `Navbar.tsx`.
-    - Made the logo toggle the sidebar on chat pages.
-- **Centralized Session State:** (Previous Task)
-    - Moved session list state and logic from `ChatPage.tsx` to `authStore.ts`.
-    - Refactored `ChatPage.tsx` to use the global store.
-- **Navbar "New Chat" Icon:** (Previous Task)
-    - Added a `startNewChat` action to `authStore.ts`.
-    - Added the icon button to `Navbar.tsx`.
-- **Model Dropdown Color Update:** (Previous Task)
-    - Modified `frontend/client/src/components/ModelSelectorDropdown.module.css`.
-    - Changed the `color` rule for `.modelItem` in light mode to `#34495e`.
-- **Custom Model Deletion Fix:** (Previous Task)
-    - Modified `backend/controllers/customModels.js`.
-    - Replaced `model.remove()` with `CustomModel.findByIdAndDelete()`.
-- **Settings Page UI Update:** (Previous Task)
-    - Modified `frontend/client/src/pages/SettingsPage.tsx` to use collapsed `<details>` elements.
-- **Load Last Viewed Session:** (Previous Task)
-    - Added `lastAccessedAt` to `ChatSession` model and updated controllers.
 
 ## Next Steps
-- Update `progress.md` in the Memory Bank.
-- Present the completed task (Custom Model Usage Stats Name Fix) to the user.
+- Update `progress.md` and other relevant Memory Bank files.
+- Present the completed task to the user.
 
 ## Active Decisions and Considerations
-- Modified backend stats aggregation to show custom model names instead of IDs.
-- Refined backend prompt for title generation to restrict output to English or Vietnamese and prevent extraneous text.
-- Swapped Navbar icons (Previous Task).
-- Consolidated sidebar toggle into the logo click (Previous Task).
-- Centralized chat session list management in `authStore.ts` (Previous Task).
+- Ensured uploaded files are publicly accessible by serving the `uploads` directory.
+- Implemented frontend logic for image pasting, file selection, and previews.
+- Added rendering for images and file links within chat messages.
+- Used `VITE_API_BASE_URL` for constructing file URLs on the frontend.

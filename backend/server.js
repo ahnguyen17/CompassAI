@@ -64,6 +64,10 @@ const corsOptions = {
 app.use(cors(corsOptions)); // Use the original options again
 app.use(express.json()); // Parse JSON request bodies
 
+// Serve static files from the 'uploads' directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+console.log(`Serving static files from ${path.join(__dirname, 'uploads')} at /uploads`); // Add log
+
 // Basic route
 app.get('/', (req, res) => {
   res.send('AI Chatbox Backend is running!');

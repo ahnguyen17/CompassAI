@@ -99,6 +99,61 @@
     opacity: 0.6;
 }
 
+.fileNamePreview { /* Style for file name in preview */
+    font-size: 0.9em;
+    color: #6c757d; /* Match .fileName */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px; /* Adjust as needed */
+}
+
+.clearPreviewButton { /* Style for the 'x' button on image preview */
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    line-height: 20px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+.clearPreviewButtonSmall { /* Style for the 'x' button on non-image file preview */
+    background: rgba(0, 0, 0, 0.2);
+    color: #333;
+    border: none;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    font-size: 12px;
+    line-height: 16px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+body.dark .fileNamePreview {
+    color: #bbb; /* Match dark mode .fileName */
+}
+
+body.dark .clearPreviewButton {
+    background: rgba(255, 255, 255, 0.3);
+    color: #111;
+}
+
+body.dark .clearPreviewButtonSmall {
+    background: rgba(255, 255, 255, 0.2);
+    color: #eee;
+}
+
+
 /* Microphone Button Styles (Standardized) */
 .micButton {
     background: none;
@@ -192,6 +247,14 @@
     word-wrap: break-word;
     position: relative; /* Needed for absolute positioning of the copy button */
     padding: 10px 35px 10px 15px; /* Add padding for the button */
+}
+
+.fileLink { /* Style for file download links in messages */
+    text-decoration: none;
+    font-weight: 500;
+}
+.fileLink:hover {
+    text-decoration: underline;
 }
 
 /* Show copy button on bubble hover/focus */

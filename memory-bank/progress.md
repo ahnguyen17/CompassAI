@@ -29,16 +29,23 @@
 - **Navbar Icon Order:** Swapped the positions of the language dropdown and theme toggle icons in `Navbar.tsx`.
 - **Multilingual Title Generation:** Refined the backend prompt (`chatMessages.js`) again to instruct the AI to detect the language of the first message, generate the title in Vietnamese if detected, otherwise generate it in English, and respond *only* with the title text.
 - **Custom Model Usage Stats Name Fix:** Modified the backend aggregation pipelines in `backend/controllers/stats.js` to include custom model names instead of IDs in the usage statistics.
+- **File/Image Previews & Paste Functionality:**
+    - Backend (`server.js`) now statically serves the `uploads` directory.
+    - Frontend (`ChatPage.tsx`) allows pasting images, selecting files, and shows previews before sending.
+    - Uploaded images are displayed in chat messages; other file types are shown as downloadable links.
+    - CSS (`ChatPage.module.css`) updated for preview elements.
 
 ## What's Left to Build
-- Further testing and refinement of existing features.
+- Further testing and refinement of existing features, especially file/image uploads.
+- Address TypeScript errors in `ChatPage.tsx` if they cause runtime issues or for better code quality.
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent updates include fixing the display of custom model names in usage statistics, further refining language-aware title generation (English/Vietnamese constraint), swapping navbar icons, consolidating the sidebar toggle into the logo click, centralizing chat session state management, adding a "New Chat" icon to the navbar, UI improvements, backend logic for session loading, and a fix for custom model deletion.
+The project is actively being developed. Recent updates include the implementation of file and image previews in chat, along with the ability to paste images. This involved backend changes for static file serving and frontend modifications for UI, file handling, and display. Previous updates include fixing custom model name display in stats, refining title generation, and various UI/UX improvements to the navbar and chat page.
 
 ## Known Issues
-- None documented yet.
+- Numerous TypeScript errors in `ChatPage.tsx` related to missing type declarations and implicit 'any' types. These should be reviewed.
 
 ## Evolution of Project Decisions
 - As the project progresses, decisions regarding the tech stack and architecture may evolve based on requirements and challenges encountered.
+- The `ChatMessage` model already had a suitable `fileInfo` structure, simplifying backend changes for file metadata storage.

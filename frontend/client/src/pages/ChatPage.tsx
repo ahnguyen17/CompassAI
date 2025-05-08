@@ -1101,7 +1101,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
 
                  {/* Input Controls Row */}
                  <div className={styles.inputControls}>
-                     <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} id="file-upload" />
+                     <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        style={{ display: 'none' }}
+                        id="file-upload"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" // Added accept attribute
+                     />
                      <button
                          type="button"
                          onClick={() => fileInputRef.current?.click()}

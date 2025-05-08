@@ -4,6 +4,10 @@ const { OpenAI } = require('openai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const pdf = require('pdf-parse');
+const mammoth = require('mammoth');
+const WordExtractor = require('word-extractor');
+const XLSX = require('xlsx');
+// const util = require('util'); // No longer needed for pptxto.txt
 
 // Import Models
 const ChatMessage = require('../models/ChatMessage');
@@ -240,6 +244,9 @@ const callApi = async (providerName, apiKey, modelToUse, history, finalUserMessa
     // Return both content and citations
     return { content: aiResponseContent, citations: extractedCitations };
 };
+
+// Instantiate WordExtractor
+const wordExtractor = new WordExtractor();
 
 // Helper function for streaming API calls
 // Takes finalUserMessageContent instead of combinedContentForAI
@@ -676,6 +683,92 @@ exports.addMessageToSession = async (req, res, next) => {
                          fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing PDF content]`;
                      }
                  }
+                 // DOCX processing
+                 else if (uploadedFile.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                    try {
+                        const fullFilePath = path.join(__dirname, '..', userMessageData.fileInfo.path);
+                        const result = await mammoth.extractRawText({ path: fullFilePath });
+                        const maxChars = 10000; // Limit extracted text length for Word/Excel
+                        const extractedText = result.value.substring(0, maxChars);
+                        fileTextContent = `\n\n--- Start of DOCX Content (${uploadedFile.originalname}) ---\n${extractedText}${result.value.length > maxChars ? '\n[...content truncated]' : ''}\n--- End of DOCX Content ---`;
+                    } catch (docxError) {
+                        console.error("Error processing DOCX:", docxError);
+                        fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing DOCX content]`;
+                    }
+                 }
+                 // DOC processing
+                 else if (uploadedFile.mimetype === 'application/msword') {
+                    try {
+                        const fullFilePath = path.join(__dirname, '..', userMessageData.fileInfo.path);
+                        const doc = await wordExtractor.extract(fullFilePath);
+                        const maxChars = 10000; // Limit extracted text length
+                        const extractedText = doc.getBody().substring(0, maxChars);
+                        fileTextContent = `\n\n--- Start of DOC Content (${uploadedFile.originalname}) ---\n${extractedText}${doc.getBody().length > maxChars ? '\n[...content truncated]' : ''}\n--- End of DOC Content ---`;
+                    } catch (docError) {
+                        console.error("Error processing DOC:", docError);
+                        fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing DOC content]`;
+                    }
+                 }
+                 // XLSX and XLS processing
+                 else if (uploadedFile.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || uploadedFile.mimetype === 'application/vnd.ms-excel') {
+                    try {
+                        const fullFilePath = path.join(__dirname, '..', userMessageData.fileInfo.path);
+                        const workbook = XLSX.readFile(fullFilePath);
+                        let fullExtractedText = "";
+                        // const maxCharsPerSheet = 5000; // Not strictly needed if overallMaxChars is effective
+                        let totalChars = 0;
+                        const overallMaxChars = 15000; // Overall limit for Excel content
+
+                        for (const sheetName of workbook.SheetNames) {
+                            if (totalChars >= overallMaxChars) break;
+                            if (workbook.SheetNames.length > 1) {
+                                const sheetHeader = `\n--- Content from Sheet: ${sheetName} ---\n`;
+                                if (totalChars + sheetHeader.length > overallMaxChars) break; // Check before adding header
+                                fullExtractedText += sheetHeader;
+                                totalChars += sheetHeader.length;
+                            }
+                            
+                            const sheet = workbook.Sheets[sheetName];
+                            const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
+                            
+                            for (const row of sheetData) {
+                                if (totalChars >= overallMaxChars) break;
+                                let rowText = "";
+                                for (const cell of row) {
+                                    if (totalChars >= overallMaxChars) break;
+                                    let cellText = "";
+                                    if (cell && typeof cell === 'string' && cell.trim() !== "") {
+                                        cellText = cell.trim() + " ";
+                                    } else if (cell && typeof cell === 'number') {
+                                        cellText = cell.toString() + " ";
+                                    }
+
+                                    if (totalChars + cellText.length > overallMaxChars) {
+                                        cellText = cellText.substring(0, overallMaxChars - totalChars);
+                                        rowText += cellText;
+                                        totalChars = overallMaxChars;
+                                        break; 
+                                    }
+                                    rowText += cellText;
+                                    totalChars += cellText.length;
+                                }
+                                fullExtractedText += rowText.trimRight() + "\n"; // Add row text (trimmed) and a newline
+                                if (totalChars >= overallMaxChars) break;
+                            }
+                            // No need for per-sheet truncation message if overall truncation is handled
+                        }
+                        if (totalChars >= overallMaxChars) {
+                            fullExtractedText += "\n[...Excel content truncated due to overall size limit]";
+                        }
+                        fileTextContent = `\n\n--- Start of Excel Content (${uploadedFile.originalname}) ---\n${fullExtractedText.trim()}\n--- End of Excel Content ---`;
+                    } catch (excelError) {
+                        console.error("Error processing Excel file:", excelError);
+                        fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing Excel content]`;
+                    }
+                 }
+                 // Note: PowerPoint (.ppt, .pptx) extraction is deferred due to library vulnerabilities.
+                 // They will be treated as generic files if uploaded.
+
                  combinedTextContent = combinedTextContent ? `${combinedTextContent}\n${fileTextContent}` : fileTextContent;
              } else if (uploadedFile && isImageFile && !isVisionModel) {
                  // If it's an image but model doesn't support vision, just add filename info

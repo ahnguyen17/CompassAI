@@ -1,31 +1,32 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Implemented file and image previews in chat, and the ability to paste images.
+Implemented AI model image understanding (multimodal vision input).
 
 ## Recent Changes
-- **File/Image Previews & Paste Functionality:**
-    - Modified `backend/server.js` to statically serve the `uploads` directory, making uploaded files accessible via URL.
-    - Updated `frontend/client/src/pages/ChatPage.tsx` to:
-        - Handle pasting images into the chat input.
-        - Display a preview of selected/pasted files (image thumbnail or file icon/name) near the input area.
-        - Allow removal of the selected/pasted file before sending.
-        - Display uploaded images directly in chat messages.
-        - Display links to other uploaded file types in chat messages.
-        - Construct file URLs using `VITE_API_BASE_URL` for proper pathing.
-    - Added CSS styles to `frontend/client/src/pages/ChatPage.module.css` for the new preview elements (image previews, file name previews, clear buttons) and file links within messages.
-- **Multilingual Title Generation Language Constraint:** (Previous Task)
-    - Updated the title generation prompt in `backend/controllers/chatMessages.js` again.
-    - The prompt now instructs the AI to detect the language, generate the title in Vietnamese if detected as Vietnamese, otherwise generate the title in English. It also strongly emphasizes responding *only* with the title text.
-- **Custom Model Usage Stats Name Fix:** (Previous Task)
-    - Modified the aggregation pipelines in `backend/controllers/stats.js` to include custom model names instead of IDs in the usage statistics.
+- **AI Vision Input Implementation:**
+    - **Backend (`controllers/providers.js`):** Updated `AVAILABLE_MODELS` structure to include a `supportsVision: boolean` flag. Marked relevant OpenAI, Anthropic Claude 3, and Gemini models as supporting vision.
+    - **Backend (`controllers/chatMessages.js`):**
+        - Modified `findProviderForModel` to work with the new model object structure.
+        - Added `modelSupportsVision` helper function.
+        - Updated `addMessageToSession` to check `supportsVision` flag. If true and an image is uploaded, it reads the image file, base64 encodes it, and prepares a provider-specific multimodal content structure.
+        - Updated `formatMessagesForProvider`, `callApi`, and `callApiStream` to correctly handle and pass the multimodal content structure (text + image data) to the respective provider SDKs (OpenAI, Anthropic, Gemini). Includes logic for base64 prefix handling (stripping for Gemini).
+        - Text-only logic is retained for non-vision models or when no image is sent.
+    - **Frontend (`components/ModelSelectorDropdown.tsx`):** Updated component to parse the new `baseModels` structure and conditionally display a vision icon (`👁️`) next to models where `supportsVision` is true.
+    - **Frontend (`components/ModelSelectorDropdown.module.css`):** Added CSS styles for the `.visionIcon`.
+- **File/Image Previews & Paste Functionality:** (Previous Task)
+    - Modified `backend/server.js` to statically serve the `uploads` directory.
+    - Updated `frontend/client/src/pages/ChatPage.tsx` for image pasting, file selection previews, and rendering uploaded files/images in messages.
+    - Added CSS styles to `frontend/client/src/pages/ChatPage.module.css` for preview elements.
 
 ## Next Steps
 - Update `progress.md` and other relevant Memory Bank files.
 - Present the completed task to the user.
 
 ## Active Decisions and Considerations
-- Ensured uploaded files are publicly accessible by serving the `uploads` directory.
-- Implemented frontend logic for image pasting, file selection, and previews.
-- Added rendering for images and file links within chat messages.
-- Used `VITE_API_BASE_URL` for constructing file URLs on the frontend.
+- Implemented multimodal input handling for OpenAI, Anthropic, and Gemini based on research.
+- Used base64 encoding as the primary method for sending image data.
+- Handled provider-specific API request formatting for multimodal content.
+- Updated frontend to visually indicate vision-capable models.
+- Deferred flagging Perplexity models for vision support pending further confirmation.
+- DeepSeek remains text-only.

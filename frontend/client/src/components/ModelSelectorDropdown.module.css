@@ -50,6 +50,15 @@
   white-space: nowrap;
   font-size: 0.95em;
   color: #34495e; /* Updated light mode color */
+  display: flex; /* Use flexbox to align text and icon */
+  justify-content: space-between; /* Push icon to the right */
+  align-items: center; /* Vertically align items */
+}
+
+.visionIcon {
+  margin-left: 8px; /* Space between text and icon */
+  font-size: 0.9em; /* Slightly smaller icon */
+  opacity: 0.7; /* Make it slightly subtle */
 }
 
 .modelItem:hover {

@@ -1,55 +1,56 @@
 const ApiKey = require('../models/ApiKey');
 const DisabledModel = require('../models/DisabledModel'); // Import the DisabledModel model
 
-// Hardcoded list of common models per provider
+// Hardcoded list of common models per provider, now including vision support flag
 // In a real application, you might fetch this dynamically if APIs allow
 const AVAILABLE_MODELS = {
     'Anthropic': [
-        "claude-3-opus-20240229",
-        "claude-3-sonnet-20240229",
-        "claude-3-haiku-20240307",
-        "claude-2.1", // Re-added (Deprecated)
-        "claude-2.0", // Re-added (Deprecated)
-        "claude-instant-1.2" // Re-added (Deprecated)
+        { name: "claude-3-opus-20240229", supportsVision: true },
+        { name: "claude-3-sonnet-20240229", supportsVision: true },
+        { name: "claude-3-haiku-20240307", supportsVision: true },
+        { name: "claude-2.1", supportsVision: false }, // Re-added (Deprecated)
+        { name: "claude-2.0", supportsVision: false }, // Re-added (Deprecated)
+        { name: "claude-instant-1.2", supportsVision: false } // Re-added (Deprecated)
     ],
     'OpenAI': [
-        "gpt-4",
-        "gpt-4-turbo",
-        "gpt-4o",
-        "gpt-3.5-turbo",
-        "gpt-4.1", // Added
-        "gpt-4.1-mini", // Added
-        "gpt-4.1-nano", // Added
-        "o3-mini" // Added per user request
+        { name: "gpt-4o", supportsVision: true }, // Flagged vision
+        { name: "gpt-4-turbo", supportsVision: true }, // Flagged vision
+        { name: "gpt-4", supportsVision: false }, // Older GPT-4 likely doesn't have vision API access easily
+        { name: "gpt-3.5-turbo", supportsVision: false },
+        { name: "gpt-4.1", supportsVision: false }, // Added - Assuming no vision
+        { name: "gpt-4.1-mini", supportsVision: false }, // Added - Assuming no vision
+        { name: "gpt-4.1-nano", supportsVision: false }, // Added - Assuming no vision
+        { name: "o3-mini", supportsVision: false } // Added per user request - Assuming no vision
     ],
     'Gemini': [
         // Note: Verify official API identifiers before use
-        "gemini-2.5-pro-experimental", // Added per request
-        "gemini-2.0-flash",            // Added per request
-        "gemini-2.0-flash-lite",       // Added per request
-        "gemini-1.5-pro-latest",
-        "gemini-1.5-pro",
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-flash-8b",         // Added per request (Note: Size specifiers usually aren't in model names)
-        "gemini-1.0-pro",
+        { name: "gemini-1.5-pro-latest", supportsVision: true }, // Flagged vision
+        { name: "gemini-1.5-flash-latest", supportsVision: true }, // Flagged vision
+        { name: "gemini-1.5-pro", supportsVision: true }, // Assuming 1.5 Pro also supports vision
+        { name: "gemini-1.0-pro", supportsVision: false }, // 1.0 Pro likely doesn't support vision API easily
+        // Added experimental/other models - Assuming no vision for now unless confirmed
+        { name: "gemini-2.5-pro-experimental", supportsVision: false },
+        { name: "gemini-2.0-flash", supportsVision: false },
+        { name: "gemini-2.0-flash-lite", supportsVision: false },
+        { name: "gemini-1.5-flash-8b", supportsVision: false }, // Size specifiers unusual
     ],
-     'DeepSeek': [ // Added DeepSeek
-         "deepseek-chat",
-         "deepseek-coder",
-         "deepseek-reasoner" // Added new model
-         // Removed "DeepSeek-V3"
+     'DeepSeek': [ // No vision support confirmed
+         { name: "deepseek-chat", supportsVision: false },
+         { name: "deepseek-coder", supportsVision: false },
+         { name: "deepseek-reasoner", supportsVision: false }
      ],
-     'Perplexity': [ // Added Perplexity with prefix
-        "perplexity/sonar-deep-research",
-        "perplexity/sonar-reasoning-pro",
-        "perplexity/sonar-reasoning",
-        "perplexity/sonar-pro",
-        "perplexity/sonar",
-        "perplexity/r1-1776"
+     'Perplexity': [ // Vision support via API unclear for specific models
+        { name: "perplexity/sonar-deep-research", supportsVision: false }, // Assume false for now
+        { name: "perplexity/sonar-reasoning-pro", supportsVision: false }, // Assume false for now
+        { name: "perplexity/sonar-reasoning", supportsVision: false }, // Assume false for now
+        { name: "perplexity/sonar-pro", supportsVision: false }, // Assume false for now
+        { name: "perplexity/sonar", supportsVision: false }, // Assume false for now
+        { name: "perplexity/r1-1776", supportsVision: false } // Assume false for now
     ]
 };
 
 // Export the constant for use in other controllers (e.g., customModels)
+// Note: Consumers of this export will need to handle the new object structure
 exports.AVAILABLE_MODELS = AVAILABLE_MODELS;
 
 // @desc    Get available models for enabled providers
@@ -73,19 +74,23 @@ exports.getAvailableModels = async (req, res, next) => {
         const filteredBaseModels = {};
         for (const provider of enabledProviders) {
             if (AVAILABLE_MODELS[provider]) {
-                // Filter out disabled models for this provider
+                // Filter out disabled models for this provider (checking model.name)
                 const providerModels = AVAILABLE_MODELS[provider].filter(
-                    modelName => !disabledModelNamesSet.has(modelName)
+                    model => !disabledModelNamesSet.has(model.name)
                 );
                 // Only include provider if they have at least one enabled model
                 if (providerModels.length > 0) {
+                    // Return the array of model objects for the provider
                     filteredBaseModels[provider] = providerModels;
                 }
             }
         }
 
         // --- Process Custom Models ---
-        // Format custom models for the response
+        // Custom models don't inherently support vision unless their base model does,
+        // but we don't need to add the flag here as the frontend only needs the list.
+        // The backend controller (chatMessages) will check the base model's capability.
+        // Format custom models for the response - structure remains the same
         const formattedCustomModels = customModelsList.map(model => ({
             _id: model._id,
             name: model.name,
@@ -95,6 +100,7 @@ exports.getAvailableModels = async (req, res, next) => {
         }));
 
         // --- Combine Results ---
+        // The response structure remains the same, but baseModels now contains arrays of objects
         const responseData = {
             baseModels: filteredBaseModels,
             customModels: formattedCustomModels

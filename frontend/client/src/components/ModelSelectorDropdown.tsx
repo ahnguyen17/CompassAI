@@ -11,9 +11,15 @@ interface CustomModelData {
     baseModelIdentifier: string;
 }
 
+// Interface for a single Base Model object (new structure)
+interface BaseModelData {
+    name: string;
+    supportsVision: boolean;
+}
+
 // Interface for the combined data structure from the backend
 interface CombinedAvailableModels {
-  baseModels: { [provider: string]: string[] };
+  baseModels: { [provider: string]: BaseModelData[] }; // Updated: Array of objects
   customModels: CustomModelData[];
 }
 
@@ -141,21 +147,23 @@ const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
                 <Fragment key={`base-${baseProvider}`}>
                   <div className={styles.providerGroup}>{baseProvider}</div>
                   {baseModelsList
-                    .sort() // Sort models within provider
-                    .map(baseModelName => {
-                      // Determine display text (same logic as before)
+                    .sort((a, b) => a.name.localeCompare(b.name)) // Sort models by name within provider
+                    .map(baseModel => { // Iterate through model objects
+                      // Determine display text
                       const displayText = baseProvider.toLowerCase() === 'perplexity'
-                          ? baseModelName.replace(/^perplexity\//, '')
-                          : baseModelName;
+                          ? baseModel.name.replace(/^perplexity\//, '')
+                          : baseModel.name;
                       return (
                         <div
-                          key={baseModelName} // Use base model name as key
-                          className={`${styles.modelItem} ${selectedModel === baseModelName ? styles.modelItemSelected : ''}`}
-                          onClick={() => handleSelect(baseModelName)} // Pass base model name on select
+                          key={baseModel.name} // Use base model name as key
+                          className={`${styles.modelItem} ${selectedModel === baseModel.name ? styles.modelItemSelected : ''}`}
+                          onClick={() => handleSelect(baseModel.name)} // Pass base model name on select
                           role="option"
-                          aria-selected={selectedModel === baseModelName}
+                          aria-selected={selectedModel === baseModel.name}
                         >
                           {displayText}
+                          {/* Conditionally render vision icon */}
+                          {baseModel.supportsVision && <span className={styles.visionIcon} title="Supports image input">👁️</span>}
                         </div>
                       );
                   })}

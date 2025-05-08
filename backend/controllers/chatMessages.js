@@ -11,35 +11,12 @@ const ChatSession = require('../models/ChatSession');
 const ApiKey = require('../models/ApiKey');
 const CustomModel = require('../models/CustomModel'); // Import CustomModel
 const mongoose = require('mongoose'); // Import mongoose for ObjectId check
+const path = require('path'); // Import path for resolving file paths
 
-// Define available models (Should match controllers/providers.js)
-const AVAILABLE_MODELS = {
-    'Anthropic': [
-        "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307",
-        "claude-2.1", "claude-2.0", "claude-instant-1.2" // Deprecated models re-added
-    ],
-    'OpenAI': ["gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-3.5-turbo", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano"], // Added new models
-    'Gemini': [
-        "gemini-2.5-pro-experimental", "gemini-2.0-flash", "gemini-2.0-flash-lite",
-        "gemini-1.5-pro-latest", "gemini-1.5-pro", "gemini-1.5-flash-latest",
-        "gemini-1.5-flash-8b", "gemini-1.0-pro"
-    ],
-    'DeepSeek': [ // Added DeepSeek
-        "deepseek-chat",
-        "deepseek-coder",
-        "deepseek-reasoner" // Added new model
-    ],
-    'Perplexity': [ // Added Perplexity to match providers.js
-        "perplexity/sonar-deep-research",
-        "perplexity/sonar-reasoning-pro",
-        "perplexity/sonar-reasoning",
-        "perplexity/sonar-pro",
-        "perplexity/sonar",
-        "perplexity/r1-1776"
-    ]
-};
+// Import AVAILABLE_MODELS from providers controller
+const { AVAILABLE_MODELS } = require('./providers');
 
-// Define default models per provider
+// Define default models per provider (ensure these exist in AVAILABLE_MODELS)
 const DEFAULT_MODELS = {
     'Anthropic': 'claude-3-haiku-20240307',
     'OpenAI': 'gpt-3.5-turbo',
@@ -57,29 +34,57 @@ const findProviderForModel = (modelName) => {
 
     // Standard check for other providers
     for (const [provider, models] of Object.entries(AVAILABLE_MODELS)) {
-        if (models.includes(modelName)) return provider;
+        // Check if any model object in the array has the matching name
+        if (models.some(model => model.name === modelName)) {
+            return provider;
+        }
     }
-
+    console.warn(`Provider not found for model: ${modelName}`);
     return null;
 };
 
+// Helper function to check if a model supports vision
+const modelSupportsVision = (modelName) => {
+    for (const models of Object.values(AVAILABLE_MODELS)) {
+        const modelData = models.find(m => m.name === modelName);
+        if (modelData) {
+            return modelData.supportsVision || false;
+        }
+    }
+    return false; // Default to false if model not found
+};
+
+
 // Helper function to format message history for different providers
-const formatMessagesForProvider = (providerName, history, combinedContentForAI) => {
+// Now accepts finalUserMessageContent which might be a string or a multimodal array
+const formatMessagesForProvider = (providerName, history, finalUserMessageContent) => {
     const historyForProvider = history.map((msg, index) => {
-        // Use combinedContentForAI only for the very last user message being sent now
         const isLastUserMessage = index === history.length - 1 && msg.sender === 'user';
-        const messageContent = isLastUserMessage ? combinedContentForAI : msg.content;
 
-        // Skip empty messages unless it's the last user message (which might just be a file)
-        if (!messageContent && !isLastUserMessage) return null;
+        // Use the pre-formatted finalUserMessageContent for the last user message
+        if (isLastUserMessage) {
+            // Handle different structures based on provider
+            if (providerName === 'Anthropic' || providerName === 'OpenAI' || providerName === 'DeepSeek' || providerName === 'Perplexity') {
+                // These expect a 'content' field which can be string or array
+                return { role: 'user', content: finalUserMessageContent };
+            } else if (providerName === 'Gemini') {
+                // Gemini expects 'parts' which should already be formatted correctly in finalUserMessageContent
+                 // If finalUserMessageContent is just text, wrap it
+                 const parts = Array.isArray(finalUserMessageContent) ? finalUserMessageContent : [{ text: finalUserMessageContent || "" }];
+                 return { role: 'user', parts: parts };
+            }
+        } else {
+            // Handle previous messages (always text for now)
+            if (!msg.content) return null; // Skip previous empty messages
 
-        // DeepSeek and Perplexity use OpenAI format
-        if (providerName === 'Anthropic' || providerName === 'OpenAI' || providerName === 'DeepSeek' || providerName === 'Perplexity')
-            return { role: msg.sender === 'user' ? 'user' : 'assistant', content: messageContent || "" }; // Ensure content is at least ""
-        if (providerName === 'Gemini')
-            return { role: msg.sender === 'user' ? 'user' : 'model', parts: [{ text: messageContent || "" }] }; // Ensure text is at least ""
+            if (providerName === 'Anthropic' || providerName === 'OpenAI' || providerName === 'DeepSeek' || providerName === 'Perplexity') {
+                return { role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.content };
+            } else if (providerName === 'Gemini') {
+                return { role: msg.sender === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] };
+            }
+        }
         return null;
-    }).filter(Boolean); // Remove null entries
+    }).filter(Boolean); // Remove null entries (like empty previous messages)
 
     let formattedMessages = historyForProvider;
 
@@ -99,14 +104,16 @@ const formatMessagesForProvider = (providerName, history, combinedContentForAI) 
 
 // Helper function for non-streaming API calls (used for title generation AND non-streaming responses)
 // Returns an object { content: string | null, citations: Array | null }
-const callApi = async (providerName, apiKey, modelToUse, history, combinedContentForAI, systemPrompt = null) => { // Added systemPrompt
+// Takes finalUserMessageContent instead of combinedContentForAI
+const callApi = async (providerName, apiKey, modelToUse, history, finalUserMessageContent, systemPrompt = null) => {
     let aiResponseContent = null;
     let extractedCitations = null; // Initialize citations as null
     // Pass the *full* history including the latest user message for formatting
-    let formattedMessages = formatMessagesForProvider(providerName, history, combinedContentForAI);
+    // formatMessagesForProvider now handles the potentially complex finalUserMessageContent
+    let formattedMessages = formatMessagesForProvider(providerName, history, finalUserMessageContent);
 
     // --- System Prompt Injection ---
-    // Note: Title generation calls won't have a system prompt, this is mainly for actual chat responses.
+    // Note: Title generation calls won't have a system prompt or complex content.
     if (systemPrompt) {
         console.log(`Injecting system prompt for ${providerName} (Non-Streaming)`);
         if (providerName === 'OpenAI' || providerName === 'DeepSeek' || providerName === 'Perplexity') {
@@ -235,13 +242,15 @@ const callApi = async (providerName, apiKey, modelToUse, history, combinedConten
 };
 
 // Helper function for streaming API calls
-const callApiStream = async (providerName, apiKey, modelToUse, history, combinedContentForAI, sendSse, systemPrompt = null) => { // Added systemPrompt
+// Takes finalUserMessageContent instead of combinedContentForAI
+const callApiStream = async (providerName, apiKey, modelToUse, history, finalUserMessageContent, sendSse, systemPrompt = null) => {
     let fullResponseContent = ''; // Accumulate full response
     let fullReasoningContent = ''; // Accumulate reasoning content
     let fullCitations = []; // Store citations for later use
     let errorOccurred = false;
     // Pass the *full* history including the latest user message for formatting
-    let formattedMessages = formatMessagesForProvider(providerName, history, combinedContentForAI);
+    // formatMessagesForProvider now handles the potentially complex finalUserMessageContent
+    let formattedMessages = formatMessagesForProvider(providerName, history, finalUserMessageContent);
 
     // --- System Prompt Injection ---
     if (systemPrompt) {
@@ -565,31 +574,95 @@ exports.addMessageToSession = async (req, res, next) => {
         const savedUserMessage = await ChatMessage.create(userMessageData);
         console.log("Saved user message to DB:", savedUserMessage._id);
 
-        // Prepare combined content for AI (including potential file content)
-        let combinedContentForAI = content || '';
-        if (uploadedFile) {
-            let fileTextContent = `[File Uploaded: ${uploadedFile.originalname} (${(uploadedFile.size / 1024).toFixed(1)} KB)]`;
-            if (uploadedFile.mimetype === 'application/pdf') {
-                try {
-                    // Use the original path for reading the file
-                    console.log(`Attempting to read PDF: ${uploadedFile.path}`);
-                    const dataBuffer = fs.readFileSync(uploadedFile.path);
-                    console.log(`Read PDF buffer, attempting to parse...`);
-                    const pdfData = await pdf(dataBuffer);
-                    console.log(`Parsed PDF successfully.`);
-                    const maxChars = 5000; // Limit extracted text length
-                    const extractedText = pdfData.text.substring(0, maxChars);
-                    fileTextContent = `\n\n--- Start of PDF Content (${uploadedFile.originalname}) ---\n${extractedText}${pdfData.text.length > maxChars ? '\n[...content truncated]' : ''}\n--- End of PDF Content ---`;
-                } catch (pdfError) {
-                    console.error("Error processing PDF:", pdfError);
-                    fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing PDF content]`;
+        // --- Prepare Content for AI (Text + Optional Image) ---
+        let finalUserMessageContentForApi; // This will hold either string or multimodal array
+        const userTextContent = content || ''; // User's text input
+
+        // Check if a file was uploaded and if the selected model supports vision
+        const isVisionModel = modelSupportsVision(modelIdentifierForApi); // Check vision support for the *base* model
+        const isImageFile = uploadedFile && uploadedFile.mimetype.startsWith('image/');
+
+        if (isImageFile && isVisionModel) {
+            console.log(`Image uploaded (${uploadedFile.originalname}) and model ${modelIdentifierForApi} supports vision.`);
+            try {
+                // Construct the full path to the uploaded file
+                const fullFilePath = path.join(__dirname, '..', userMessageData.fileInfo.path);
+                console.log(`Reading image file from: ${fullFilePath}`);
+                const imageBuffer = await fs.promises.readFile(fullFilePath);
+                const base64Image = imageBuffer.toString('base64');
+                const mimeType = uploadedFile.mimetype;
+
+                const providerForVision = findProviderForModel(modelIdentifierForApi); // Find provider for the base model
+
+                if (providerForVision === 'OpenAI' || providerForVision === 'Perplexity') {
+                    finalUserMessageContentForApi = [
+                        { type: "text", text: userTextContent || "Analyze this image." }, // Ensure text part exists
+                        { type: "image_url", image_url: `data:${mimeType};base64,${base64Image}` }
+                    ];
+                    console.log(`Formatted for OpenAI/Perplexity vision.`);
+                } else if (providerForVision === 'Anthropic') {
+                    finalUserMessageContentForApi = [
+                        { type: "image", source: { type: "base64", media_type: mimeType, data: base64Image } },
+                        { type: "text", text: userTextContent || "Analyze this image." } // Ensure text part exists
+                    ];
+                    console.log(`Formatted for Anthropic vision.`);
+                } else if (providerForVision === 'Gemini') {
+                    // Gemini needs raw base64, no prefix
+                    finalUserMessageContentForApi = [
+                         // Text part first for Gemini based on examples? (Verify this)
+                        { text: userTextContent || "Analyze this image." }, // Ensure text part exists
+                        { inlineData: { mimeType: mimeType, data: base64Image } }
+                    ];
+                     console.log(`Formatted for Gemini vision (using inlineData).`);
+                } else {
+                    // Fallback if provider/model combo isn't handled (shouldn't happen if flagged correctly)
+                    console.warn(`Vision model ${modelIdentifierForApi} from provider ${providerForVision} detected, but no specific formatting logic found. Sending text only.`);
+                    finalUserMessageContentForApi = userTextContent;
                 }
+
+            } catch (imageError) {
+                console.error("Error reading or encoding image file:", imageError);
+                // Fallback to sending text only if image processing fails
+                finalUserMessageContentForApi = userTextContent + `\n\n[Error processing uploaded image: ${uploadedFile.originalname}]`;
             }
-            // Add file info/content AFTER any user text content
-            combinedContentForAI = combinedContentForAI ? `${combinedContentForAI}\n${fileTextContent}` : fileTextContent;
+        } else {
+             // If no image, not an image file, or model doesn't support vision, prepare text-only content
+             let combinedTextContent = userTextContent;
+             if (uploadedFile && !isImageFile) { // Handle non-image files (like PDF text extraction)
+                 let fileTextContent = `[File Uploaded: ${uploadedFile.originalname} (${(uploadedFile.size / 1024).toFixed(1)} KB)]`;
+                 if (uploadedFile.mimetype === 'application/pdf') {
+                     try {
+                         const fullFilePath = path.join(__dirname, '..', userMessageData.fileInfo.path);
+                         console.log(`Attempting to read PDF: ${fullFilePath}`);
+                         const dataBuffer = fs.readFileSync(fullFilePath); // Use sync read here for simplicity or refactor outer scope to async
+                         console.log(`Read PDF buffer, attempting to parse...`);
+                         const pdfData = await pdf(dataBuffer); // pdf-parse is async
+                         console.log(`Parsed PDF successfully.`);
+                         const maxChars = 5000; // Limit extracted text length
+                         const extractedText = pdfData.text.substring(0, maxChars);
+                         fileTextContent = `\n\n--- Start of PDF Content (${uploadedFile.originalname}) ---\n${extractedText}${pdfData.text.length > maxChars ? '\n[...content truncated]' : ''}\n--- End of PDF Content ---`;
+                     } catch (pdfError) {
+                         console.error("Error processing PDF:", pdfError);
+                         fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing PDF content]`;
+                     }
+                 }
+                 combinedTextContent = combinedTextContent ? `${combinedTextContent}\n${fileTextContent}` : fileTextContent;
+             } else if (uploadedFile && isImageFile && !isVisionModel) {
+                 // If it's an image but model doesn't support vision, just add filename info
+                 combinedTextContent += `\n\n[Image Uploaded: ${uploadedFile.originalname}]`;
+                 console.log(`Image uploaded but model ${modelIdentifierForApi} does not support vision. Sending text only.`);
+             }
+             finalUserMessageContentForApi = combinedTextContent;
         }
+        // --- End Prepare Content for AI ---
+
 
         // --- Auto-generate Title (if needed) ---
+        // Use only the text part for title generation if multimodal
+        const textForTitleGen = typeof finalUserMessageContentForApi === 'string'
+            ? finalUserMessageContentForApi
+            : finalUserMessageContentForApi.find(part => part.type === 'text')?.text || '';
+
         let generatedTitle = null;
         let titleUpdated = false;
         if (session.title === 'New Chat') {
@@ -605,13 +678,12 @@ exports.addMessageToSession = async (req, res, next) => {
                 const titleModel = DEFAULT_MODELS[titleProvider]; // Use default model for title
                 try {
                     // Refined Prompt 2: Explicitly request ONLY the title in English or Vietnamese
-                    const titlePrompt = `Analyze the language of the following message snippet. If the language is Vietnamese, respond ONLY with a concise title (3-5 words max) in Vietnamese. If the language is English or any other language, respond ONLY with a concise title (3-5 words max) in English. Your response must contain ONLY the title text and nothing else. Snippet: \"${combinedContentForAI.substring(0, 150)}...\"`;
+                    const titlePrompt = `Analyze the language of the following message snippet. If the language is Vietnamese, respond ONLY with a concise title (3-5 words max) in Vietnamese. If the language is English or any other language, respond ONLY with a concise title (3-5 words max) in English. Your response must contain ONLY the title text and nothing else. Snippet: \"${textForTitleGen.substring(0, 150)}...\"`;
                     const titleApiKey = successfulApiKeyEntryForTitle.keyValue;
                     // Use non-streaming callApi for title generation
                     // Pass only the titlePrompt as the history/content for this specific call
-                    const titleHistory = [{ _id: 'temp-title-user', sender: 'user', content: titlePrompt, timestamp: new Date().toISOString() }];
-                    // Pass titlePrompt as the last message content argument
-                    // callApi now returns an object { content, citations }
+                    const titleHistory = [{ _id: 'temp-title-user', session: sessionId, sender: 'user', content: titlePrompt, timestamp: new Date().toISOString() }];
+                    // Pass titlePrompt as the finalUserMessageContent argument for this specific call
                     const titleResult = await callApi(titleProvider, titleApiKey, titleModel, titleHistory, titlePrompt);
                     generatedTitle = titleResult.content; // Extract content for title
 
@@ -720,10 +792,10 @@ exports.addMessageToSession = async (req, res, next) => {
                      console.log("Streaming: No specific model requested or derived. Will proceed to fallback.");
                 }
 
-                // 2. Attempt API call (or fallback if needed) - Pass systemPromptForApi
+                // 2. Attempt API call (or fallback if needed) - Pass systemPromptForApi and finalUserMessageContentForApi
                 if (providerToTry && modelToTry && apiKeyToUse) {
-                    // Pass systemPromptForApi to callApiStream
-                    const result = await callApiStream(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI, sendSse, systemPromptForApi); 
+                    // Pass systemPromptForApi and the prepared finalUserMessageContentForApi
+                    const result = await callApiStream(providerToTry, apiKeyToUse, modelToTry, history, finalUserMessageContentForApi, sendSse, systemPromptForApi);
                     if (!result.errorOccurred) {
                         providerUsed = providerToTry;
                         actualModelUsed = modelToTry; // Store the base model used for the API call
@@ -737,7 +809,7 @@ exports.addMessageToSession = async (req, res, next) => {
                         const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
                         if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
                              // Try default model for the *same provider*, still pass original system prompt if any
-                            const defaultResult = await callApiStream(providerToTry, apiKeyToUse, defaultModelForProvider, history, combinedContentForAI, sendSse, systemPromptForApi);
+                            const defaultResult = await callApiStream(providerToTry, apiKeyToUse, defaultModelForProvider, history, finalUserMessageContentForApi, sendSse, systemPromptForApi);
                             if (!defaultResult.errorOccurred) {
                                 providerUsed = providerToTry;
                                 actualModelUsed = defaultModelForProvider; // Store the default base model used
@@ -765,7 +837,11 @@ exports.addMessageToSession = async (req, res, next) => {
                             const fallbackModel = DEFAULT_MODELS[fallbackProvider];
                             if (!fallbackModel) continue;
                             // Fallback uses default models, so no custom system prompt is passed
-                            const fallbackResult = await callApiStream(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, combinedContentForAI, sendSse, null); 
+                            // Also, fallback likely won't handle multimodal, so pass text only
+                            const fallbackTextContent = typeof finalUserMessageContentForApi === 'string'
+                                ? finalUserMessageContentForApi
+                                : finalUserMessageContentForApi.find(part => part.type === 'text')?.text || '';
+                            const fallbackResult = await callApiStream(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, fallbackTextContent, sendSse, null);
                             if (!fallbackResult.errorOccurred) {
                                 providerUsed = fallbackProvider;
                                 actualModelUsed = fallbackModel; // Store the fallback base model used
@@ -864,12 +940,12 @@ exports.addMessageToSession = async (req, res, next) => {
             }
 
 
-            // 2. Attempt API call (or fallback if needed) - Pass systemPromptForApi
+            // 2. Attempt API call (or fallback if needed) - Pass systemPromptForApi and finalUserMessageContentForApi
             if (providerToTry && modelToTry && apiKeyToUse) {
-                // Pass systemPromptForApi to callApi
-                apiResult = await callApi(providerToTry, apiKeyToUse, modelToTry, history, combinedContentForAI, systemPromptForApi); 
+                // Pass systemPromptForApi and the prepared finalUserMessageContentForApi
+                apiResult = await callApi(providerToTry, apiKeyToUse, modelToTry, history, finalUserMessageContentForApi, systemPromptForApi);
                 if (apiResult && apiResult.content !== null) {
-                    providerUsed = providerToTry; 
+                    providerUsed = providerToTry;
                     actualModelUsed = modelToTry; // Store the base model used for the API call
                     // If successful with custom model's base, keep finalModelNameToSave as the custom ID
                     console.log(`Non-Streaming: Success ${providerUsed}/${actualModelUsed} (Base Model)`);
@@ -879,9 +955,9 @@ exports.addMessageToSession = async (req, res, next) => {
                     const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
                     if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
                         // Try default model for the *same provider*, still pass original system prompt if any
-                        apiResult = await callApi(providerToTry, apiKeyToUse, defaultModelForProvider, history, combinedContentForAI, systemPromptForApi);
+                        apiResult = await callApi(providerToTry, apiKeyToUse, defaultModelForProvider, history, finalUserMessageContentForApi, systemPromptForApi);
                         if (apiResult && apiResult.content !== null) {
-                            providerUsed = providerToTry; 
+                            providerUsed = providerToTry;
                             actualModelUsed = defaultModelForProvider; // Store the default base model used
                             finalModelNameToSave = actualModelUsed; // Save the default base model name
                             console.log(`Non-Streaming: Success ${providerUsed}/DEFAULT ${actualModelUsed}`);
@@ -904,7 +980,12 @@ exports.addMessageToSession = async (req, res, next) => {
                         console.log(`Non-Streaming Fallback: Trying ${fallbackProvider} (Priority: ${apiKeyEntry.priority})`);
                         const fallbackModel = DEFAULT_MODELS[fallbackProvider];
                         if (!fallbackModel) continue;
-                        apiResult = await callApi(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, combinedContentForAI);
+                        // Fallback uses default models, so no custom system prompt is passed
+                        // Also, fallback likely won't handle multimodal, so pass text only
+                        const fallbackTextContent = typeof finalUserMessageContentForApi === 'string'
+                            ? finalUserMessageContentForApi
+                            : finalUserMessageContentForApi.find(part => part.type === 'text')?.text || '';
+                        apiResult = await callApi(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, fallbackTextContent);
                         if (apiResult && apiResult.content !== null) {
                             providerUsed = fallbackProvider; actualModelUsed = fallbackModel;
                             console.log(`Non-Streaming Fallback successful: ${providerUsed}/${actualModelUsed}.`);

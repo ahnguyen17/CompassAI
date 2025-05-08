@@ -9,10 +9,12 @@ The project follows a client-server architecture. The backend is built using Nod
 3. MongoDB is likely used for data storage, given the presence of Mongoose models in the backend.
 4. `multer` is used for handling `multipart/form-data` for file uploads in the backend.
 5. Static file serving (`express.static`) is used in the backend (`server.js`) to make uploaded files publicly accessible via `/uploads/<filename>`.
+6. AI Vision Input: Implemented support for sending images (via base64 encoding) to vision-capable models (OpenAI, Anthropic, Gemini) by adapting API request structures based on the provider.
 
 ## Design Patterns
 1. MVC (Model-View-Controller) pattern in the backend.
 2. Component-based architecture in the frontend.
+3. Provider-specific formatting logic within the `chatMessages` controller to handle multimodal API differences.
 
 ## Data Models (Mongoose)
 - `User`: Stores user authentication and profile data.
@@ -38,8 +40,9 @@ The project follows a client-server architecture. The backend is built using Nod
 - Frontend components make API calls to the backend to perform various operations.
 - `CustomProvider` has a one-to-many relationship with `CustomModel`.
 - `CustomModel` references a `CustomProvider`.
-- The `chatMessages` controller checks if a requested model ID is a `CustomModel` ObjectId. If so, it uses the linked `baseModelIdentifier` and `systemPrompt` for the API call.
+- The `chatMessages` controller checks if a requested model ID is a `CustomModel` ObjectId. If so, it uses the linked `baseModelIdentifier` and `systemPrompt` for the API call. It also checks if the `baseModelIdentifier` supports vision and formats the API call accordingly if an image is present.
 - `ChatPage.tsx` on the frontend handles file selection, image pasting, preview generation, and sending file data along with messages. It also renders uploaded images and file links.
+- `ModelSelectorDropdown.tsx` displays models and indicates vision support based on data from the `providers` controller.
 
 ## Key API Endpoints (`/api/v1/...`)
 - `/auth`: User registration, login, password updates.
@@ -48,17 +51,17 @@ The project follows a client-server architecture. The backend is built using Nod
 - `/chatsessions`: CRUD for chat sessions. Sorted by `lastAccessedAt` descending.
 - `/chatsessions/:sessionId/messages`:
     - `GET`: Retrieve messages for a session. Updates session `lastAccessedAt`.
-    - `POST`: Add message (text and/or file) to session, triggers AI response. Updates session `lastAccessedAt`. Handles `multipart/form-data` for file uploads.
-- `/providers/models`: Get available models (filtered base models + all custom models) for chat page dropdown.
-- `/providers/all-models`: Get all hardcoded base models for admin settings dropdowns.
+    - `POST`: Add message (text and/or file) to session, triggers AI response. Updates session `lastAccessedAt`. Handles `multipart/form-data` for file uploads. Now supports sending image data to vision-capable AI models.
+- `/providers/models`: Get available models (filtered base models + all custom models) for chat page dropdown. Now includes `supportsVision` flag for base models.
+- `/providers/all-models`: Get all hardcoded base models for admin settings dropdowns. Now returns array of objects including `supportsVision` flag.
 - `/referralcodes`: CRUD for referral codes (Admin).
 - `/disabledmodels`: CRUD for disabling/enabling base models (Admin).
 - `/stats`: Usage statistics retrieval (Admin).
 - `/settings`: Get/Update global application settings (Admin).
 - `/customproviders`: CRUD for custom providers (Admin).
 - `/custommodels`: CRUD for custom models (Admin).
-- `/uploads/<filename>`: (NEW - Static) Publicly accessible URL for uploaded files.
+- `/uploads/<filename>`: (Static) Publicly accessible URL for uploaded files.
 
 ## Development Workflow Patterns
 1.  **Planning:** Utilize the `sequentialthinking` MCP to break down complex tasks or new features into detailed, logical steps before implementation.
-2.  **Research & Integration:** Before integrating new third-party libraries/APIs or making significant structural changes, use the `context7` MCP (`resolve-library-id` then `get-library-docs`) to consult the latest documentation. This ensures adherence to current best practices and avoids deprecated features.
+2.  **Research & Integration:** Before integrating new third-party libraries/APIs or making significant structural changes, use the `context7` MCP (`resolve-library-id` then `get-library-docs`) or `perplexity-mcp` (`get_documentation`) to consult the latest documentation. This ensures adherence to current best practices and avoids deprecated features.

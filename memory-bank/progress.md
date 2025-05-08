@@ -34,18 +34,26 @@
     - Frontend (`ChatPage.tsx`) allows pasting images, selecting files, and shows previews before sending.
     - Uploaded images are displayed in chat messages; other file types are shown as downloadable links.
     - CSS (`ChatPage.module.css`) updated for preview elements.
+- **AI Vision Input (Multimodal):**
+    - Backend (`providers.js`) updated to flag vision-capable models (OpenAI, Anthropic, Gemini).
+    - Backend (`chatMessages.js`) updated to read uploaded images, base64 encode them, and format API requests with image data for supported providers/models.
+    - Frontend (`ModelSelectorDropdown.tsx`) updated to display an icon (`👁️`) next to vision-capable models.
 
 ## What's Left to Build
-- Further testing and refinement of existing features, especially file/image uploads.
-- Address TypeScript errors in `ChatPage.tsx` if they cause runtime issues or for better code quality.
+- Further testing and refinement of existing features, especially file/image uploads and AI vision input across different providers/models.
+- Address TypeScript errors in `ChatPage.tsx` and `ModelSelectorDropdown.tsx` if they cause runtime issues or for better code quality.
+- Confirm which specific Perplexity models support vision via API and update backend/frontend accordingly.
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent updates include the implementation of file and image previews in chat, along with the ability to paste images. This involved backend changes for static file serving and frontend modifications for UI, file handling, and display. Previous updates include fixing custom model name display in stats, refining title generation, and various UI/UX improvements to the navbar and chat page.
+The project is actively being developed. The latest update adds support for AI models to understand image inputs (multimodal vision). This involved significant backend changes to handle image data and format API requests for OpenAI, Anthropic, and Gemini, along with frontend updates to indicate which models have this capability. Previous updates added user-facing file/image previews, paste support, and various UI/UX improvements.
 
 ## Known Issues
-- Numerous TypeScript errors in `ChatPage.tsx` related to missing type declarations and implicit 'any' types. These should be reviewed.
+- Numerous TypeScript errors in `ChatPage.tsx` and `ModelSelectorDropdown.tsx` related to missing type declarations and implicit 'any' types. These should be reviewed.
+- Vision support for specific Perplexity models via API is unconfirmed.
 
 ## Evolution of Project Decisions
-- As the project progresses, decisions regarding the tech stack and architecture may evolve based on requirements and challenges encountered.
+- Implemented multimodal support by adding provider-specific logic to the backend message controller.
+- Used base64 encoding as the primary method for sending image data to AI APIs.
+- Updated the frontend model selector to clearly indicate vision capabilities.
 - The `ChatMessage` model already had a suitable `fileInfo` structure, simplifying backend changes for file metadata storage.

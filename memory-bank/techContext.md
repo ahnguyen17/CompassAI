@@ -19,11 +19,13 @@
 2. npm is used for managing dependencies in both backend and frontend.
 3. The project uses a .env file for environment variables (example provided).
 4. Backend serves uploaded files statically from the `backend/uploads` directory.
+5. Backend configuration (`providers.js`) defines model capabilities, including vision support.
 
 ## Technical Constraints
 1. The backend and frontend must be able to communicate via RESTful APIs.
 2. The application should be scalable and performant.
 3. Security considerations, such as proper authentication and authorization, are crucial.
-4. Multimodal input (images) requires provider-specific API formatting (base64 encoding, content structure).
+4. Multimodal input (images) requires provider-specific API formatting (base64 encoding, content structure). Logic is centralized in `chatMessages.js`.
 5. Base64 image encoding/decoding adds processing overhead.
 6. Vision model API calls might have different pricing structures and rate limits compared to text-only models.
+7. Vision support for specific models (especially newer ones like GPT-4.1 series or Perplexity models) needs verification against official API documentation.

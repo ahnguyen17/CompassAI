@@ -17,9 +17,9 @@ const AVAILABLE_MODELS = {
         { name: "gpt-4-turbo", supportsVision: true }, // Flagged vision
         { name: "gpt-4", supportsVision: false }, // Older GPT-4 likely doesn't have vision API access easily
         { name: "gpt-3.5-turbo", supportsVision: false },
-        { name: "gpt-4.1", supportsVision: false }, // Added - Assuming no vision
-        { name: "gpt-4.1-mini", supportsVision: false }, // Added - Assuming no vision
-        { name: "gpt-4.1-nano", supportsVision: false }, // Added - Assuming no vision
+        { name: "gpt-4.1", supportsVision: true }, // Updated - Vision confirmed
+        { name: "gpt-4.1-mini", supportsVision: true }, // Updated - Vision confirmed
+        { name: "gpt-4.1-nano", supportsVision: true }, // Updated - Vision confirmed
         { name: "o3-mini", supportsVision: false } // Added per user request - Assuming no vision
     ],
     'Gemini': [

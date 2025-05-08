@@ -9,12 +9,13 @@ The project follows a client-server architecture. The backend is built using Nod
 3. MongoDB is likely used for data storage, given the presence of Mongoose models in the backend.
 4. `multer` is used for handling `multipart/form-data` for file uploads in the backend.
 5. Static file serving (`express.static`) is used in the backend (`server.js`) to make uploaded files publicly accessible via `/uploads/<filename>`.
-6. AI Vision Input: Implemented support for sending images (via base64 encoding) to vision-capable models (OpenAI, Anthropic, Gemini) by adapting API request structures based on the provider.
+6. AI Vision Input: Implemented support for sending images (via base64 encoding) to vision-capable models (OpenAI GPT-4o/Turbo/4.1 series, Anthropic Claude 3 series, Gemini 1.5 series) by adapting API request structures based on the provider.
 
 ## Design Patterns
 1. MVC (Model-View-Controller) pattern in the backend.
 2. Component-based architecture in the frontend.
 3. Provider-specific formatting logic within the `chatMessages` controller to handle multimodal API differences.
+4. Configuration-driven feature enablement (`supportsVision` flag in `providers.js`).
 
 ## Data Models (Mongoose)
 - `User`: Stores user authentication and profile data.
@@ -40,7 +41,7 @@ The project follows a client-server architecture. The backend is built using Nod
 - Frontend components make API calls to the backend to perform various operations.
 - `CustomProvider` has a one-to-many relationship with `CustomModel`.
 - `CustomModel` references a `CustomProvider`.
-- The `chatMessages` controller checks if a requested model ID is a `CustomModel` ObjectId. If so, it uses the linked `baseModelIdentifier` and `systemPrompt` for the API call. It also checks if the `baseModelIdentifier` supports vision and formats the API call accordingly if an image is present.
+- The `chatMessages` controller checks if a requested model ID is a `CustomModel` ObjectId. If so, it uses the linked `baseModelIdentifier` and `systemPrompt` for the API call. It also checks if the `baseModelIdentifier` supports vision (using data from `providers.js`) and formats the API call accordingly if an image is present.
 - `ChatPage.tsx` on the frontend handles file selection, image pasting, preview generation, and sending file data along with messages. It also renders uploaded images and file links.
 - `ModelSelectorDropdown.tsx` displays models and indicates vision support based on data from the `providers` controller.
 

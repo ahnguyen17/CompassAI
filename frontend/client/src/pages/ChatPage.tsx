@@ -55,7 +55,7 @@ interface ChatMessage {
     citations?: any[]; // Add optional citations array
     fileInfo?: { filename: string; originalname: string; mimetype: string; size: number; path: string; }
  }
- 
+
  // Define props interface
  interface ChatPageProps {
    isSidebarVisible: boolean;
@@ -125,14 +125,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
               // Ensure the data structure matches CombinedAvailableModels
               const data = response.data.data;
               // Perform more robust checking
-              if (data && 
-                  typeof data.baseModels === 'object' && 
+              if (data &&
+                  typeof data.baseModels === 'object' &&
                   data.baseModels !== null && // Check not null
                   !Array.isArray(data.baseModels) && // Check not an array
-                  Array.isArray(data.customModels)) 
+                  Array.isArray(data.customModels))
               {
                    // Validate customModels structure minimally
-                   const isValidCustomModels = data.customModels.every((item: any) => 
+                   const isValidCustomModels = data.customModels.every((item: any) =>
                        typeof item === 'object' && item !== null && '_id' in item && 'name' in item && 'providerName' in item && 'baseModelIdentifier' in item
                    );
 
@@ -160,27 +160,27 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
       }
   };
   // Removed local handleDeleteSession - will use global store's deleteSession
-  const handleToggleShare = async () => { 
-      if (!currentSession) return; 
-      setShareLoading(true); 
-      setError(''); 
-      const newShareStatus = !currentSession.isShared; 
-      try { 
-          const response = await apiClient.put(`/chatsessions/${currentSession._id}`, { isShared: newShareStatus }); 
-          if (response.data?.success) { 
+  const handleToggleShare = async () => {
+      if (!currentSession) return;
+      setShareLoading(true);
+      setError('');
+      const newShareStatus = !currentSession.isShared;
+      try {
+          const response = await apiClient.put(`/chatsessions/${currentSession._id}`, { isShared: newShareStatus });
+          if (response.data?.success) {
               const updatedSession: ChatSession = response.data.data; // Ensure type
-              setCurrentSession(updatedSession); 
+              setCurrentSession(updatedSession);
               // Use the setter correctly: provide the new array
-              setSessions(sessions.map((s: ChatSession) => s._id === updatedSession._id ? updatedSession : s)); 
-          } else { 
-              setError('Failed to update sharing status.'); 
-          } 
-      } catch (err: any) { 
-          setError(err.response?.data?.error || 'Error updating sharing status.'); 
-          if (err.response?.status === 401) navigate('/login'); 
-      } finally { 
-          setShareLoading(false); 
-      } 
+              setSessions(sessions.map((s: ChatSession) => s._id === updatedSession._id ? updatedSession : s));
+          } else {
+              setError('Failed to update sharing status.');
+          }
+      } catch (err: any) {
+          setError(err.response?.data?.error || 'Error updating sharing status.');
+          if (err.response?.status === 401) navigate('/login');
+      } finally {
+          setShareLoading(false);
+      }
   };
   const fetchMessages = async (sessionId: string) => {
       if (!sessionId) return;
@@ -220,13 +220,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
    };
    // Removed local handleNewChat function - Navbar icon uses global store action now
 
-   // Handle keydown for textarea (Shift+Enter to send, Enter for newline)
+   // Handle keydown for textarea (Enter to send, Shift+Enter for newline)
    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-       if (e.key === 'Enter' && e.shiftKey) { // Check for Shift+Enter first
-           e.preventDefault(); // Prevent the default newline from Shift+Enter
+       if (e.key === 'Enter' && !e.shiftKey) { // Check for Enter without Shift
+           e.preventDefault(); // Prevent the default newline from Enter
            handleSendMessage(); // Send the message
        }
-       // If only Enter is pressed (without Shift), do nothing here,
+       // If Shift+Enter is pressed, do nothing here,
        // allowing the default newline behavior of the textarea.
    };
 
@@ -338,16 +338,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                           // Deep clone the citations to ensure we're not sharing references
                                           const citationsCopy = JSON.parse(JSON.stringify(jsonData.citations));
                                           console.log('Citations copy:', citationsCopy);
-                                          
+
                                           const updatedMessages = prev.map(msg =>
                                               msg._id === optimisticAiMessageId
-                                                  ? { 
-                                                      ...msg, 
-                                                      citations: citationsCopy 
+                                                  ? {
+                                                      ...msg,
+                                                      citations: citationsCopy
                                                     }
                                                   : msg
                                           );
-                                          
+
                                           // Log the updated message to verify citations were added
                                           const updatedMsg = updatedMessages.find(m => m._id === optimisticAiMessageId);
                                           console.log('Updated message with citations:', {
@@ -356,9 +356,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                               citationsCount: updatedMsg?.citations?.length || 0,
                                               citations: updatedMsg?.citations
                                           });
-                                          
+
                                           // Debug: Log all messages to see if citations are being stored
-                                          console.log('All messages after citation update:', 
+                                          console.log('All messages after citation update:',
                                               updatedMessages.map(m => ({
                                                   id: m._id,
                                                   sender: m.sender,
@@ -366,7 +366,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                                   citationsCount: m.citations?.length || 0
                                               }))
                                           );
-                                          
+
                                           return updatedMessages;
                                       });
                                   } else {
@@ -395,22 +395,22 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                       // Find the current message to preserve its citations
                                       const currentMsg = prev.find(m => m._id === optimisticAiMessageId);
                                       const currentCitations = currentMsg?.citations;
-                                      
+
                                       console.log('Updating message at stream end:', {
                                           messageId: optimisticAiMessageId,
                                           hasCitations: !!currentCitations,
                                           citationsCount: currentCitations?.length || 0
                                       });
-                                      
+
                                       return prev.map(msg =>
                                           msg._id === optimisticAiMessageId
-                                              ? { 
-                                                  ...msg, 
-                                                  content: finalContent, 
+                                              ? {
+                                                  ...msg,
+                                                  content: finalContent,
                                                   reasoningContent: finalReasoning,
                                                   // Explicitly preserve citations
                                                   citations: currentCitations
-                                                } 
+                                                }
                                               : msg
                                       );
                                   });
@@ -435,22 +435,22 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                   // Find the current message to preserve its citations
                   const currentMsg = prev.find(m => m._id === optimisticAiMessageId);
                   const currentCitations = currentMsg?.citations;
-                  
+
                   console.log('Updating message at stream end (no done event):', {
                       messageId: optimisticAiMessageId,
                       hasCitations: !!currentCitations,
                       citationsCount: currentCitations?.length || 0
                   });
-                  
+
                   return prev.map(msg =>
                       msg._id === optimisticAiMessageId
-                          ? { 
-                              ...msg, 
-                              content: finalContent, 
+                          ? {
+                              ...msg,
+                              content: finalContent,
                               reasoningContent: finalReasoningOnEnd,
                               // Explicitly preserve citations
                               citations: currentCitations
-                            } 
+                            }
                           : msg
                   );
               });
@@ -646,9 +646,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
   //     setIsSidebarVisible(true);
   //   }
    // }, [currentSession, isSidebarVisible]); // Keep comment or remove if no longer relevant
- 
+
    // Removed local toggleSidebarVisibility function
- 
+
    // --- Render ---
   return (
     <div className={styles.chatPageContainer} style={{ backgroundColor: isDarkMode ? '#1a1a1a' : '#f8f9fa' }}> {/* Apply container background */}
@@ -690,7 +690,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
        <div className={styles.mainChatArea}>
           {/* Removed floating hamburger button */}
           {/* Hamburger button removed from Navbar, will be added below - This comment seems misplaced now */}
- 
+
           {currentSession ? (
            <>
              {/* Header */}
@@ -841,13 +841,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                     isStreaming: streamingMessageId === msg._id,
                                     citations: msg.citations
                                 });
-                                
+
                                 // Check if citations exist and are not empty
                                 if (msg.citations && msg.citations.length > 0) {
                                     console.log(`Rendering citations for message ${msg._id}`);
                                     return (
-                                        <div style={{ 
-                                            marginTop: '15px', 
+                                        <div style={{
+                                            marginTop: '15px',
                                             borderTop: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
                                             paddingTop: '10px'
                                         }}>

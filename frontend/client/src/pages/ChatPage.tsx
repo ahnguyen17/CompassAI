@@ -313,6 +313,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
           content: userMessageContent + (fileToSend ? `\n\n[Uploading: ${fileToSend.name}]` : ''),
           timestamp: new Date().toISOString()
       };
+      // Store the temp ID to find and replace later
+      const optimisticUserMessageId = optimisticUserMessage._id;
       setMessages(prev => [...prev, optimisticUserMessage]); // Add user message optimistically
 
       // --- Conditional Logic: Stream if showReasoning is true ---
@@ -477,6 +479,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                       return newState;
                                   });
                                   return;
+                              } else if (jsonData.type === 'user_message_saved') { // Handle the saved user message
+                                  const savedUserMsg = jsonData.message as ChatMessage;
+                                  console.log("Received saved user message:", savedUserMsg);
+                                  // Replace the optimistic message with the confirmed one from backend
+                                  setMessages(prev => prev.map(msg =>
+                                      msg._id === optimisticUserMessageId ? savedUserMsg : msg
+                                  ));
                               }
                           } catch (e) { console.error('Failed to parse SSE data:', e, 'Line:', line); }
                       }
@@ -555,9 +564,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
               });
 
               if (response.data?.success) {
-                  const aiMessage = response.data.data; // Expecting the AI message directly
-                  // Replace AI placeholder with the actual message
-                  setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? aiMessage : msg));
+                  const aiMessage = response.data.data; // AI response
+                  const savedUserMsg = response.data.userMessage; // Saved user message
+
+                  // Replace optimistic user message and AI placeholder
+                  setMessages(prev => prev.map(msg => {
+                      if (msg._id === optimisticUserMessageId) return savedUserMsg; // Replace user msg
+                      if (msg._id === optimisticAiMessageId) return aiMessage; // Replace AI placeholder
+                      return msg;
+                  }));
+
                   if (aiMessage.modelUsed) setSelectedModel(aiMessage.modelUsed);
                   if (response.data.updatedSessionTitle && currentSession) {
                       const newTitle = response.data.updatedSessionTitle;

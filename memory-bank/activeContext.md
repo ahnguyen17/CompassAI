@@ -1,12 +1,12 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Fixed incorrect image URL construction on the frontend, preventing uploaded images from displaying.
+Implemented immediate display of uploaded images in chat messages without requiring a page refresh.
 
 ## Recent Changes
-- **Fix Frontend Image URL Construction:**
-    - Modified `frontend/client/src/pages/ChatPage.tsx` to correctly construct the `src` attribute for displaying uploaded images.
-    - Implemented a more robust method using the `URL` object's `origin` property to get the base server address from `VITE_API_BASE_URL` (removing any `/api/v1` path) before appending the relative `/uploads/...` path. This resolves the issue where images were not displaying.
+- **Implement Immediate Image Display:**
+    - **Backend (`chatMessages.js`):** Modified `addMessageToSession` to send the complete, saved user message object (including `fileInfo`) back to the frontend immediately after creation. This is done via an early SSE event (`user_message_saved`) in streaming mode, or included in the main JSON response (`userMessage` key) in non-streaming mode.
+    - **Frontend (`ChatPage.tsx`):** Updated `handleSendMessage` to handle the new backend response. It now listens for the `user_message_saved` SSE event (or checks the `userMessage` key in the non-streaming response) and uses the received complete message object to replace the initial optimistic user message in the `messages` state. This triggers a re-render showing the actual uploaded image.
 - **Fix OpenAI Vision Input Formatting:** (Previous Task)
     - Corrected the `image_url` structure for OpenAI/Perplexity API calls in `backend/controllers/chatMessages.js`.
 - **Fix Vision Input ReferenceError:** (Previous Task)
@@ -17,11 +17,12 @@ Fixed incorrect image URL construction on the frontend, preventing uploaded imag
     - Implemented backend logic and frontend UI for multimodal input (text + image) for OpenAI, Anthropic, and Gemini models.
 - **File/Image Previews & Paste Functionality:** (Previous Task)
     - Implemented user-facing file/image previews, paste support, and rendering in chat. Configured backend static file serving.
+    - Fixed image URL construction on frontend.
 
 ## Next Steps
 - Update `progress.md`.
-- Present the completed task (bug fix) to the user.
+- Present the completed task to the user.
 
 ## Active Decisions and Considerations
-- Identified the root cause of broken images as incorrect URL construction on the frontend due to including `/api/v1` from the base API URL.
-- Refactored URL generation using `URL.origin` for robustness.
+- Modified backend response to include the saved user message object.
+- Updated frontend state management to replace optimistic messages with confirmed messages from the backend, enabling immediate image display.

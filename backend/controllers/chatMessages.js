@@ -775,6 +775,12 @@ exports.addMessageToSession = async (req, res, next) => {
                 }
             };
 
+            // --- Send Saved User Message via SSE ---
+            // Send the confirmed user message back immediately so frontend can update UI
+            sendSse({ type: 'user_message_saved', message: savedUserMessage });
+            console.log("Sent user_message_saved SSE event.");
+            // --- End Send Saved User Message ---
+
             try {
                 // Use modelIdentifierForApi (base model) for finding provider and making calls
                 console.log(`Attempting API call with base model: ${modelIdentifierForApi || 'None (use default)'}`);
@@ -1042,10 +1048,11 @@ exports.addMessageToSession = async (req, res, next) => {
             console.log('Saved message has citations:', !!aiMessage.citations);
             console.log('Saved citations count:', aiMessage.citations?.length || 0);
 
-            // 6. Send back the single AI response
+            // 6. Send back the single AI response AND the saved user message
             res.status(201).json({
               success: true,
-              data: aiMessage,
+              userMessage: savedUserMessage, // Include the saved user message
+              data: aiMessage, // Keep AI response as 'data'
               ...(titleUpdated && { updatedSessionTitle: generatedTitle }) // Include title if updated
             });
         } // End of non-streaming block

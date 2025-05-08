@@ -626,7 +626,8 @@ exports.addMessageToSession = async (req, res, next) => {
                 if (providerForVision === 'OpenAI' || providerForVision === 'Perplexity') {
                     finalUserMessageContentForApi = [
                         { type: "text", text: userTextContent || "Analyze this image." }, // Ensure text part exists
-                        { type: "image_url", image_url: `data:${mimeType};base64,${base64Image}` }
+                        // Corrected: image_url should be an object with a 'url' key
+                        { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }
                     ];
                     console.log(`Formatted for OpenAI/Perplexity vision.`);
                 } else if (providerForVision === 'Anthropic') {

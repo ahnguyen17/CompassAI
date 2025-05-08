@@ -40,6 +40,7 @@
     - Frontend (`ModelSelectorDropdown.tsx`) updated to display an icon (`👁️`) next to vision-capable models.
     - **Fixed:** Resolved TypeScript build error (`TS2719`) in `ChatPage.tsx` by updating type definitions.
     - **Fixed:** Resolved backend ReferenceError in `chatMessages.js` by ensuring `modelIdentifierForApi` is initialized before use in vision checks.
+    - **Fixed:** Corrected OpenAI/Perplexity API request formatting for `image_url` to send an object `{ "url": "data:..." }` instead of a string, resolving 400 errors.
 
 ## What's Left to Build
 - Further testing and refinement of existing features, especially AI vision input across different providers/models.
@@ -48,7 +49,7 @@
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent work focused on implementing and refining AI vision input capabilities, including enabling support for the GPT-4.1 series and fixing a related backend runtime error. User-facing file/image previews and paste support are also functional.
+The project is actively being developed. Recent work focused on implementing and refining AI vision input capabilities, including enabling support for the GPT-4.1 series and fixing related backend runtime and API formatting errors. User-facing file/image previews and paste support are also functional.
 
 ## Known Issues
 - Numerous TypeScript errors (mostly implicit 'any' types and missing module declarations) remain in `ChatPage.tsx` and `ModelSelectorDropdown.tsx`. These should be reviewed.
@@ -60,4 +61,4 @@ The project is actively being developed. Recent work focused on implementing and
 - Used base64 encoding as the primary method for sending image data to AI APIs.
 - Updated the frontend model selector to clearly indicate vision capabilities.
 - The `ChatMessage` model already had a suitable `fileInfo` structure, simplifying backend changes for file metadata storage.
-- Corrected variable initialization order in `chatMessages.js` to prevent runtime errors when handling vision models.
+- Corrected variable initialization order and API payload formatting in `chatMessages.js` to prevent runtime errors when handling vision models.

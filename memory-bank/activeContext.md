@@ -1,16 +1,18 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Fixed a ReferenceError in the backend chat message controller related to AI vision input.
+Fixed an OpenAI API error related to incorrect image URL formatting for vision models.
 
 ## Recent Changes
-- **Fix Vision Input ReferenceError:**
-    - Adjusted code order in `backend/controllers/chatMessages.js` within the `addMessageToSession` function.
-    - Moved the block that determines `modelIdentifierForApi` (handling custom models) to execute *before* the block that prepares content for the AI and checks `modelSupportsVision(modelIdentifierForApi)`. This resolves the "Cannot access 'modelIdentifierForApi' before initialization" error.
+- **Fix OpenAI Vision Input Formatting:**
+    - Corrected the structure of the `image_url` field in the multimodal content array within `backend/controllers/chatMessages.js` when formatting requests for OpenAI/Perplexity.
+    - Ensured the `image_url` value is an object `{ "url": "data:..." }` instead of just the data URI string, resolving the "400 Invalid type... expected an object, but got a string" error.
+- **Fix Vision Input ReferenceError:** (Previous Task)
+    - Adjusted code order in `backend/controllers/chatMessages.js` to ensure `modelIdentifierForApi` is initialized before use.
 - **Enable Vision for GPT-4.1 Series:** (Previous Task)
-    - Verified vision support and updated `backend/controllers/providers.js` to set `supportsVision: true` for `gpt-4.1`, `gpt-4.1-mini`, and `gpt-4.1-nano`.
+    - Updated `backend/controllers/providers.js` to flag GPT-4.1 models as supporting vision.
 - **AI Vision Input Implementation:** (Previous Task)
-    - Implemented backend logic (`chatMessages.js`) and frontend UI (`ModelSelectorDropdown.tsx`) for multimodal input (text + image) for OpenAI, Anthropic, and Gemini models.
+    - Implemented backend logic and frontend UI for multimodal input (text + image) for OpenAI, Anthropic, and Gemini models.
 - **File/Image Previews & Paste Functionality:** (Previous Task)
     - Implemented user-facing file/image previews, paste support, and rendering in chat. Configured backend static file serving.
 
@@ -19,5 +21,5 @@ Fixed a ReferenceError in the backend chat message controller related to AI visi
 - Present the completed task (bug fix) to the user.
 
 ## Active Decisions and Considerations
-- Prioritized fixing the runtime error caused by incorrect variable initialization order.
-- Ensured the logic for determining the final model identifier runs before checking its vision capabilities.
+- Corrected the payload structure for OpenAI/Perplexity vision API calls to match documentation requirements.
+- Prioritized fixing the API 400 error.

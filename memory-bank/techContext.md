@@ -19,7 +19,7 @@
 2. npm is used for managing dependencies in both backend and frontend.
 3. The project uses a .env file for environment variables (example provided).
 4. Backend serves uploaded files statically from the `backend/uploads` directory.
-5. Backend configuration (`providers.js`) defines model capabilities, including vision support.
+5. Backend configuration (`providers.js`) defines base model capabilities, including vision support. This information is used to populate `supportsVision` flags for base models and a `baseModelSupportsVision` flag for custom models in API responses.
 
 ## Technical Constraints
 1. The backend and frontend must be able to communicate via RESTful APIs.

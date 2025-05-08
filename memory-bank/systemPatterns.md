@@ -15,7 +15,7 @@ The project follows a client-server architecture. The backend is built using Nod
 1. MVC (Model-View-Controller) pattern in the backend.
 2. Component-based architecture in the frontend.
 3. Provider-specific formatting logic within the `chatMessages` controller to handle multimodal API differences.
-4. Configuration-driven feature enablement (`supportsVision` flag in `providers.js`).
+4. Configuration-driven feature enablement (`supportsVision` flag in `providers.js` for base models, which then informs a `baseModelSupportsVision` flag for custom models).
 
 ## Data Models (Mongoose)
 - `User`: Stores user authentication and profile data.
@@ -43,7 +43,7 @@ The project follows a client-server architecture. The backend is built using Nod
 - `CustomModel` references a `CustomProvider`.
 - The `chatMessages` controller checks if a requested model ID is a `CustomModel` ObjectId. If so, it uses the linked `baseModelIdentifier` and `systemPrompt` for the API call. It also checks if the `baseModelIdentifier` supports vision (using data from `providers.js`) and formats the API call accordingly if an image is present.
 - `ChatPage.tsx` on the frontend handles file selection, image pasting, preview generation, and sending file data along with messages. It also renders uploaded images and file links.
-- `ModelSelectorDropdown.tsx` displays models and indicates vision support based on data from the `providers` controller.
+- `ModelSelectorDropdown.tsx` displays models and indicates vision support for base models directly, and for custom models based on their underlying base model's capabilities, using data from the `providers` controller.
 
 ## Key API Endpoints (`/api/v1/...`)
 - `/auth`: User registration, login, password updates.
@@ -53,7 +53,7 @@ The project follows a client-server architecture. The backend is built using Nod
 - `/chatsessions/:sessionId/messages`:
     - `GET`: Retrieve messages for a session. Updates session `lastAccessedAt`.
     - `POST`: Add message (text and/or file) to session, triggers AI response. Updates session `lastAccessedAt`. Handles `multipart/form-data` for file uploads. Now supports sending image data to vision-capable AI models.
-- `/providers/models`: Get available models (filtered base models + all custom models) for chat page dropdown. Now includes `supportsVision` flag for base models.
+- `/providers/models`: Get available models (filtered base models + all custom models) for chat page dropdown. Base models include a `supportsVision` flag. Custom models now include a `baseModelSupportsVision` flag derived from their base model.
 - `/providers/all-models`: Get all hardcoded base models for admin settings dropdowns. Now returns array of objects including `supportsVision` flag.
 - `/referralcodes`: CRUD for referral codes (Admin).
 - `/disabledmodels`: CRUD for disabling/enabling base models (Admin).

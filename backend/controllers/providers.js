@@ -87,17 +87,29 @@ exports.getAvailableModels = async (req, res, next) => {
         }
 
         // --- Process Custom Models ---
-        // Custom models don't inherently support vision unless their base model does,
-        // but we don't need to add the flag here as the frontend only needs the list.
-        // The backend controller (chatMessages) will check the base model's capability.
-        // Format custom models for the response - structure remains the same
-        const formattedCustomModels = customModelsList.map(model => ({
-            _id: model._id,
-            name: model.name,
-            providerName: model.provider?.name || 'Unknown Provider', // Use populated provider name
-            baseModelIdentifier: model.baseModelIdentifier
-            // Do not include systemPrompt here for security/privacy
-        }));
+        const formattedCustomModels = customModelsList.map(customModel => {
+            let baseModelSupportsVision = false;
+            // Find the base model in AVAILABLE_MODELS and check its supportsVision flag
+            for (const providerName in AVAILABLE_MODELS) {
+                const baseModelsByProvider = AVAILABLE_MODELS[providerName];
+                const foundBaseModel = baseModelsByProvider.find(
+                    bm => bm.name === customModel.baseModelIdentifier
+                );
+                if (foundBaseModel) {
+                    baseModelSupportsVision = !!foundBaseModel.supportsVision; // Ensure boolean
+                    break; // Found the base model, no need to search further
+                }
+            }
+
+            return {
+                _id: customModel._id,
+                name: customModel.name,
+                providerName: customModel.provider?.name || 'Unknown Provider',
+                baseModelIdentifier: customModel.baseModelIdentifier,
+                baseModelSupportsVision: baseModelSupportsVision // Add the new flag
+                // Do not include systemPrompt here for security/privacy
+            };
+        });
 
         // --- Combine Results ---
         // The response structure remains the same, but baseModels now contains arrays of objects

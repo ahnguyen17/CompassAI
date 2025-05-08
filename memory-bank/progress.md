@@ -37,9 +37,9 @@
     - **Fixed:** Corrected image URL construction in `ChatPage.tsx` to properly display uploaded images.
     - **Fixed:** Implemented immediate display of uploaded images in chat by sending the saved user message back from the backend and updating the frontend state accordingly.
 - **AI Vision Input (Multimodal):**
-    - Backend (`providers.js`) updated to flag vision-capable models (OpenAI GPT-4o/Turbo/4.1 series, Anthropic Claude 3 series, Gemini 1.5 series).
+    - Backend (`providers.js`) updated to flag vision-capable models (OpenAI GPT-4o/Turbo/4.1 series, Anthropic Claude 3 series, Gemini 1.5 series) and to enrich custom model data with a `baseModelSupportsVision` flag.
     - Backend (`chatMessages.js`) updated to read uploaded images, base64 encode them, and format API requests with image data for supported providers/models.
-    - Frontend (`ModelSelectorDropdown.tsx`) updated to display an icon (`👁️`) next to vision-capable models.
+    - Frontend (`ModelSelectorDropdown.tsx`) updated to display an icon (`👁️`) next to vision-capable base models and custom models (if their base model supports vision).
     - **Fixed:** Resolved TypeScript build error (`TS2719`) in `ChatPage.tsx` by updating type definitions.
     - **Fixed:** Resolved backend ReferenceError in `chatMessages.js` by ensuring `modelIdentifierForApi` is initialized before use in vision checks.
     - **Fixed:** Corrected OpenAI/Perplexity API request formatting for `image_url` to send an object `{ "url": "data:..." }` instead of a string, resolving 400 errors.
@@ -51,7 +51,7 @@
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent work focused on implementing and refining AI vision input capabilities and fixing related backend/frontend bugs (ReferenceError, OpenAI 400 error, immediate image display). User-facing file/image previews and paste support are functional.
+The project is actively being developed. Recent work focused on implementing and refining AI vision input capabilities, including displaying vision icons for custom models if their base model supports it, and fixing related backend/frontend bugs (ReferenceError, OpenAI 400 error, immediate image display). User-facing file/image previews and paste support are functional.
 
 ## Known Issues
 - Numerous TypeScript errors (mostly implicit 'any' types and missing module declarations) remain in `ChatPage.tsx` and `ModelSelectorDropdown.tsx`. These should be reviewed.
@@ -66,3 +66,4 @@ The project is actively being developed. Recent work focused on implementing and
 - Corrected variable initialization order and API payload formatting in `chatMessages.js` to prevent runtime errors when handling vision models.
 - Refactored frontend image URL construction to correctly use the base server URL without the API path prefix.
 - Modified backend response and frontend message handling to enable immediate display of uploaded images without page refresh.
+- Extended vision icon display logic in the frontend model selector to custom models by checking a new `baseModelSupportsVision` flag provided by the backend.

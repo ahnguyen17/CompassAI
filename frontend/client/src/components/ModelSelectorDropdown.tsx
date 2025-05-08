@@ -9,6 +9,7 @@ interface CustomModelData {
     name: string;
     providerName: string;
     baseModelIdentifier: string;
+    baseModelSupportsVision: boolean; // New flag
 }
 
 // Interface for a single Base Model object (new structure)
@@ -128,6 +129,8 @@ const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
                       // title attribute removed
                     >
                       {customModel.name} {/* Display custom model name */}
+                      {/* Conditionally render vision icon for custom models */}
+                      {customModel.baseModelSupportsVision && <span className={styles.visionIcon} title="Base model supports image input">👁️</span>}
                     </div>
                   ))}
               </Fragment>

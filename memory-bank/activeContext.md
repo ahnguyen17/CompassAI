@@ -1,12 +1,15 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Implemented immediate display of uploaded images in chat messages without requiring a page refresh.
+Adding vision icon (👁️) to custom models in the model selector dropdown if their underlying base model supports vision.
 
 ## Recent Changes
-- **Implement Immediate Image Display:**
-    - **Backend (`chatMessages.js`):** Modified `addMessageToSession` to send the complete, saved user message object (including `fileInfo`) back to the frontend immediately after creation. This is done via an early SSE event (`user_message_saved`) in streaming mode, or included in the main JSON response (`userMessage` key) in non-streaming mode.
-    - **Frontend (`ChatPage.tsx`):** Updated `handleSendMessage` to handle the new backend response. It now listens for the `user_message_saved` SSE event (or checks the `userMessage` key in the non-streaming response) and uses the received complete message object to replace the initial optimistic user message in the `messages` state. This triggers a re-render showing the actual uploaded image.
+- **Add Vision Icon to Custom Models:**
+    - **Backend (`providers.js`):** Modified `getAvailableModels` to check if the `baseModelIdentifier` of each custom model corresponds to a base model with `supportsVision: true`. Added a `baseModelSupportsVision` boolean flag to the custom model data sent to the frontend.
+    - **Frontend (`ModelSelectorDropdown.tsx`):** Updated the `CustomModelData` interface to include `baseModelSupportsVision`. Modified rendering logic to display the vision icon next to custom models if this flag is true.
+- **Implement Immediate Image Display:** (Previous Task)
+    - **Backend (`chatMessages.js`):** Modified `addMessageToSession` to send the complete, saved user message object (including `fileInfo`) back to the frontend immediately after creation.
+    - **Frontend (`ChatPage.tsx`):** Updated `handleSendMessage` to use the received complete message object to replace the initial optimistic user message.
 - **Fix OpenAI Vision Input Formatting:** (Previous Task)
     - Corrected the `image_url` structure for OpenAI/Perplexity API calls in `backend/controllers/chatMessages.js`.
 - **Fix Vision Input ReferenceError:** (Previous Task)
@@ -21,8 +24,10 @@ Implemented immediate display of uploaded images in chat messages without requir
 
 ## Next Steps
 - Update `progress.md`.
+- Update `systemPatterns.md`.
+- Update `techContext.md`.
 - Present the completed task to the user.
 
 ## Active Decisions and Considerations
-- Modified backend response to include the saved user message object.
-- Updated frontend state management to replace optimistic messages with confirmed messages from the backend, enabling immediate image display.
+- Backend now enriches custom model data with a `baseModelSupportsVision` flag.
+- Frontend model selector dropdown uses this flag to conditionally render the vision icon for custom models.

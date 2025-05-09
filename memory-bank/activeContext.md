@@ -9,12 +9,13 @@ Completing the UI redesign of `ChatPage.tsx` and resolving associated TypeScript
 - **TypeScript Error Resolution (Partial):**
     - **`vite-env.d.ts`:**
         - Added module declarations for `react-router-dom`, `react-markdown`, `remark-gfm`, `react-i18next`, `react-syntax-highlighter`, and `react-syntax-highlighter/dist/esm/styles/prism` to resolve module not found errors.
-        - Provided more specific type signatures for `useParams`, `useNavigate`, `Link`, and `useLocation` from `react-router-dom` to fix type argument and export errors.
+        - Provided more specific type signatures for `useParams`, `useNavigate`, `Link`, `useLocation`, `Routes`, `Route`, `Navigate`, `Outlet`, and `BrowserRouter` from `react-router-dom` to fix type argument and export errors.
         - Added `ImportMetaEnv` interface and extended `ImportMeta` to resolve `import.meta.env` errors.
     - **`ChatPage.tsx`:**
         - Attempted multiple strategies to resolve a persistent "Parameter 's' implicitly has an 'any' type" error on line ~694-699 within a `sessions.map(...)` call. The error remains despite explicit typing and structural changes. This error is currently being monitored.
 - **Build Error Resolution (Netlify):**
     - Installed `react-icons` dependency in `frontend/client` to resolve "Cannot find module 'react-icons/md'" (TS2307) error during Netlify build.
+    - Updated `vite-env.d.ts` to include declarations for `Routes`, `Route`, `Navigate`, `Outlet`, and `BrowserRouter` from `react-router-dom` to resolve TS2305 errors.
 - **UI Redesign of `ChatPage.tsx` (Ongoing):**
     - **Input Controls:**
         - Relocated the Microphone button (`MdMic` / `MdMicOff`) into the main input controls bar, between the textarea and the Send button.

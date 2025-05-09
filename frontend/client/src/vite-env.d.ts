@@ -94,10 +94,15 @@ interface Window {
 // Module declarations for libraries with missing types
 declare module 'react-router-dom' {
   export function useParams<T extends Record<string, string | undefined>>(): T;
-  export function useNavigate(): any;
-  export function Link(props: any): JSX.Element; // Basic signature for Link
-  export function useLocation(): any; // Basic signature for useLocation
-  // Add other exports as needed, e.g., Route, Routes, etc.
+  export function useNavigate(): any; // More specific: (to: string, options?: NavigateOptions) => void;
+  export function Link(props: any): JSX.Element; // More specific: LinkProps from 'react-router-dom'
+  export function useLocation(): any; // More specific: Location from 'react-router-dom'
+  export function Routes(props: any): JSX.Element; // Basic signature
+  export function Route(props: any): JSX.Element; // Basic signature
+  export function Navigate(props: any): JSX.Element; // Basic signature
+  export function Outlet(props: any): JSX.Element; // Basic signature
+  export function BrowserRouter(props: any): JSX.Element; // Basic signature
+  // Add other exports as needed
 }
 declare module 'react-markdown';
 declare module 'remark-gfm';

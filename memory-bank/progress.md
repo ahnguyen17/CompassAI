@@ -53,10 +53,11 @@
 - **Build Error Resolution (Netlify):**
     - Installed `react-icons` as a dependency in `frontend/client/package.json` to fix "Cannot find module 'react-icons/md'" (TS2307) error during Netlify builds.
     - Updated `vite-env.d.ts` to include declarations for `Routes`, `Route`, `Navigate`, `Outlet`, and `BrowserRouter` from `react-router-dom` to resolve TS2305 errors.
-- **`ChatPage.tsx` UI Redesign (Ongoing):**
+- **`ChatPage.tsx` UI Redesign:**
     - Input controls layout updated: Microphone button moved into the main input bar.
     - Share button updated to use `MdShare` / `MdLinkOff` icons.
     - New Chat button in sidebar header updated to use `MdAddCircleOutline` icon and calls `startNewChat` from `authStore`.
+    - **Mobile Responsiveness:** Enhanced by updating `ChatPage.module.css` to allow wrapping for the Model Selector/Reasoning Toggle row, adjusting header margins, and ensuring message bubble max-width.
 
 ## What's Left to Build
 - Further testing and refinement of existing features, especially AI vision input, immediate image display, and the `ChatPage.tsx` UI changes.

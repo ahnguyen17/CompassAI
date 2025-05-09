@@ -545,4 +545,37 @@ body.dark .sendButton:disabled {
     .fileUploadButton {
         padding: 8px; /* Keep padding, maybe adjust size if needed */
     }
-} /* Add missing closing brace for @media query */
+
+    /* Header in Main Chat Area */
+    .mainChatArea > div:first-child { 
+        margin-left: 0 !important; /* Override desktop inline style */
+    }
+
+    .mainChatArea > div:first-child h3 {
+        min-width: 0; /* Allow title to shrink */
+        overflow-wrap: break-word;
+        word-break: break-word; 
+    }
+
+    /* Model Selector & Reasoning Toggle Row */
+    .inputForm > div:first-child { /* This targets the div holding the dropdown and toggle */
+        flex-wrap: wrap;
+        justify-content: flex-start; /* Align to start when wrapped */
+        gap: 8px; /* Consistent gap for wrapped items */
+    }
+
+    /* Assuming ModelSelectorDropdown is the first direct child or has a specific class we can target */
+    /* If it's the first child and needs to take full width when wrapped: */
+    .inputForm > div:first-child > :first-child { 
+        flex-basis: 100%; /* Make dropdown take full width if it's on its own line */
+        margin-bottom: 8px; /* Space below dropdown if toggle wraps under */
+    }
+    /* If the reasoning toggle is the second child and needs specific alignment when wrapped alone */
+     .inputForm > div:first-child > :nth-child(2) {
+        /* Potentially add margin-left: auto if it should align right when alone on a new line */
+    }
+
+    .messageBubble {
+        max-width: 85%; /* Ensure this is active for mobile */
+    }
+}

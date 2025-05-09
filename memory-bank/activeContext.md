@@ -16,12 +16,19 @@ Completing the UI redesign of `ChatPage.tsx` and resolving associated TypeScript
 - **Build Error Resolution (Netlify):**
     - Installed `react-icons` dependency in `frontend/client` to resolve "Cannot find module 'react-icons/md'" (TS2307) error during Netlify build.
     - Updated `vite-env.d.ts` to include declarations for `Routes`, `Route`, `Navigate`, `Outlet`, and `BrowserRouter` from `react-router-dom` to resolve TS2305 errors.
-- **UI Redesign of `ChatPage.tsx` (Ongoing):**
+- **UI Redesign of `ChatPage.tsx`:**
     - **Input Controls:**
         - Relocated the Microphone button (`MdMic` / `MdMicOff`) into the main input controls bar, between the textarea and the Send button.
     - **Icon Buttons:**
         - Replaced the text-based "Share" / "Unshare" button with an icon button (`MdShare` / `MdLinkOff`).
         - Updated the "New Chat" button in the sidebar header to use an icon (`MdAddCircleOutline`) and call the `startNewChat` action from `authStore`.
+    - **Mobile Responsiveness:**
+        - Updated `ChatPage.module.css` to improve layout on smaller screens:
+            - Removed fixed left margin from the main chat area header.
+            - Allowed chat title to wrap.
+            - Enabled `flex-wrap` for the Model Selector and Reasoning Toggle row, allowing them to stack.
+            - Set Model Selector to take full width when wrapped.
+            - Ensured message bubbles maintain a `max-width` of `85%`.
 - **Previous Fix (TS2719 Error in ChatPage):**
     - **Frontend (`ChatPage.tsx`):** Updated the local `CustomModelData` interface definition to include `baseModelSupportsVision: boolean;`.
 

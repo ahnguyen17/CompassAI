@@ -1,6 +1,7 @@
 const ChatSession = require('../models/ChatSession');
 const ChatMessage = require('../models/ChatMessage'); // Needed for deleting messages on session delete
 const { v4: uuidv4 } = require('uuid');
+const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3'); // Import S3Client and DeleteObjectCommand
 // Add error handling utilities later if needed
 
 // @desc    Get all chat sessions for the logged-in user
@@ -217,11 +218,48 @@ exports.deleteChatSession = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'User not authorized to delete this session' });
     }
 
-    // Delete associated messages first
-    await ChatMessage.deleteMany({ session: session._id });
+    // Fetch messages with fileInfo to identify S3 objects to delete
+    const messagesWithFiles = await ChatMessage.find({ session: session._id, 'fileInfo.filename': { $exists: true, $ne: null } });
 
-    // Then delete the session
+    if (messagesWithFiles.length > 0) {
+      const s3Client = new S3Client({
+        region: process.env.AWS_S3_REGION,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        },
+      });
+
+      const s3ObjectsToDelete = messagesWithFiles
+        .map(msg => msg.fileInfo && msg.fileInfo.filename ? { Key: msg.fileInfo.filename } : null)
+        .filter(obj => obj && obj.Key); // Ensure Key is present
+
+      if (s3ObjectsToDelete.length > 0) {
+        console.log(`Found ${s3ObjectsToDelete.length} S3 objects to delete for session ${session._id}`);
+        for (const s3Object of s3ObjectsToDelete) {
+          try {
+            console.log(`Attempting to delete S3 object: ${s3Object.Key}`);
+            await s3Client.send(new DeleteObjectCommand({
+              Bucket: process.env.AWS_S3_BUCKET_NAME,
+              Key: s3Object.Key,
+            }));
+            console.log(`Successfully deleted S3 object: ${s3Object.Key}`);
+          } catch (s3DeleteError) {
+            console.error(`Error deleting S3 object ${s3Object.Key}:`, s3DeleteError);
+            // Log and continue, so DB cleanup still happens.
+            // Depending on policy, you might want to collect errors and report them.
+          }
+        }
+      }
+    }
+
+    // Delete associated messages from MongoDB
+    await ChatMessage.deleteMany({ session: session._id });
+    console.log(`Deleted ChatMessage documents for session ${session._id}`);
+
+    // Then delete the session from MongoDB
     await session.deleteOne();
+    console.log(`Deleted ChatSession document ${session._id}`);
 
     res.status(200).json({
       success: true,

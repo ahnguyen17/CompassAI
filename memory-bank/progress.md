@@ -43,6 +43,11 @@
     - **Fixed:** Resolved TypeScript build error (`TS2719`) in `ChatPage.tsx` by updating its local `CustomModelData` interface definition to include `baseModelSupportsVision`, aligning it with `ModelSelectorDropdown.tsx` and backend data.
     - **Fixed:** Resolved backend ReferenceError in `chatMessages.js` by ensuring `modelIdentifierForApi` is initialized before use in vision checks.
     - **Fixed:** Corrected OpenAI/Perplexity API request formatting for `image_url` to send an object `{ "url": "data:..." }` instead of a string, resolving 400 errors.
+- **S3 File Deletion on Session Delete:**
+    - Implemented logic in `backend/controllers/chatSessions.js` (`deleteChatSession` function) to:
+        - Identify `ChatMessage` documents with `fileInfo.filename`.
+        - Delete the corresponding objects from AWS S3 using `DeleteObjectCommand`.
+        - Then proceed to delete `ChatMessage` and `ChatSession` records from MongoDB.
 - **`ChatPage.tsx` Cleanup and TypeScript Error Resolution:**
     - Successfully removed extraneous text appended to `ChatPage.tsx` after a previous `write_to_file` operation.
     - **`vite-env.d.ts` Updates:**
@@ -60,19 +65,21 @@
     - **Mobile Responsiveness:** Updated `ChatPage.module.css` to keep the Model Selector/Reasoning Toggle row on a single line (`flex-wrap: nowrap;`) for mobile devices, adjusted header margins, and ensured message bubble max-width.
 
 ## What's Left to Build
+- Thoroughly test the new S3 file deletion feature when deleting chat sessions.
 - Further testing and refinement of existing features, especially AI vision input, immediate image display, and the `ChatPage.tsx` UI changes.
 - Address the persistent "Parameter 's' implicitly has an 'any' type" error in `ChatPage.tsx` (around line 694-699) if it causes runtime issues or blocks compilation.
 - Confirm which specific Perplexity models support vision via API and update backend/frontend accordingly.
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent work focused on cleaning up `ChatPage.tsx`, resolving numerous TypeScript errors by updating `vite-env.d.ts` and `ChatPage.tsx`, and implementing UI enhancements on the chat page, including icon replacements and layout adjustments for input controls.
+The project is actively being developed. Recent work focused on implementing S3 file deletion upon chat session deletion, cleaning up `ChatPage.tsx`, resolving numerous TypeScript errors by updating `vite-env.d.ts` and `ChatPage.tsx`, and implementing UI enhancements on the chat page.
 
 ## Known Issues
 - A persistent TypeScript error ("Parameter 's' implicitly has an 'any' type") remains in `ChatPage.tsx` (around line 694-699) despite multiple attempts to resolve it. This is being monitored.
 - Vision support for specific Perplexity models via API is unconfirmed.
 
 ## Evolution of Project Decisions
+- Added S3 file deletion to the chat session deletion process to manage storage and remove orphaned files.
 - Leveraged existing OpenAI vision implementation logic to easily enable support for the GPT-4.1 series models.
 - Implemented multimodal support by adding provider-specific logic to the backend message controller.
 - Used base64 encoding as the primary method for sending image data to AI APIs.

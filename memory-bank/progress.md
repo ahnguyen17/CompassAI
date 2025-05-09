@@ -50,6 +50,8 @@
         - Provided specific type signatures for `useParams`, `useNavigate`, `Link`, and `useLocation` from `react-router-dom`.
         - Added `ImportMetaEnv` interface to define Vite environment variables like `VITE_API_BASE_URL`.
     - Most TypeScript module resolution and `import.meta.env` errors in `ChatPage.tsx` have been resolved.
+- **Build Error Resolution (Netlify):**
+    - Installed `react-icons` as a dependency in `frontend/client/package.json` to fix "Cannot find module 'react-icons/md'" (TS2307) error during Netlify builds.
 - **`ChatPage.tsx` UI Redesign (Ongoing):**
     - Input controls layout updated: Microphone button moved into the main input bar.
     - Share button updated to use `MdShare` / `MdLinkOff` icons.

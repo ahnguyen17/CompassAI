@@ -43,18 +43,33 @@
     - **Fixed:** Resolved TypeScript build error (`TS2719`) in `ChatPage.tsx` by updating its local `CustomModelData` interface definition to include `baseModelSupportsVision`, aligning it with `ModelSelectorDropdown.tsx` and backend data.
     - **Fixed:** Resolved backend ReferenceError in `chatMessages.js` by ensuring `modelIdentifierForApi` is initialized before use in vision checks.
     - **Fixed:** Corrected OpenAI/Perplexity API request formatting for `image_url` to send an object `{ "url": "data:..." }` instead of a string, resolving 400 errors.
+- **`ChatPage.tsx` Cleanup and TypeScript Error Resolution:**
+    - Successfully removed extraneous text appended to `ChatPage.tsx` after a previous `write_to_file` operation.
+    - **`vite-env.d.ts` Updates:**
+        - Added module declarations for `react-router-dom`, `react-markdown`, `remark-gfm`, `react-i18next`, `react-syntax-highlighter`, and `react-syntax-highlighter/dist/esm/styles/prism`.
+        - Provided specific type signatures for `useParams`, `useNavigate`, `Link`, `useLocation`, `Routes`, `Route`, `Navigate`, `Outlet`, and `BrowserRouter` from `react-router-dom`.
+        - Added `ImportMetaEnv` interface to define Vite environment variables like `VITE_API_BASE_URL`.
+    - Most TypeScript module resolution and `import.meta.env` errors in `ChatPage.tsx` have been resolved.
+- **Build Error Resolution (Netlify):**
+    - Installed `react-icons` as a dependency in `frontend/client/package.json` to fix "Cannot find module 'react-icons/md'" (TS2307) error during Netlify builds.
+    - Updated `vite-env.d.ts` to include declarations for `Routes`, `Route`, `Navigate`, `Outlet`, and `BrowserRouter` from `react-router-dom` to resolve TS2305 errors.
+- **`ChatPage.tsx` UI Redesign:**
+    - Input controls layout updated: Microphone button moved into the main input bar.
+    - Share button updated to use `MdShare` / `MdLinkOff` icons.
+    - New Chat button in sidebar header updated to use `MdAddCircleOutline` icon and calls `startNewChat` from `authStore`.
+    - **Mobile Responsiveness:** Updated `ChatPage.module.css` to keep the Model Selector/Reasoning Toggle row on a single line (`flex-wrap: nowrap;`) for mobile devices, adjusted header margins, and ensured message bubble max-width.
 
 ## What's Left to Build
-- Further testing and refinement of existing features, especially AI vision input and immediate image display.
-- Address remaining TypeScript errors in `ChatPage.tsx` and `ModelSelectorDropdown.tsx` if they cause runtime issues or for better code quality.
+- Further testing and refinement of existing features, especially AI vision input, immediate image display, and the `ChatPage.tsx` UI changes.
+- Address the persistent "Parameter 's' implicitly has an 'any' type" error in `ChatPage.tsx` (around line 694-699) if it causes runtime issues or blocks compilation.
 - Confirm which specific Perplexity models support vision via API and update backend/frontend accordingly.
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent work focused on implementing and refining AI vision input capabilities, including displaying vision icons for custom models if their base model supports it, and fixing related backend/frontend bugs (ReferenceError, OpenAI 400 error, immediate image display). User-facing file/image previews and paste support are functional.
+The project is actively being developed. Recent work focused on cleaning up `ChatPage.tsx`, resolving numerous TypeScript errors by updating `vite-env.d.ts` and `ChatPage.tsx`, and implementing UI enhancements on the chat page, including icon replacements and layout adjustments for input controls.
 
 ## Known Issues
-- Numerous TypeScript errors (mostly implicit 'any' types and missing module declarations) remain in `ChatPage.tsx` and `ModelSelectorDropdown.tsx`. These should be reviewed.
+- A persistent TypeScript error ("Parameter 's' implicitly has an 'any' type") remains in `ChatPage.tsx` (around line 694-699) despite multiple attempts to resolve it. This is being monitored.
 - Vision support for specific Perplexity models via API is unconfirmed.
 
 ## Evolution of Project Decisions

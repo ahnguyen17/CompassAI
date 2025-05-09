@@ -1,0 +1,140 @@
+.navbar {
+  background: var(--navbar-background);
+  color: var(--text-color);
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 50px; /* Match previous inline style */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add a subtle shadow */
+  border-bottom: 1px solid var(--border-color-subtle);
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.leftSection, .rightSection {
+  display: flex;
+  align-items: center;
+  gap: 15px; /* Consistent gap */
+}
+
+.logoLink {
+  color: var(--text-color);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.logoImage {
+  height: 30px;
+  margin-right: 10px;
+}
+
+.iconButton {
+  background: none;
+  border: none;
+  color: var(--text-secondary-color); /* Use secondary text color for icons */
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4em; /* Slightly larger icons */
+  transition: color 0.2s ease;
+}
+
+.iconButton:hover {
+  color: var(--primary-color); /* Highlight on hover */
+}
+
+.newChatButton {
+  /* Inherits .iconButton styles */
+  margin-left: 0; /* Remove specific margin */
+}
+
+.dropdownContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 5px); /* Position below the trigger + small gap */
+  background-color: var(--surface-color);
+  min-width: 120px;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+  z-index: 1001; /* Ensure dropdown is above navbar content */
+  border-radius: 6px;
+  padding: 5px 0;
+  border: 1px solid var(--border-color-subtle);
+  overflow: hidden; /* Ensure children adhere to border-radius */
+}
+
+.langDropdown {
+  min-width: 80px;
+}
+
+.dropdownItem {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  padding: 8px 16px;
+  text-decoration: none;
+  display: flex; /* Use flex for icon alignment */
+  align-items: center; /* Center icon and text vertically */
+  gap: 8px; /* Space between icon and text */
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95em;
+  box-sizing: border-box;
+  transition: background-color 0.2s ease;
+}
+
+.dropdownItem:hover {
+  background-color: var(--subtle-background-color);
+  color: var(--text-accent-color); /* Use accent color on hover */
+}
+
+.dropdownItem:disabled {
+  color: var(--text-secondary-color);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dropdownItem.active {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.userDisplay {
+  color: var(--text-secondary-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.userDisplay:hover {
+  color: var(--text-color);
+}
+
+.authLink {
+  color: var(--text-color);
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.authLink:hover {
+  background-color: var(--subtle-background-color);
+  color: var(--primary-color);
+  text-decoration: none;
+}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import { MdSend, MdAttachFile, MdMic, MdMicOff, MdLightbulbOutline, MdClose, MdChevronLeft, MdShare, MdLinkOff, MdAddCircleOutline } from 'react-icons/md'; // Added MdAddCircleOutline
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
  // Import both light and dark themes
@@ -79,6 +80,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
     fetchSessions, // Use global fetch action
     deleteSession, // Use global delete action
     setSessions, // Use global setter action
+    startNewChat, // Get startNewChat action from the store
   } = useAuthStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null); // Keep local state for the *selected* session
@@ -180,7 +182,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
               const updatedSession: ChatSession = response.data.data; // Ensure type
               setCurrentSession(updatedSession);
               // Use the setter correctly: provide the new array
-              setSessions(sessions.map((s: ChatSession) => s._id === updatedSession._id ? updatedSession : s));
+              setSessions(sessions.map((s: ChatSession): ChatSession => s._id === updatedSession._id ? updatedSession : s));
           } else {
               setError('Failed to update sharing status.');
           }
@@ -441,7 +443,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                               } else if (jsonData.type === 'title_update' && currentSession) {
                                   setCurrentSession(prev => prev ? { ...prev, title: jsonData.title } : null);
                                   // Update global sessions list as well
-                                  setSessions(sessions.map((s: ChatSession) => s._id === currentSession._id ? { ...s, title: jsonData.title } : s ));
+                                  setSessions(sessions.map((s: ChatSession): ChatSession => s._id === currentSession._id ? { ...s, title: jsonData.title } : s ));
                               } else if (jsonData.type === 'error') {
                                   setError(`AI Error: ${jsonData.message}`); console.error('SSE Error Event:', jsonData.message); setStreamingMessageId(null); setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, content: `[Error: ${jsonData.message}]`, modelUsed: 'error' } : msg)); reader.cancel(); return;
                               } else if (jsonData.type === 'done') {
@@ -579,8 +581,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                   if (response.data.updatedSessionTitle && currentSession) {
                       const newTitle = response.data.updatedSessionTitle;
                       setCurrentSession(prev => prev ? { ...prev, title: newTitle } : null);
-                      // Update global sessions list as well
-                      setSessions(sessions.map((s: ChatSession) => s._id === currentSession._id ? { ...s, title: newTitle } : s ));
+
+                      // Update global sessions list as well - Mirroring the working streaming logic structure
+                      setSessions(
+                        sessions.map((s: ChatSession): ChatSession => 
+                          s._id === currentSession._id ? { ...s, title: newTitle } : s
+                        )
+                      );
                   }
               } else {
                   setError(response.data?.error || 'Failed to send message or get AI response.');
@@ -622,13 +629,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
              setIsListening(true);
          };
 
-         recognitionRef.current.onresult = (event) => {
+         recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
              const transcript = event.results[event.results.length - 1][0].transcript.trim();
              console.log('Speech recognized:', transcript);
              setNewMessage(prev => prev ? prev + ' ' + transcript : transcript); // Append transcript
          };
 
-         recognitionRef.current.onerror = (event) => {
+         recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
              console.error('Speech recognition error:', event.error);
              // Handle specific errors like 'not-allowed' or 'no-speech' if needed
              setIsListening(false); // Ensure listening state is reset on error
@@ -730,28 +737,32 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
       >
          {isSidebarVisible && (
              <>
-                 {/* Header with New Chat Button - Removed local handleNewChat */}
-                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                     {/* This button might need to use the global startNewChat action if kept */}
-                     {/* <button onClick={handleNewChat} className={styles.newChatButton}>{t('chat_new_button')}</button> */}
-                     {/* Placeholder or remove if Navbar icon is sufficient */}
-                 </div>
-                 {/* Chat History Title and Close Button */}
+                 {/* Chat History Title and Close/New Chat Buttons */}
                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                      <h4>{t('chat_history_title')}</h4>
-                     <button
-                         onClick={toggleSidebarVisibility}
-                         className={styles.sidebarHeaderCloseButton} // Use new specific class
-                         title={t('chat_sidebar_hide_tooltip')}
-                         aria-label={t('chat_sidebar_hide_tooltip')}
-                     >
-                         &laquo; {/* Use left arrow icon */}
-                     </button>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <button
+                            onClick={() => startNewChat(navigate)}
+                            className={styles.sidebarHeaderCloseButton} // Re-use style for consistency
+                            title={t('chat_new_button')}
+                            aria-label={t('chat_new_button')}
+                        >
+                            <MdAddCircleOutline size="1.3em" />
+                        </button>
+                        <button
+                            onClick={toggleSidebarVisibility}
+                            className={styles.sidebarHeaderCloseButton} // Use new specific class
+                            title={t('chat_sidebar_hide_tooltip')}
+                            aria-label={t('chat_sidebar_hide_tooltip')}
+                        >
+                            <MdChevronLeft size="1.5em" /> {/* Replaced &laquo; with icon */}
+                        </button>
+                     </div>
                  </div>
                  {/* Use global sessionsLoading and sessionsError */}
                  {sessionsLoading ? <p>{t('chat_loading')}</p> : sessionsError ? <p style={{ color: 'red' }}>{sessionsError}</p> : sessions.length > 0 ? (
                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                     {sessions.map((session) => ( <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}> <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}> {session.title || 'Untitled Chat'} </span> <button onClick={(e) => { e.stopPropagation(); deleteSession(session._id, currentSession?._id ?? null, navigate); }} disabled={deleteLoading === session._id} className={styles.deleteSessionButton} aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}> {deleteLoading === session._id ? '...' : '×'} </button> </li> ))}
+                     {sessions.map((session: ChatSession) => ( <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}> <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}> {session.title || 'Untitled Chat'} </span> <button onClick={(e) => { e.stopPropagation(); deleteSession(session._id, currentSession?._id ?? null, navigate); }} disabled={deleteLoading === session._id} className={styles.deleteSessionButton} aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}> {deleteLoading === session._id ? '...' : <MdClose size="0.9em" />} </button> </li> ))}
                 </ul> ) : <p>{t('chat_no_history')}</p>}
              </>
          )}
@@ -772,7 +783,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                  marginBottom: '15px',
                  paddingBottom: '15px',
                  borderBottom: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
-                 marginLeft: '40px',
+                 marginLeft: '40px', // This might need adjustment if sidebar toggle is here
                  color: isDarkMode ? '#e0e0e0' : 'inherit',
                   gap: '10px' // Add gap between header items
               }}>
@@ -781,17 +792,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                   {/* Ensure New Chat Button is removed from here */}
                   <button
                       onClick={handleToggleShare}
-                     disabled={shareLoading}
-                     className={styles.sendButton} // Use the send button class
-                     style={{ // Keep only necessary inline styles that differ from .sendButton
-                         background: isDarkMode ? '#3a3d41' : '#f8f9fa', // Custom background
-                         color: isDarkMode ? '#e0e0e0' : 'inherit', // Custom text color
-                         border: `1px solid ${isDarkMode ? '#555' : '#dee2e6'}`, // Add border back if needed
-                         // Remove padding and fontSize to inherit from .sendButton
-                     }}
-                 >
-                     {shareLoading ? '...' : (currentSession.isShared ? t('chat_unshare_button') : t('chat_share_button'))}
-                 </button>
+                      disabled={shareLoading}
+                      className={`${styles.fileUploadButton} ${styles.reasoningToggle}`} // Use common icon button styles
+                      title={currentSession.isShared ? t('chat_unshare_button') : t('chat_share_button')}
+                      aria-label={currentSession.isShared ? t('chat_unshare_button') : t('chat_share_button')}
+                  >
+                      {shareLoading ? '...' : (currentSession.isShared ? <MdLinkOff /> : <MdShare />)}
+                  </button>
              </div>
              {currentSession.isShared && currentSession.shareId && (
                 <div style={{
@@ -800,7 +807,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                     background: isDarkMode ? '#3a3d41' : '#f0f0f0',
                     color: isDarkMode ? '#e0e0e0' : 'inherit',
                     borderRadius: '4px',
-                    marginLeft: '40px',
+                    marginLeft: '40px', // This might need adjustment
                     display: 'flex', // Use flexbox for alignment
                     alignItems: 'center', // Align items vertically
                     gap: '10px' // Add space between link and button
@@ -1048,54 +1055,32 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                             />
                         ) : ( <div /> /* Placeholder to maintain space-between */)}
 
-                        {/* Microphone Button (Moved Here) */}
-                        {recognitionRef.current && ( // Only show if API is supported
-                            <button
-                                type="button"
-                                onClick={handleToggleListening}
-                                disabled={sendingMessage || loadingMessages || !currentSession}
-                                className={`${styles.micButton} ${isListening ? styles.micButtonListening : ''}`} // Keep listening class for now, style will be removed via CSS
-                                title={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
-                                aria-label={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
-                            >
-                                🎤
-                            </button>
-                        )}
-
                        {/* Reasoning Toggle Icon Button */}
                        <button
                            type="button"
-                         onClick={() => setShowReasoning(!showReasoning)}
-                         title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
-                         aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
-                          aria-pressed={showReasoning} // Indicate toggle state
-                          style={{
-                              // Removed marginLeft: 'auto'
-                              background: 'none',
-                              border: 'none',
-                             cursor: 'pointer',
-                             fontSize: '1.3em',
-                             padding: '0 5px',
-                             color: '#fff', // Base color
-                             opacity: showReasoning ? 1 : 0.5 // Indicate status with opacity
-                         }}
-                     >
-                         🧠 {/* Brain icon */}
+                           onClick={() => setShowReasoning(!showReasoning)}
+                           title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
+                           aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
+                           aria-pressed={showReasoning}
+                           className={styles.reasoningToggle} // Use new class
+                           style={{ opacity: showReasoning ? 1 : 0.6 }} // Keep opacity for visual feedback
+                       >
+                         <MdLightbulbOutline />
                      </button>
                  </div>
                  {/* Preview Area */}
                  {previewUrl && selectedFile && selectedFile.type.startsWith('image/') && (
                     <div style={{ marginBottom: '10px', position: 'relative', maxWidth: '150px' }}>
                         <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '4px' }} />
-                        <button onClick={clearSelectedFile} className={styles.clearPreviewButton} title="Remove image">×</button>
+                        <button onClick={clearSelectedFile} className={styles.clearPreviewButton} title="Remove image"><MdClose /></button>
                     </div>
                  )}
                  {selectedFile && !selectedFile.type.startsWith('image/') && (
                     <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <span className={styles.fileNamePreview} style={{ color: isDarkMode ? '#bbb' : '#6c757d' }}>
-                            📄 {selectedFile.name}
+                        <span className={styles.fileNamePreview}>
+                            <MdAttachFile style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {selectedFile.name}
                         </span>
-                        <button onClick={clearSelectedFile} className={styles.clearPreviewButtonSmall} title="Remove file">×</button>
+                        <button onClick={clearSelectedFile} className={styles.clearPreviewButtonSmall} title="Remove file"><MdClose size="0.8em" /></button>
                     </div>
                  )}
 
@@ -1107,67 +1092,51 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                         onChange={handleFileChange}
                         style={{ display: 'none' }}
                         id="file-upload"
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" // Added accept attribute
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
                      />
                      <button
                          type="button"
                          onClick={() => fileInputRef.current?.click()}
                          disabled={sendingMessage || loadingMessages || !currentSession}
                          className={styles.fileUploadButton}
-                         style={{
-                             background: isDarkMode ? '#444' : '#eee',
-                             border: `1px solid ${isDarkMode ? '#666' : '#ccc'}`,
-                             color: isDarkMode ? '#eee' : 'inherit'
-                         }}
                          title={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')}
                          aria-label={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')}
                      >
-                         📎
+                         <MdAttachFile />
                      </button>
-                     {selectedFile && (
-                         <span
-                             className={styles.fileName}
-                             style={{ color: isDarkMode ? '#bbb' : '#6c757d' }}
-                         >
-                              {selectedFile.name}
-                          </span>
-                        )}
-                        {/* Microphone Button Removed from here */}
+                     {/* Removed selectedFile span from here, preview handles it */}
                         <textarea
                             ref={textareaRef}
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyDown={handleKeyDown} // Add keydown handler
-                         placeholder={t('chat_input_placeholder')}
-                         disabled={sendingMessage || loadingMessages || !currentSession}
-                         className={styles.messageInput}
-                         onPaste={handlePaste} // Add paste handler
-                         style={{
-                             background: isDarkMode ? '#3a3d41' : 'white',
-                             border: `1px solid ${isDarkMode ? '#555' : '#ced4da'}`,
-                             color: isDarkMode ? '#e0e0e0' : 'inherit',
-                             resize: 'vertical', // Allow vertical resize
-                             minHeight: '40px', // Set a minimum height
-                             maxHeight: '150px', // Optional: Limit max height
-                             overflowY: 'auto' // Add scroll if content exceeds max height
-                         }}
-                         rows={1} // Start with 1 row, auto-expands with CSS potentially or JS
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder={t('chat_input_placeholder')}
+                            disabled={sendingMessage || loadingMessages || !currentSession}
+                            className={styles.messageInput}
+                            onPaste={handlePaste}
+                            rows={1}
                       />
+                        {/* Microphone Button */}
+                        {recognitionRef.current && ( // Only show if API is supported
+                            <button
+                                type="button"
+                                onClick={handleToggleListening}
+                                disabled={sendingMessage || loadingMessages || !currentSession}
+                                className={`${styles.micButton} ${isListening ? styles.micButtonListening : ''}`}
+                                title={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
+                                aria-label={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
+                            >
+                                {isListening ? <MdMicOff /> : <MdMic />}
+                            </button>
+                        )}
                       <button
                           type="submit"
-                         disabled={sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)}
-                         className={styles.sendButton}
-                         style={{
-                             background: isDarkMode
-                                 ? (sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)
-                                     ? '#495057'
-                                     : '#0d6efd')
-                                 : (sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)
-                                     ? '#6c757d'
-                                     : '#007bff')
-                         }}
+                          disabled={sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)}
+                          className={styles.sendButton}
+                          title={t('chat_send_button')}
+                          aria-label={t('chat_send_button')}
                      >
-                         {sendingMessage ? t('chat_sending_button') : t('chat_send_button')}
+                         <MdSend />
                      </button>
                 </div>
              </form>
@@ -1183,4 +1152,4 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
    );
  };
 
- export default ChatPage;
+export default ChatPage;

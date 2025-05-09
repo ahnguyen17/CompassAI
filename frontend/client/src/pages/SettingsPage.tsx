@@ -356,7 +356,8 @@ const SettingsPage: React.FC = () => { // Removed props
             ]);
 
             if (allModelsResponse.data?.success && disabledModelsResponse.data?.success) {
-                const allModelsData: { [provider: string]: string[] } = allModelsResponse.data.data;
+                // Updated to handle the new model structure with name and supportsVision properties
+                const allModelsData: { [provider: string]: Array<{name: string, supportsVision: boolean}> } = allModelsResponse.data.data;
                 // Correctly type the response data as an array of strings
                 const disabledModelNamesArray: string[] = disabledModelsResponse.data.data;
                 // Create the Set directly from the array of strings
@@ -365,10 +366,11 @@ const SettingsPage: React.FC = () => { // Removed props
                 const statuses: ModelStatus[] = [];
                 // Iterate through all available models from the backend constant
                 for (const provider in allModelsData) {
-                    allModelsData[provider].forEach(modelName => {
+                    allModelsData[provider].forEach(model => {
+                        // Extract the name property from each model object
                         statuses.push({
-                            modelName: modelName,
-                            isDisabled: disabledModelNames.has(modelName) // Check if this model is in the disabled list
+                            modelName: model.name,
+                            isDisabled: disabledModelNames.has(model.name) // Check if this model is in the disabled list
                         });
                     });
                 }
@@ -379,6 +381,7 @@ const SettingsPage: React.FC = () => { // Removed props
                 setFetchModelStatusError('Failed to load model statuses or disabled models.');
             }
         } catch (err: any) {
+            console.error("Error fetching model statuses:", err);
             setFetchModelStatusError(err.response?.data?.error || 'Error loading model statuses.');
             if (err.response?.status === 401) setFetchModelStatusError('Unauthorized.');
             if (err.response?.status === 403) setFetchModelStatusError('Forbidden.');
@@ -634,7 +637,7 @@ const SettingsPage: React.FC = () => { // Removed props
   };
 
 
-  // --- Model Visibility Handler (Admin) --- ADDED
+  // --- Model Visibility Handler (Admin) --- UPDATED
   const handleToggleModelVisibility = async (modelName: string, currentlyDisabled: boolean) => {
       setModelActionLoading(modelName);
       setModelActionError('');
@@ -649,7 +652,10 @@ const SettingsPage: React.FC = () => { // Removed props
           }
 
           if (response.data?.success) {
-              fetchModelStatuses(); // Refresh the list after successful toggle
+              // Add a small delay before refreshing to ensure backend has processed the change
+              setTimeout(() => {
+                  fetchModelStatuses(); // Refresh the list after successful toggle
+              }, 500);
           } else {
               setModelActionError(response.data?.error || `Failed to ${currentlyDisabled ? 'enable' : 'disable'} model.`);
           }

@@ -1,36 +1,5 @@
 const DisabledModel = require('../models/DisabledModel');
-
-// Use the same hardcoded list as providers.js
-const AVAILABLE_MODELS = {
-    'Anthropic': [
-        "claude-3-opus-20240229",
-        "claude-3-sonnet-20240229",
-        "claude-3-haiku-20240307",
-        "claude-2.1",
-        "claude-2.0",
-        "claude-instant-1.2"
-    ],
-    'OpenAI': [
-        "gpt-4",
-        "gpt-4-turbo",
-        "gpt-4o",
-        "gpt-3.5-turbo"
-    ],
-    'Gemini': [
-        "gemini-2.5-pro-experimental",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-1.5-pro-latest",
-        "gemini-1.5-pro",
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-flash-8b",
-        "gemini-1.0-pro",
-    ],
-    'DeepSeek': [ // Added DeepSeek
-        "deepseek-chat",
-        "deepseek-coder"
-    ]
-};
+const { AVAILABLE_MODELS } = require('./providers'); // Import from providers.js to ensure consistency
 
 // @desc    Get all disabled model names
 // @route   GET /api/v1/disabledmodels
@@ -51,14 +20,16 @@ exports.getDisabledModels = async (req, res, next) => {
 // @access  Private/Admin
 exports.getAllModelsStatus = async (req, res, next) => {
     try {
-        // Get all model names from the hardcoded list
-        const allAvailableModels = Object.values(AVAILABLE_MODELS).flat();
+        // Get all model objects from the hardcoded list and extract their names
+        const allAvailableModelObjects = Object.values(AVAILABLE_MODELS).flat();
         const disabled = await DisabledModel.find();
         const disabledModelNamesSet = new Set(disabled.map(m => m.modelName));
 
-        const modelStatuses = allAvailableModels.map(modelName => ({
-            modelName: modelName,
-            isDisabled: disabledModelNamesSet.has(modelName)
+        // Map through the model objects and check if their names are in the disabled set
+        const modelStatuses = allAvailableModelObjects.map(modelObj => ({
+            modelName: modelObj.name,
+            isDisabled: disabledModelNamesSet.has(modelObj.name),
+            supportsVision: modelObj.supportsVision
         }));
 
         res.status(200).json({ success: true, data: modelStatuses });

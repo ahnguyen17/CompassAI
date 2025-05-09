@@ -45,11 +45,20 @@
 /* Style for the copy button when placed inside the bubble */
 .copyButtonInside {
     position: absolute;
-    bottom: 5px; /* Changed from top */
-    right: 5px;
+    bottom: 8px; /* Adjusted */
+    right: 8px; /* Adjusted */
     z-index: 1;
-    opacity: 0; /* Hidden by default */
+    opacity: 0.6; /* Slightly visible for discoverability */
     transition: opacity 0.2s ease-in-out;
+    background-color: rgba(0,0,0,0.1); /* Subtle background */
+    border-radius: 4px;
+    padding: 2px 4px;
+    color: var(--text-secondary-color);
+}
+
+.copyButtonInside:hover {
+    opacity: 1;
+    background-color: rgba(0,0,0,0.2);
 }
 
 .messageList {
@@ -63,166 +72,155 @@
 .inputForm {
     margin-top: auto;
     padding-top: 15px;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid var(--border-color-subtle);
 }
 
 .inputControls {
     display: flex;
-    align-items: center;
-    gap: 10px; /* Add gap between input elements */
+    align-items: flex-end; /* Align items to the bottom for multi-line textarea */
+    gap: 10px;
+    padding: 8px;
+    background-color: var(--surface-color); /* Use surface color for input area background */
+    border: 1px solid var(--input-border);
+    border-radius: 24px; /* Rounded corners for the whole input bar */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: border-color 0.3s ease, background-color 0.3s ease;
 }
 
-.fileUploadButton {
-    padding: 10px;
-    cursor: pointer;
-    border: 1px solid #ccc;
-    border-radius: 50%;
-    background: #eee;
-    flex-shrink: 0; /* Prevent button from shrinking */
+.inputControls:focus-within {
+    border-color: var(--input-focus-border);
+    box-shadow: 0 0 0 2px var(--input-focus-shadow);
 }
-.fileUploadButton:disabled {
+
+.fileUploadButton, .micButton, .sendButton, .reasoningToggle { /* Common class for icon buttons */
+    background: transparent;
+    border: none;
+    color: var(--text-secondary-color);
+    cursor: pointer;
+    padding: 8px; /* Consistent padding */
+    border-radius: 50%; /* Circular buttons */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5em; /* Icon size */
+    transition: color 0.2s ease, background-color 0.2s ease;
+    flex-shrink: 0;
+    width: 40px; /* Fixed width */
+    height: 40px; /* Fixed height */
+}
+
+.fileUploadButton:hover, .micButton:hover, .sendButton:not(:disabled):hover, .reasoningToggle:hover {
+    color: var(--primary-color);
+    background-color: var(--accent-background-color); /* Subtle hover background */
+}
+
+.fileUploadButton:disabled, .micButton:disabled, .sendButton:disabled, .reasoningToggle:disabled {
     cursor: not-allowed;
-    opacity: 0.6;
+    opacity: 0.5;
+    background-color: transparent;
 }
 
 .fileName {
     font-size: 0.8em;
-    color: #6c757d;
+    color: var(--text-secondary-color);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100px;
-    flex-shrink: 0; /* Prevent button from shrinking */
-}
-.fileUploadButton:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
+    flex-shrink: 0;
+    align-self: center; /* Align with other buttons if textarea is multi-line */
 }
 
 .fileNamePreview { /* Style for file name in preview */
     font-size: 0.9em;
-    color: #6c757d; /* Match .fileName */
+    color: var(--text-secondary-color);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 150px; /* Adjust as needed */
+    max-width: 150px;
 }
 
-.clearPreviewButton { /* Style for the 'x' button on image preview */
+.clearPreviewButton {
     position: absolute;
     top: -5px;
     right: -5px;
-    background: rgba(0, 0, 0, 0.6);
-    color: white;
-    border: none;
+    background: var(--surface-color);
+    color: var(--text-secondary-color);
+    border: 1px solid var(--border-color);
     border-radius: 50%;
     width: 20px;
     height: 20px;
     font-size: 14px;
-    line-height: 20px;
+    line-height: 18px; /* Adjust for border */
     text-align: center;
     cursor: pointer;
     padding: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.clearPreviewButtonSmall { /* Style for the 'x' button on non-image file preview */
-    background: rgba(0, 0, 0, 0.2);
-    color: #333;
-    border: none;
+.clearPreviewButtonSmall {
+    background: var(--surface-color);
+    color: var(--text-secondary-color);
+    border: 1px solid var(--border-color);
     border-radius: 50%;
     width: 16px;
     height: 16px;
     font-size: 12px;
-    line-height: 16px;
+    line-height: 14px; /* Adjust for border */
     text-align: center;
     cursor: pointer;
     padding: 0;
 }
 
-body.dark .fileNamePreview {
-    color: #bbb; /* Match dark mode .fileName */
-}
-
-body.dark .clearPreviewButton {
-    background: rgba(255, 255, 255, 0.3);
-    color: #111;
-}
-
-body.dark .clearPreviewButtonSmall {
-    background: rgba(255, 255, 255, 0.2);
-    color: #eee;
-}
-
-
-/* Microphone Button Styles (Standardized) */
-.micButton {
-    background: none;
-    border: none;
-    padding: 5px; /* Match dropdown button padding */
-    margin: 0;
-    cursor: pointer;
-    font-size: 1.3em; /* Match other icons */
-    line-height: 1;
-    color: inherit; /* Inherit color */
-    flex-shrink: 0;
-    /* Removed transition */
-}
-.micButton:disabled {
-    cursor: not-allowed;
-    opacity: 0.5; /* Match dropdown button disabled state */
-}
-
-/* Add animation keyframes for the mic glow */
+/* Mic glow animation */
 @keyframes micGlow {
-  0% { box-shadow: 0 0 3px 1px rgba(0, 123, 255, 0.7); } /* Start glow */
-  50% { box-shadow: 0 0 8px 3px rgba(0, 123, 255, 0.9); } /* Peak glow */
-  100% { box-shadow: 0 0 3px 1px rgba(0, 123, 255, 0.7); } /* End glow */
+  0% { box-shadow: 0 0 3px 1px var(--primary-color); opacity: 0.7; }
+  50% { box-shadow: 0 0 8px 3px var(--primary-color); opacity: 1; }
+  100% { box-shadow: 0 0 3px 1px var(--primary-color); opacity: 0.7; }
 }
 
-/* Style for the microphone button when listening */
 .micButtonListening {
-  /* Apply the animation */
   animation: micGlow 1.5s infinite ease-in-out;
-  /* Ensure button background doesn't obscure the glow */
-  background-color: transparent; /* Or adjust as needed */
-  /* Optional: Slightly increase size or change border */
-  border-color: rgba(0, 123, 255, 0.9);
-  border-radius: 50%; /* Make border circular to match glow shape */
-}
-/* Removed .micButtonListening and its dark mode variant - Comment updated */
-
-
-.fileName {
-    font-size: 0.8em;
-    color: #6c757d;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100px;
-    flex-shrink: 0; /* Prevent shrinking */
+  background-color: var(--accent-background-color) !important; /* Ensure it overrides hover */
+  color: var(--primary-color) !important;
 }
 
 .messageInput {
     flex: 1;
-    padding: 12px 15px;
-    border-radius: 20px;
-    border: 1px solid #ced4da;
+    padding: 10px 15px; /* Adjusted padding */
+    border-radius: 20px; /* Keep rounded for inner input */
+    border: none; /* Remove border, parent .inputControls has it */
     font-size: 1rem;
+    background-color: transparent; /* Inherit from .inputControls */
+    color: var(--text-color);
+    resize: none; /* Disable manual resize, let it grow with content */
+    min-height: 24px; /* Match button icon line height */
+    line-height: 1.5;
+    outline: none; /* Remove default outline */
+    max-height: 150px; /* From inline style */
+    overflow-y: auto; /* From inline style */
+}
+
+.messageInput::placeholder {
+    color: var(--text-secondary-color);
+    opacity: 0.7;
 }
 
 .sendButton {
-    padding: 10px 20px;
-    border-radius: 20px;
-    border: none;
-    background-color: #007bff;
-    color: white;
-    cursor: pointer;
-    font-size: 1rem;
-    flex-shrink: 0; /* Prevent shrinking */
+    /* Styles inherited from .iconButton common class */
+    background-color: var(--button-primary-bg) !important; /* Important to override transparent */
+    color: var(--text-on-primary-color) !important;
 }
+
+.sendButton:hover:not(:disabled) {
+    background-color: var(--button-primary-hover-bg) !important;
+    color: var(--text-on-primary-color) !important;
+}
+
 .sendButton:disabled {
-    background-color: #6c757d;
-    cursor: not-allowed;
+    background-color: var(--border-color-subtle) !important; /* More subtle disabled state */
+    color: var(--text-secondary-color) !important;
+    opacity: 0.7;
 }
 
 /* Base Message Styling */

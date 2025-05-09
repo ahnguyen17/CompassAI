@@ -1,4 +1,82 @@
-/* Reset or base styles can go here */
+:root {
+  /* Light Theme */
+  --primary-color: #057A55;
+  --primary-hover-color: #046b47; /* Darker shade */
+  --primary-active-color: #035c3d; /* Even darker */
+  --button-primary-bg: #0e9f6e;
+  --button-primary-hover-bg: #0c8a5f; /* Darker shade */
+  --button-primary-active-bg: #0a7550; /* Even darker */
+
+  --background-color: #ffffff;
+  --surface-color: #ffffff; /* Card/modal backgrounds */
+  --subtle-background-color: #f0f5ff; /* Light blue/grayish */
+  --accent-background-color: #def7ec; /* Light green accent */
+
+  --text-color: #333333;
+  --text-secondary-color: #555555;
+  --text-accent-color: var(--primary-color);
+  --text-on-primary-color: #ffffff;
+
+  --border-color: #d9d9d9;
+  --border-color-subtle: #eeeeee;
+
+  --link-color: #007bff; /* Keep existing link color for now */
+  --link-hover-color: #0056b3;
+
+  --code-background: #e9ecef;
+  --code-text: #333;
+  --pre-background: #f0f0f0;
+  --pre-border: #ddd;
+  --pre-text: #333;
+
+  --navbar-background: var(--surface-color);
+  --sidebar-background: #f4f4f9; /* Keep existing light bg for sidebar */
+  --input-background: var(--background-color);
+  --input-border: var(--border-color);
+  --input-focus-border: var(--primary-color);
+  --input-focus-shadow: rgba(5, 122, 85, 0.1); /* Adjusted shadow color */
+}
+
+body.dark {
+  /* Dark Theme */
+  --primary-color: #34D399; /* Brighter green for dark mode */
+  --primary-hover-color: #29b88a;
+  --primary-active-color: #1f9d7b;
+  --button-primary-bg: #26A146; /* Slightly darker green for buttons */
+  --button-primary-hover-bg: #1f8a3a;
+  --button-primary-active-bg: #1a7330;
+
+  --background-color: #1a1a1a;
+  --surface-color: #2a2a2a; /* Card/modal backgrounds */
+  --subtle-background-color: #252525;
+  --accent-background-color: #1f3a30; /* Darker green accent */
+
+  --text-color: #e0e0e0;
+  --text-secondary-color: #b0b0b0;
+  --text-accent-color: var(--primary-color);
+  --text-on-primary-color: #ffffff; /* Keep white text on dark green buttons */
+
+  --border-color: #444444;
+  --border-color-subtle: #333333;
+
+  --link-color: #64b5f6;
+  --link-hover-color: #90caf9;
+
+  --code-background: #333333;
+  --code-text: #e0e0e0;
+  --pre-background: #2a2a2a;
+  --pre-border: #444;
+  --pre-text: #d4d4d4;
+
+  --navbar-background: var(--surface-color);
+  --sidebar-background: #202020; /* Darker sidebar */
+  --input-background: var(--surface-color);
+  --input-border: var(--border-color);
+  --input-focus-border: var(--primary-color);
+  --input-focus-shadow: rgba(52, 211, 153, 0.15); /* Adjusted shadow color */
+}
+
+/* Apply base styles using variables */
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -6,8 +84,9 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f4f4f9; /* Light background */
-  color: #333; /* Default text color */
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease; /* Smooth theme transition */
 }
 
 code {
@@ -15,55 +94,32 @@ code {
     monospace;
 }
 
-/* Basic link styling */
 a {
-  color: #007bff;
+  color: var(--link-color);
   text-decoration: none;
 }
 
 a:hover {
+  color: var(--link-hover-color);
   text-decoration: underline;
 }
 
-/* Basic Code Block Styling */
 pre {
-  background-color: #f0f0f0; /* Light grey background */
-  border: 1px solid #ddd;
+  background-color: var(--pre-background);
+  border: 1px solid var(--pre-border);
+  color: var(--pre-text);
   border-radius: 4px;
   padding: 10px 15px;
-  overflow-x: auto; /* Allow horizontal scrolling for long lines */
+  overflow-x: auto;
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
   font-size: 0.9em;
-  margin: 10px 0; /* Add some margin */
+  margin: 10px 0;
 }
 
-/* Inline code styling */
 code:not(pre > code) {
-  background-color: #e9ecef;
+  background-color: var(--code-background);
+  color: var(--code-text);
   padding: 0.2em 0.4em;
   border-radius: 3px;
   font-size: 85%;
 }
-
-/* --- Dark Mode --- */
-body.dark {
-  background-color: #1a1a1a; /* Dark background */
-  color: #e0e0e0; /* Lighter text */
-}
-
-body.dark a {
-  color: #64b5f6; /* Lighter blue for links */
-}
-
-body.dark code:not(pre > code) {
-  background-color: #333;
-  color: #f0f0f0;
-}
-
-body.dark pre {
-  background-color: #2a2a2a;
-  border-color: #444;
-  color: #d4d4d4;
-}
-
-/* Removed chat page specific dark mode styles - should be handled by CSS Modules */

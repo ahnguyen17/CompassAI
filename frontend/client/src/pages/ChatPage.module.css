@@ -559,21 +559,19 @@ body.dark .sendButton:disabled {
 
     /* Model Selector & Reasoning Toggle Row */
     .inputForm > div:first-child { /* This targets the div holding the dropdown and toggle */
-        flex-wrap: wrap;
-        justify-content: flex-start; /* Align to start when wrapped */
-        gap: 8px; /* Consistent gap for wrapped items */
+        flex-wrap: nowrap; /* Ensure items stay on one line */
+        /* justify-content: space-between; is likely inherited or default for this div */
+        /* gap: 8px; */ /* Keep or adjust gap as needed, 10px is default from .inputControls */
     }
 
-    /* Assuming ModelSelectorDropdown is the first direct child or has a specific class we can target */
-    /* If it's the first child and needs to take full width when wrapped: */
-    .inputForm > div:first-child > :first-child { 
-        flex-basis: 100%; /* Make dropdown take full width if it's on its own line */
-        margin-bottom: 8px; /* Space below dropdown if toggle wraps under */
-    }
-    /* If the reasoning toggle is the second child and needs specific alignment when wrapped alone */
-     .inputForm > div:first-child > :nth-child(2) {
-        /* Potentially add margin-left: auto if it should align right when alone on a new line */
-    }
+    /* Optional: If elements need to shrink to fit */
+    /* .inputForm > div:first-child > :first-child { */
+    /*   flex-shrink: 1; */
+    /*   min-width: 100px; */ /* Example minimum width */
+    /* } */
+    /* .inputForm .reasoningToggle { */ /* Or target reasoning toggle specifically */
+    /*   flex-shrink: 0; */ /* It already has fixed width, so this might not be needed */
+    /* } */
 
     .messageBubble {
         max-width: 85%; /* Ensure this is active for mobile */

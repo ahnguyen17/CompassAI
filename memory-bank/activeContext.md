@@ -26,8 +26,7 @@ Completing the UI redesign of `ChatPage.tsx` and resolving associated TypeScript
         - Updated `ChatPage.module.css` to improve layout on smaller screens:
             - Removed fixed left margin from the main chat area header.
             - Allowed chat title to wrap.
-            - Enabled `flex-wrap` for the Model Selector and Reasoning Toggle row, allowing them to stack.
-            - Set Model Selector to take full width when wrapped.
+            - Set `flex-wrap: nowrap` for the Model Selector and Reasoning Toggle row to keep them on a single line, reverting the previous wrapping strategy.
             - Ensured message bubbles maintain a `max-width` of `85%`.
 - **Previous Fix (TS2719 Error in ChatPage):**
     - **Frontend (`ChatPage.tsx`):** Updated the local `CustomModelData` interface definition to include `baseModelSupportsVision: boolean;`.

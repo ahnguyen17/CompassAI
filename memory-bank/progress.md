@@ -57,7 +57,7 @@
     - Input controls layout updated: Microphone button moved into the main input bar.
     - Share button updated to use `MdShare` / `MdLinkOff` icons.
     - New Chat button in sidebar header updated to use `MdAddCircleOutline` icon and calls `startNewChat` from `authStore`.
-    - **Mobile Responsiveness:** Enhanced by updating `ChatPage.module.css` to allow wrapping for the Model Selector/Reasoning Toggle row, adjusting header margins, and ensuring message bubble max-width.
+    - **Mobile Responsiveness:** Updated `ChatPage.module.css` to keep the Model Selector/Reasoning Toggle row on a single line (`flex-wrap: nowrap;`) for mobile devices, adjusted header margins, and ensured message bubble max-width.
 
 ## What's Left to Build
 - Further testing and refinement of existing features, especially AI vision input, immediate image display, and the `ChatPage.tsx` UI changes.

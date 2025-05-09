@@ -1,7 +1,7 @@
 # Tech Context: CompassAI
 
 ## Technologies Used
-1. Backend: Node.js, Express, MongoDB (likely), Mongoose, `multer` (for file uploads), `fs` (for file system access), `pdf-parse` (for PDF text extraction).
+1. Backend: Node.js, Express, MongoDB (likely), Mongoose, `multer` (for file uploads using `memoryStorage`), `@aws-sdk/client-s3` (for AWS S3 integration), `uuid` (for generating unique S3 keys), `fs` (potentially for some text extractors if they don't handle buffers directly), `pdf-parse`, `mammoth`, `xlsx` (for text extraction from files).
 2. Frontend: React, Vite, TypeScript.
 3. AI Provider SDKs/APIs:
     - `@anthropic-ai/sdk` (Anthropic Claude)
@@ -17,8 +17,8 @@
 ## Development Setup
 1. Backend and frontend are separate directories within the project.
 2. npm is used for managing dependencies in both backend and frontend.
-3. The project uses a .env file for environment variables (example provided).
-4. Backend serves uploaded files statically from the `backend/uploads` directory.
+3. The project uses a .env file for environment variables (example provided), including AWS S3 credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET_NAME`, `AWS_S3_REGION`).
+4. Backend uploads files to AWS S3, and they are served publicly via S3 URLs. Local static file serving for uploads has been removed.
 5. Backend configuration (`providers.js`) defines base model capabilities, including vision support. This information is used to populate `supportsVision` flags for base models and a `baseModelSupportsVision` flag for custom models in API responses.
 
 ## Technical Constraints

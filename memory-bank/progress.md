@@ -63,20 +63,46 @@
     - Share button updated to use `MdShare` / `MdLinkOff` icons.
     - New Chat button in sidebar header updated to use `MdAddCircleOutline` icon and calls `startNewChat` from `authStore`.
     - **Mobile Responsiveness:** Updated `ChatPage.module.css` to keep the Model Selector/Reasoning Toggle row on a single line (`flex-wrap: nowrap;`) for mobile devices, adjusted header margins, and ensured message bubble max-width.
+- **User Memory Feature (Personalized Context):**
+    - **Backend:**
+        - New `UserMemory` Mongoose model created (`backend/models/UserMemory.js`) for storing contexts, global enable status, and max context count. Includes sub-documents for context items with timestamps and a pre-save hook for sorting/trimming.
+        - New `userMemoryController.js` (`backend/controllers/userMemoryController.js`) implemented with CRUD operations for memory settings and individual context items.
+        - New `userMemoryRoutes.js` (`backend/routes/userMemoryRoutes.js`) established for the controller actions, protected by authentication.
+        - User memory routes mounted in `backend/server.js`.
+        - `chatMessages.js` controller (`backend/controllers/chatMessages.js`) updated to:
+            - Accept a `useSessionMemory` flag from the frontend.
+            - Fetch and inject user memory contexts into the LLM prompt if enabled.
+            - Implement basic automatic context extraction from short, statement-like user messages.
+    - **Frontend:**
+        - `api.ts` service (`frontend/client/src/services/api.ts`) updated with interfaces (`UserMemoryData`, `ContextItemData`) and functions for user memory API endpoints.
+        - "Personalized Memory" management panel added to `SettingsPage.tsx` (`frontend/client/src/pages/SettingsPage.tsx`), allowing users to:
+            - Toggle global memory enablement.
+            - Set maximum number of stored contexts.
+            - Manually add, view, edit, and delete individual context items.
+            - Clear all stored contexts.
+        - Session-specific memory toggle (using `MdAutoAwesome` icon) added to `ChatPage.tsx` (`frontend/client/src/pages/ChatPage.tsx`) near the model selector, controlling the `useSessionMemory` flag sent to the backend.
 
 ## What's Left to Build
 - Thoroughly test the new S3 file deletion feature when deleting chat sessions.
 - Further testing and refinement of existing features, especially AI vision input, immediate image display, and the `ChatPage.tsx` UI changes.
+- **Thoroughly test the new User Memory feature:**
+    - Backend API functionality (CRUD for settings and contexts).
+    - Frontend "Personalized Memory" panel in Settings.
+    - Frontend session memory toggle on Chat Page.
+    - Context injection logic and its impact on LLM responses.
+    - Automatic context extraction behavior and accuracy.
+    - Uniqueness and recency logic for context storage.
 - Address the persistent "Parameter 's' implicitly has an 'any' type" error in `ChatPage.tsx` (around line 694-699) if it causes runtime issues or blocks compilation.
 - Confirm which specific Perplexity models support vision via API and update backend/frontend accordingly.
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent work focused on implementing S3 file deletion upon chat session deletion, cleaning up `ChatPage.tsx`, resolving numerous TypeScript errors by updating `vite-env.d.ts` and `ChatPage.tsx`, and implementing UI enhancements on the chat page.
+The project is actively being developed. Recent work focused on the initial implementation of the User Memory feature, including backend model/controller/routes, frontend UI in Settings and Chat pages, and integration with the chat processing logic. Prior to this, S3 file deletion and various UI/TypeScript enhancements were completed.
 
 ## Known Issues
 - A persistent TypeScript error ("Parameter 's' implicitly has an 'any' type") remains in `ChatPage.tsx` (around line 694-699) despite multiple attempts to resolve it. This is being monitored.
 - Vision support for specific Perplexity models via API is unconfirmed.
+- The automatic context extraction for User Memory is currently very basic and may require further refinement for better accuracy and relevance.
 
 ## Evolution of Project Decisions
 - Added S3 file deletion to the chat session deletion process to manage storage and remove orphaned files.
@@ -89,3 +115,10 @@ The project is actively being developed. Recent work focused on implementing S3 
 - Refactored frontend image URL construction to correctly use the base server URL without the API path prefix.
 - Modified backend response and frontend message handling to enable immediate display of uploaded images without page refresh.
 - Extended vision icon display logic in the frontend model selector to custom models by checking a new `baseModelSupportsVision` flag provided by the backend.
+- **User Memory Feature:**
+    - Adopted a hybrid model for context management (manual + basic automatic extraction).
+    - Implemented context storage with a user-configurable maximum limit (default 50), prioritizing recency (`updatedAt`).
+    - Uniqueness of contexts is based on an exact text match for the initial version.
+    - Provided a global enable/disable setting for the memory feature in user settings.
+    - Added a session-specific toggle on the chat page to override memory usage for individual chat sessions.
+    - Memory contexts are injected into the system prompt sent to the LLM.

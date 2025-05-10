@@ -13,6 +13,7 @@
     - `context7` MCP for retrieving up-to-date documentation for libraries/APIs.
     - `perplexity-mcp` for research and documentation retrieval.
 5. Other: npm for package management.
+6. User Memory Feature: Utilizes Mongoose for the `UserMemory` model, with backend logic in Express controllers for CRUD operations and integration into chat processing. Frontend uses React state and Axios for API interactions.
 
 ## Development Setup
 1. Backend and frontend are separate directories within the project.
@@ -29,3 +30,6 @@
 5. Base64 image encoding/decoding adds processing overhead.
 6. Vision model API calls might have different pricing structures and rate limits compared to text-only models.
 7. Vision support for specific models (especially newer ones like GPT-4.1 series or Perplexity models) needs verification against official API documentation.
+8. **User Memory Storage:** The `UserMemory` model stores an array of context sub-documents. Performance considerations for querying and updating this array (especially with sorting, uniqueness checks, and trimming) should be monitored as data grows. The current `maxContexts` limit (e.g., 50-200) helps mitigate this.
+9. **Automatic Context Extraction:** The initial implementation for auto-extracting context is rule-based and simple. More advanced NLP techniques would require additional libraries or services and add complexity.
+10. **Context Injection:** Injecting too much context into LLM prompts can increase token usage and costs, and potentially dilute the immediate query's focus. The amount of context injected (e.g., top 10 recent items) is a balance.

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { MdSend, MdAttachFile, MdMic, MdMicOff, MdLightbulbOutline, MdClose, MdChevronLeft, MdShare, MdLinkOff, MdAddCircleOutline } from 'react-icons/md'; // Added MdAddCircleOutline
+import { MdSend, MdAttachFile, MdMic, MdMicOff, MdLightbulbOutline, MdClose, MdChevronLeft, MdShare, MdLinkOff, MdAddCircleOutline, MdAutoAwesome } from 'react-icons/md'; // Added MdAutoAwesome
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
  // Import both light and dark themes
@@ -111,8 +111,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
     const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for the end of the messages list
     const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for textarea
     const [isListening, setIsListening] = useState(false); // State for speech recognition
-    const recognitionRef = useRef<SpeechRecognition | null>(null); // Ref to hold recognition instance
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null); // For image previews
+  const recognitionRef = useRef<SpeechRecognition | null>(null); // Ref to hold recognition instance
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // For image previews
+  const [isSessionMemoryActive, setIsSessionMemoryActive] = useState(true); // State for session memory toggle
 
     // --- Helper Function for Parsing Perplexity Content ---
   const parsePerplexityContent = (content: string): { reasoning: string | null; mainContent: string } => {
@@ -324,6 +325,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
       if (showReasoning) { // Use showReasoning to control streaming
           // --- Streaming Logic ---
           console.log("Streaming enabled via reasoning toggle."); // Add log
+          formData.append('useSessionMemory', isSessionMemoryActive.toString()); // Add session memory flag
           const optimisticAiMessageId = `temp-ai-${Date.now()}`;
           const optimisticAiMessage: ChatMessage = {
               _id: optimisticAiMessageId,
@@ -558,6 +560,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
               // Use apiClient.post (expects single JSON response with AI message)
               // Add stream=false parameter for non-streaming requests
               formData.append('stream', 'false');
+              formData.append('useSessionMemory', isSessionMemoryActive.toString()); // Add session memory flag
 
               const response = await apiClient.post(`/chatsessions/${sessionId}/messages`, formData, {
                   headers: {
@@ -1054,19 +1057,34 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                 disabled={sendingMessage || loadingMessages}
                             />
                         ) : ( <div /> /* Placeholder to maintain space-between */)}
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {/* Session Memory Toggle Icon Button */}
+                            <button
+                                type="button"
+                                onClick={() => setIsSessionMemoryActive(!isSessionMemoryActive)}
+                                title={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"}
+                                aria-label={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"}
+                                aria-pressed={isSessionMemoryActive}
+                                className={styles.reasoningToggle} // Reuse styling
+                                style={{ opacity: isSessionMemoryActive ? 1 : 0.6 }}
+                            >
+                                <MdAutoAwesome />
+                            </button>
 
-                       {/* Reasoning Toggle Icon Button */}
-                       <button
-                           type="button"
-                           onClick={() => setShowReasoning(!showReasoning)}
-                           title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
-                           aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
-                           aria-pressed={showReasoning}
-                           className={styles.reasoningToggle} // Use new class
-                           style={{ opacity: showReasoning ? 1 : 0.6 }} // Keep opacity for visual feedback
-                       >
-                         <MdLightbulbOutline />
-                     </button>
+                            {/* Reasoning Toggle Icon Button */}
+                            <button
+                                type="button"
+                                onClick={() => setShowReasoning(!showReasoning)}
+                                title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
+                                aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
+                                aria-pressed={showReasoning}
+                                className={styles.reasoningToggle} // Use new class
+                                style={{ opacity: showReasoning ? 1 : 0.6 }} // Keep opacity for visual feedback
+                            >
+                                <MdLightbulbOutline />
+                            </button>
+                        </div>
                  </div>
                  {/* Preview Area */}
                  {previewUrl && selectedFile && selectedFile.type.startsWith('image/') && (

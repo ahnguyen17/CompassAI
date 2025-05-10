@@ -16,6 +16,7 @@ const ChatMessage = require('../models/ChatMessage');
 const ChatSession = require('../models/ChatSession');
 const ApiKey = require('../models/ApiKey');
 const CustomModel = require('../models/CustomModel'); // Import CustomModel
+const UserMemory = require('../models/UserMemory'); // Import UserMemory model
 const mongoose = require('mongoose'); // Import mongoose for ObjectId check
 const path = require('path'); // Import path for resolving file paths
 
@@ -533,7 +534,8 @@ exports.addMessageToSession = async (req, res, next) => {
     console.log(`Entering addMessageToSession for session ID: ${req.params.sessionId}`);
     try {
         const sessionId = req.params.sessionId;
-        const { content, model: requestedModel } = req.body;
+        // Add useSessionMemory, default to true if not provided
+        const { content, model: requestedModel, useSessionMemory = true } = req.body; 
         const uploadedFile = req.file;
         const shouldStream = req.body.stream !== 'false'; // Default to streaming unless explicitly disabled
 
@@ -653,6 +655,40 @@ exports.addMessageToSession = async (req, res, next) => {
         }
         // --- End Determine Model Identifiers ---
 
+        // --- Prepare User Memory Context ---
+        let memoryContextForPrompt = "";
+        if (req.user && req.user.id) { // Ensure user is available
+            const userMemory = await UserMemory.findOne({ userId: req.user.id });
+            // Check global enable and session-specific toggle
+            if (userMemory && userMemory.isGloballyEnabled && useSessionMemory) { 
+                if (userMemory.contexts && userMemory.contexts.length > 0) {
+                    // Sort by updatedAt or createdAt descending to get the most recent
+                    const sortedContexts = [...userMemory.contexts].sort((a, b) => 
+                        (b.updatedAt || b.createdAt).getTime() - (a.updatedAt || a.createdAt).getTime()
+                    );
+                    
+                    // Take up to a certain number of contexts (e.g., 10, could be from userMemory.maxContexts or a fixed number for prompt injection)
+                    const contextsToUse = sortedContexts.slice(0, Math.min(10, userMemory.maxContexts)); 
+                    
+                    if (contextsToUse.length > 0) {
+                        memoryContextForPrompt = "Relevant information about you based on past interactions:\n" +
+                                                contextsToUse.map(c => `- ${c.text}`).join("\n") +
+                                                "\n\n---\n\n"; // Separator
+                        console.log(`Injecting ${contextsToUse.length} memory contexts for user ${req.user.id}`);
+                    }
+                }
+            }
+        }
+        // --- End Prepare User Memory Context ---
+
+        // Inject memory context into systemPromptForApi
+        if (memoryContextForPrompt) {
+            if (systemPromptForApi) {
+                systemPromptForApi = memoryContextForPrompt + systemPromptForApi;
+            } else {
+                systemPromptForApi = memoryContextForPrompt;
+            }
+        }
 
         // --- Prepare Content for AI (Text + Optional Image) ---
         let finalUserMessageContentForApi; // This will hold either string or multimodal array
@@ -1051,6 +1087,36 @@ exports.addMessageToSession = async (req, res, next) => {
                     }, null, 2));
                     const savedMessage = await ChatMessage.create(messageToSave);
                     console.log("Successfully saved final AI message to DB (streaming). ID:", savedMessage._id); // Log success and ID
+
+                    // --- Automatic Context Extraction (Streaming) ---
+                    if (req.user && req.user.id && useSessionMemory && finalAiContent) {
+                        const userMemoryDocForAuto = await UserMemory.findOne({ userId: req.user.id });
+                        if (userMemoryDocForAuto && userMemoryDocForAuto.isGloballyEnabled) {
+                            const lastUserText = content || '';
+                            if (lastUserText.length > 0 && lastUserText.length <= 75 &&
+                                !lastUserText.includes('?') &&
+                                !['what', 'how', 'why', 'who', 'when', 'where', 'tell me'].some(q => lastUserText.toLowerCase().startsWith(q))) {
+                                const trimmedUserText = lastUserText.trim();
+                                const existingContextIndex = userMemoryDocForAuto.contexts.findIndex(c => c.text === trimmedUserText);
+                                const now = new Date();
+                                if (existingContextIndex > -1) {
+                                    userMemoryDocForAuto.contexts[existingContextIndex].updatedAt = now;
+                                    console.log(`Auto-context (stream): Updated timestamp for existing context: "${trimmedUserText}"`);
+                                } else {
+                                    userMemoryDocForAuto.contexts.push({ text: trimmedUserText, source: 'chat_auto_extracted', createdAt: now, updatedAt: now });
+                                    console.log(`Auto-context (stream): Adding new context: "${trimmedUserText}"`);
+                                }
+                                try {
+                                    await userMemoryDocForAuto.save();
+                                    console.log(`User memory (stream) updated with auto-extracted context for user ${req.user.id}.`);
+                                } catch (saveError) {
+                                    console.error(`Error saving user memory (stream) after auto-extraction: `, saveError);
+                                }
+                            }
+                        }
+                    }
+                    // --- End Automatic Context Extraction (Streaming) ---
+
                 } catch (dbError) {
                     console.error("!!! Error saving final AI message to DB (streaming):", dbError); // Make error more prominent
                 }
@@ -1185,6 +1251,35 @@ exports.addMessageToSession = async (req, res, next) => {
             console.log('Saved message ID:', aiMessage._id);
             console.log('Saved message has citations:', !!aiMessage.citations);
             console.log('Saved citations count:', aiMessage.citations?.length || 0);
+
+            // --- Automatic Context Extraction (Non-Streaming) ---
+            if (req.user && req.user.id && useSessionMemory && apiResult && apiResult.content) {
+                const userMemoryDocForAuto = await UserMemory.findOne({ userId: req.user.id });
+                if (userMemoryDocForAuto && userMemoryDocForAuto.isGloballyEnabled) {
+                    const lastUserText = content || '';
+                    if (lastUserText.length > 0 && lastUserText.length <= 75 &&
+                        !lastUserText.includes('?') &&
+                        !['what', 'how', 'why', 'who', 'when', 'where', 'tell me'].some(q => lastUserText.toLowerCase().startsWith(q))) {
+                        const trimmedUserText = lastUserText.trim();
+                        const existingContextIndex = userMemoryDocForAuto.contexts.findIndex(c => c.text === trimmedUserText);
+                        const now = new Date();
+                        if (existingContextIndex > -1) {
+                            userMemoryDocForAuto.contexts[existingContextIndex].updatedAt = now;
+                             console.log(`Auto-context (non-stream): Updated timestamp for existing context: "${trimmedUserText}"`);
+                        } else {
+                            userMemoryDocForAuto.contexts.push({ text: trimmedUserText, source: 'chat_auto_extracted', createdAt: now, updatedAt: now });
+                            console.log(`Auto-context (non-stream): Adding new context: "${trimmedUserText}"`);
+                        }
+                        try {
+                            await userMemoryDocForAuto.save();
+                            console.log(`User memory (non-stream) updated with auto-extracted context for user ${req.user.id}.`);
+                        } catch (saveError) {
+                            console.error(`Error saving user memory (non-stream) after auto-extraction: `, saveError);
+                        }
+                    }
+                }
+            }
+            // --- End Automatic Context Extraction (Non-Streaming) ---
 
             // 6. Send back the single AI response AND the saved user message
             res.status(201).json({

@@ -1,52 +1,50 @@
 # Active Context: CompassAI
 
 ## Current Work Focus
-Testing and finalizing the S3 file deletion feature upon chat session deletion. Previously, the focus was on UI redesign of `ChatPage.tsx` and resolving TypeScript errors.
+Implementation of the User Memory feature, enabling personalized chat responses based on stored user-specific contexts.
 
 ## Recent Changes
-- **S3 File Deletion on Session Delete:**
-    - Modified `backend/controllers/chatSessions.js` in the `deleteChatSession` function.
-    - Added logic to fetch `ChatMessage` documents that have associated `fileInfo`.
-    - For each such message, the S3 object key (`fileInfo.filename`) is retrieved.
-    - An `S3Client` is initialized, and `DeleteObjectCommand` is sent to AWS S3 to remove the file.
-    - Errors during S3 deletion are logged, but the process continues to delete MongoDB records for `ChatMessage` and `ChatSession`.
-    - Imported `S3Client` and `DeleteObjectCommand` from `@aws-sdk/client-s3`.
-- **Correct `ChatPage.tsx` Extraneous Text:**
-    - Used `write_to_file` to remove unintentionally appended text (tool error messages) from `ChatPage.tsx`, restoring it to its correct code content ending with `export default ChatPage;`.
-- **TypeScript Error Resolution (Partial):**
-    - **`vite-env.d.ts`:**
-        - Added module declarations for `react-router-dom`, `react-markdown`, `remark-gfm`, `react-i18next`, `react-syntax-highlighter`, and `react-syntax-highlighter/dist/esm/styles/prism` to resolve module not found errors.
-        - Provided more specific type signatures for `useParams`, `useNavigate`, `Link`, `useLocation`, `Routes`, `Route`, `Navigate`, `Outlet`, and `BrowserRouter` from `react-router-dom` to fix type argument and export errors.
-        - Added `ImportMetaEnv` interface and extended `ImportMeta` to resolve `import.meta.env` errors.
-    - **`ChatPage.tsx`:**
-        - Attempted multiple strategies to resolve a persistent "Parameter 's' implicitly has an 'any' type" error on line ~694-699 within a `sessions.map(...)` call. The error remains despite explicit typing and structural changes. This error is currently being monitored.
-- **Build Error Resolution (Netlify):**
-    - Installed `react-icons` dependency in `frontend/client` to resolve "Cannot find module 'react-icons/md'" (TS2307) error during Netlify build.
-    - Updated `vite-env.d.ts` to include declarations for `Routes`, `Route`, `Navigate`, `Outlet`, and `BrowserRouter` from `react-router-dom` to resolve TS2305 errors.
-- **UI Redesign of `ChatPage.tsx`:**
-    - **Input Controls:**
-        - Relocated the Microphone button (`MdMic` / `MdMicOff`) into the main input controls bar, between the textarea and the Send button.
-    - **Icon Buttons:**
-        - Replaced the text-based "Share" / "Unshare" button with an icon button (`MdShare` / `MdLinkOff`).
-        - Updated the "New Chat" button in the sidebar header to use an icon (`MdAddCircleOutline`) and call the `startNewChat` action from `authStore`.
-    - **Mobile Responsiveness:**
-        - Updated `ChatPage.module.css` to improve layout on smaller screens:
-            - Removed fixed left margin from the main chat area header.
-            - Allowed chat title to wrap.
-            - Set `flex-wrap: nowrap` for the Model Selector and Reasoning Toggle row to keep them on a single line, reverting the previous wrapping strategy.
-            - Ensured message bubbles maintain a `max-width` of `85%`.
-- **Previous Fix (TS2719 Error in ChatPage):**
-    - **Frontend (`ChatPage.tsx`):** Updated the local `CustomModelData` interface definition to include `baseModelSupportsVision: boolean;`.
+- **User Memory Feature Implementation:**
+    - **Backend:**
+        - Created new Mongoose model `UserMemory` (`backend/models/UserMemory.js`) to store user-specific contexts, global enable/disable settings, and max context limits. Includes sub-document schema `ContextItemSchema` with timestamps and a pre-save hook for sorting and trimming contexts.
+        - Created new controller `userMemoryController.js` (`backend/controllers/userMemoryController.js`) with functions for:
+            - Getting user memory (`getUserMemory`).
+            - Updating global memory settings (`updateUserMemorySettings`).
+            - Adding new context items (`addContext`), handling uniqueness.
+            - Updating existing context items (`updateContext`).
+            - Deleting specific context items (`deleteContext`).
+            - Clearing all contexts for a user (`clearAllContexts`).
+        - Created new routes `userMemoryRoutes.js` (`backend/routes/userMemoryRoutes.js`) for all controller actions, protected by authentication.
+        - Mounted user memory routes in `backend/server.js` under `/api/v1/usermemory`.
+        - Integrated User Memory into `chatMessages.js` (`backend/controllers/chatMessages.js`):
+            - Accepts `useSessionMemory` flag from frontend.
+            - Fetches user memory contexts if globally and session-enabled.
+            - Injects formatted memory contexts into the system prompt sent to the LLM.
+            - Added basic automatic context extraction logic (for short, statement-like user messages) after AI response.
+    - **Frontend:**
+        - Updated API service `api.ts` (`frontend/client/src/services/api.ts`) with new interfaces (`UserMemoryData`, `ContextItemData`) and functions to call user memory endpoints.
+        - Added "Personalized Memory" section to `SettingsPage.tsx` (`frontend/client/src/pages/SettingsPage.tsx`):
+            - UI for managing global memory settings (enable/disable toggle, max contexts input).
+            - UI for CRUD operations on individual context items (add, list with edit/delete, clear all).
+            - Includes an edit modal for context items.
+        - Added session-specific memory toggle (using `MdAutoAwesome` icon) to `ChatPage.tsx` (`frontend/client/src/pages/ChatPage.tsx`) near the model selector.
+            - This toggle controls a `useSessionMemory` flag sent with chat messages to the backend.
+- **Previous Work (S3 File Deletion, UI Redesign, TypeScript Fixes):**
+    - S3 file deletion on session delete was finalized.
+    - `ChatPage.tsx` UI redesign and various TypeScript error resolutions were completed.
 
 ## Next Steps
-- Update `progress.md` to reflect the S3 file deletion feature.
-- Thoroughly test the chat session deletion functionality to ensure S3 files are removed and MongoDB records are cleaned up correctly.
-- Test error handling for S3 deletion (e.g., if a file doesn't exist or S3 permissions are incorrect).
-- Trigger a new Netlify build to confirm the `react-icons` module error is resolved.
-- Continue UI refinement for `ChatPage.tsx` if any further specific changes are requested.
-- Present the completed S3 file deletion feature and previous UI/TypeScript work to the user.
+- Thoroughly test the new User Memory feature:
+    - Backend API endpoints for creating, reading, updating, and deleting memory settings and contexts.
+    - Frontend "Personalized Memory" panel in Settings: global toggles, context CRUD operations.
+    - Frontend session memory toggle on the Chat Page and its effect on context injection.
+    - Automatic context extraction logic (verify its behavior and effectiveness).
+    - Ensure context prioritization (recency) and uniqueness (exact match) are working as expected.
+- Update other Memory Bank files: `progress.md`, `systemPatterns.md`, `productContext.md`, and `techContext.md` to document the User Memory feature.
+- Present the completed User Memory feature to the user.
 
 ## Active Decisions and Considerations
-- S3 file deletion errors are currently logged, and the MongoDB cleanup proceeds. This prevents orphaning DB records if S3 is temporarily unavailable but means some S3 files might remain if deletion fails persistently. This behavior can be revisited if stricter error handling (e.g., halting DB deletion on S3 error) is required.
-- The persistent "implicit any" TypeScript error in `ChatPage.tsx` (line ~694-699) is being monitored. Further UI work will proceed, and this error will be revisited if it blocks compilation or causes runtime issues.
-- UI changes are focused on using `react-icons` and leveraging existing CSS in `ChatPage.module.css`.
+- The current automatic context extraction in `chatMessages.js` is very basic (short, non-question user messages). This is an area for potential future enhancement with more sophisticated NLP techniques if desired.
+- The uniqueness check for contexts is currently an exact string match. Semantic similarity was deemed out of scope for the initial implementation.
+- The number of contexts injected into the LLM prompt is currently hardcoded (e.g., top 10 recent). This could be made configurable or dynamic in the future.
+- The session memory toggle on `ChatPage.tsx` overrides the global memory setting for that specific session (i.e., if global is ON, session can be OFF; if global is OFF, session toggle won't enable memory).

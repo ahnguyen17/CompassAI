@@ -116,5 +116,83 @@ apiClient.interceptors.response.use(
   }
 );
 
+// --- User Memory Interfaces ---
+export interface ContextItemData {
+  _id: string;
+  text: string;
+  source: 'manual' | 'chat_auto_extracted';
+  createdAt: string; // Dates will be strings from JSON
+  updatedAt: string;
+}
+
+export interface UserMemoryData {
+  _id: string;
+  userId: string;
+  isGloballyEnabled: boolean;
+  maxContexts: number;
+  contexts: ContextItemData[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- User Memory API Functions ---
+
+export const getUserMemory = async (): Promise<ApiResponse<UserMemoryData>> => {
+  const response = await apiClient.get<ApiResponse<UserMemoryData>>('/usermemory');
+  return response.data;
+};
+
+export const updateUserMemorySettings = async (settings: {
+  isGloballyEnabled?: boolean;
+  maxContexts?: number;
+}): Promise<ApiResponse<UserMemoryData>> => {
+  const response = await apiClient.put<ApiResponse<UserMemoryData>>(
+    '/usermemory/settings',
+    settings
+  );
+  return response.data;
+};
+
+export const addMemoryContext = async (context: {
+  text: string;
+  source?: 'manual' | 'chat_auto_extracted'; // Source is optional, defaults to 'manual' in backend if not provided by frontend for manual add
+}): Promise<ApiResponse<UserMemoryData>> => {
+  const payload = { ...context };
+  if (!payload.source) {
+    payload.source = 'manual'; // Ensure source is set if frontend doesn't send it
+  }
+  const response = await apiClient.post<ApiResponse<UserMemoryData>>(
+    '/usermemory/contexts',
+    payload
+  );
+  return response.data;
+};
+
+export const updateMemoryContext = async (
+  contextId: string,
+  context: { text: string }
+): Promise<ApiResponse<UserMemoryData>> => {
+  const response = await apiClient.put<ApiResponse<UserMemoryData>>(
+    `/usermemory/contexts/${contextId}`,
+    context
+  );
+  return response.data;
+};
+
+export const deleteMemoryContext = async (
+  contextId: string
+): Promise<ApiResponse<UserMemoryData>> => { // Backend returns updated UserMemory
+  const response = await apiClient.delete<ApiResponse<UserMemoryData>>(
+    `/usermemory/contexts/${contextId}`
+  );
+  return response.data;
+};
+
+export const clearAllMemoryContexts = async (): Promise<ApiResponse<UserMemoryData>> => {
+  const response = await apiClient.post<ApiResponse<UserMemoryData>>(
+    '/usermemory/contexts/clear'
+  );
+  return response.data;
+};
 
 export default apiClient;

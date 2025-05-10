@@ -34,6 +34,14 @@ The project follows a client-server architecture. The backend is built using Nod
 - `ReferralCode`: Stores referral codes for user registration.
 - `CustomProvider`: Stores admin-defined custom provider names.
 - `CustomModel`: Stores admin-defined custom models, linking a name and system prompt to a base model identifier under a specific CustomProvider.
+- `UserMemory`: Stores user-specific contexts for personalized responses.
+    - `userId`: Reference to the `User`.
+    - `isGloballyEnabled`: Boolean to toggle the feature for the user.
+    - `maxContexts`: Number defining the limit of contexts to store.
+    - `contexts`: Array of `ContextItemSchema` sub-documents, each containing:
+        - `text`: The string of context.
+        - `source`: Enum ('manual', 'chat_auto_extracted').
+        - `createdAt`, `updatedAt`: Timestamps for the context item.
 
 ## Component Relationships
 - Backend controllers handle business logic and interact with models.
@@ -42,8 +50,14 @@ The project follows a client-server architecture. The backend is built using Nod
 - `CustomProvider` has a one-to-many relationship with `CustomModel`.
 - `CustomModel` references a `CustomProvider`.
 - The `chatMessages` controller checks if a requested model ID is a `CustomModel` ObjectId. If so, it uses the linked `baseModelIdentifier` and `systemPrompt` for the API call. It also checks if the `baseModelIdentifier` supports vision (using data from `providers.js`) and formats the API call accordingly if an image is present.
-- `ChatPage.tsx` on the frontend handles file selection, image pasting, preview generation, and sending file data along with messages. It also renders uploaded images and file links.
+- `ChatPage.tsx` on the frontend handles file selection, image pasting, preview generation, and sending file data along with messages. It also renders uploaded images and file links. It now includes a session-specific toggle for user memory usage and sends a `useSessionMemory` flag to the backend.
 - `ModelSelectorDropdown.tsx` displays models and indicates vision support for base models directly, and for custom models based on their underlying base model's capabilities, using data from the `providers` controller.
+- `userMemoryController.js` handles business logic for the `UserMemory` model.
+- `chatMessages.js` controller now:
+    - Optionally fetches contexts from `UserMemory` based on global and session settings.
+    - Injects fetched contexts into the system prompt for the LLM.
+    - Contains basic logic to auto-extract and save new contexts to `UserMemory`.
+- `SettingsPage.tsx` provides UI for users to manage their `UserMemory` settings and contexts via the `/usermemory` API.
 
 ## Key API Endpoints (`/api/v1/...`)
 - `/auth`: User registration, login, password updates.
@@ -61,6 +75,13 @@ The project follows a client-server architecture. The backend is built using Nod
 - `/settings`: Get/Update global application settings (Admin).
 - `/customproviders`: CRUD for custom providers (Admin).
 - `/custommodels`: CRUD for custom models (Admin).
+- `/usermemory`:
+    - `GET /`: Get user's memory settings and all contexts.
+    - `PUT /settings`: Update global memory settings (isGloballyEnabled, maxContexts).
+    - `POST /contexts`: Add a new context item.
+    - `PUT /contexts/:contextId`: Update an existing context item.
+    - `DELETE /contexts/:contextId`: Delete a specific context item.
+    - `POST /contexts/clear`: Clear all contexts for the user.
 
 ## Development Workflow Patterns
 1.  **Planning:** Utilize the `sequentialthinking` MCP to break down complex tasks or new features into detailed, logical steps before implementation.

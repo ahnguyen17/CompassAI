@@ -181,23 +181,27 @@ exports.deleteContext = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('User memory not found.', 404));
   }
 
-  const contextItem = userMemory.contexts.id(contextId);
+  // Check if the context item exists before trying to pull
+  const contextItemExists = userMemory.contexts.some(
+    (c) => c._id.toString() === contextId
+  );
 
-  if (!contextItem) {
+  if (!contextItemExists) {
     return next(new ErrorResponse(`Context item with ID ${contextId} not found.`, 404));
   }
 
-  // Mongoose subdocument removal
-  contextItem.remove(); // or userMemory.contexts.pull(contextId); and then save
+  // Use the pull method to remove the subdocument from the array
+  userMemory.contexts.pull({ _id: contextId });
   
+  // Save the parent document to persist the change
+  // The pre-save hook on UserMemory model will still run (for sorting/trimming if contexts array is considered modified)
   await userMemory.save();
 
-  // Re-fetch to ensure the returned data reflects the sorted/trimmed array by pre-save hook
-  const updatedUserMemory = await UserMemory.findById(userMemory._id);
-
+  // userMemory document is now updated in memory after save
+  // No need to re-fetch, userMemory is the updated document after save.
   res.status(200).json({
     success: true,
-    data: updatedUserMemory, // Or simply { success: true, data: {} } if no body needed
+    data: userMemory, 
   });
 });
 

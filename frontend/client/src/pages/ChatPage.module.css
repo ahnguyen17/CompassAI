@@ -101,9 +101,10 @@
 
 .iconRow {
     display: flex;
-    align-items: center; /* Ensure icons and inline textarea align vertically */
+    align-items: center; /* Vertically center all children */
     width: 100%;
     gap: 8px; 
+    flex-wrap: nowrap; /* Prevent wrapping of items */
 }
 
 .inputControls:focus-within {
@@ -126,6 +127,7 @@
     flex-shrink: 0;
     width: 40px; /* Fixed width */
     height: 40px; /* Fixed height */
+    margin: 0; /* Remove default margins */
 }
 
 .fileUploadButton:hover, .micButton:hover, .sendButton:not(:disabled):hover, .reasoningToggle:hover {
@@ -217,8 +219,7 @@
     outline: none; 
     max-height: 150px; 
     overflow-y: auto;
-    /* Add this to help with vertical alignment with icons */
-    align-self: center; 
+    margin: 0; /* Remove default margins */
 }
 
 .elevatedTextarea {

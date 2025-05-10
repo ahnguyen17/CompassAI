@@ -40,15 +40,16 @@ Implementation of the User Memory feature, enabling personalized chat responses 
         - Added `isTextareaElevated` state to control layout.
         - When text input is multi-line or contains newlines, the textarea moves to a line above the main icon row.
         - Reordered icons in the main input row to: Model Selector, Session Memory Toggle, Reasoning Toggle, (inline textarea or placeholder), File Attachment, Voice, Send.
-    - Updated `useEffect` in `ChatPage.tsx` to manage `isTextareaElevated` state (using dynamic single-row height calculation) and continue auto-expanding textarea height.
+    - Updated `useEffect` in `ChatPage.tsx` to manage `isTextareaElevated` state (using a more direct scrollHeight vs clientHeight comparison) and continue auto-expanding textarea height.
     - Updated `ChatPage.module.css`:
-        - Modified `styles.inputControls` to default to `flex-direction: row` and `align-items: center` for the non-elevated state, and `flex-direction: column-reverse` with `align-items: stretch` for the elevated state.
-        - Ensured `styles.iconRow` uses `align-items: center` for proper inline alignment of icons and the non-elevated textarea.
-        - Added `align-self: center` to `styles.messageInput` to aid its vertical alignment within the icon row.
+        - Adjusted padding for `styles.messageInput` to better match icon button heights for improved inline vertical alignment.
+        - Confirmed `styles.inputControls` defaults to `flex-direction: row` and `align-items: center` for the non-elevated state.
+        - Confirmed `styles.iconRow` uses `align-items: center`.
+        - Removed `align-self: center` from `styles.messageInput` as parent alignment should suffice.
         - Added `styles.elevatedTextarea` for styling the textarea when it's on its own line above icons.
 
 ## Next Steps
-- Verify the chat input UI fixes in the browser.
+- Verify the latest chat input UI fixes (CSS padding and JS elevation logic) in the browser.
 - Thoroughly test the new User Memory feature:
     - Backend API endpoints for creating, reading, updating, and deleting memory settings and contexts.
     - Frontend "Personalized Memory" panel in Settings: global toggles, context CRUD operations.

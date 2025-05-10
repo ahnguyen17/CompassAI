@@ -206,7 +206,7 @@
 
 .messageInput {
     flex: 1;
-    padding: 10px 15px; /* Adjusted padding */
+    padding: 8px 15px; /* Changed top/bottom padding from 10px to 8px */
     border-radius: 20px; /* Keep rounded for inner input */
     border: none; /* Remove border, parent .inputControls has it */
     font-size: 1rem;

@@ -51,6 +51,7 @@
         - Reordered icons on the main input row to: Model Selector, Session Memory Toggle, Reasoning Toggle, (inline textarea/placeholder), File Attachment, Voice, Send.
         - The textarea continues to auto-expand vertically based on content.
         - Updated `ChatPage.module.css` with new classes (`.inputControlsElevated`, `.iconRow`, `.elevatedTextarea`) and modified existing styles to support this dynamic two-state layout.
+        - **Fixed:** Corrected `flex-direction` in `ChatPage.module.css` for `.inputControls` to ensure the non-elevated (single-line) textarea appears inline with icons, and the elevated (multi-line) textarea appears above the icon row.
 - **S3 File Deletion on Session Delete:**
     - Implemented logic in `backend/controllers/chatSessions.js` (`deleteChatSession` function) to:
         - Identify `ChatMessage` documents with `fileInfo.filename`.
@@ -91,26 +92,26 @@
         - Session-specific memory toggle (using `MdAutoAwesome` icon) added to `ChatPage.tsx` (`frontend/client/src/pages/ChatPage.tsx`) near the model selector, controlling the `useSessionMemory` flag sent to the backend.
 
 ## What's Left to Build
-- Thoroughly test the new S3 file deletion feature when deleting chat sessions.
-- Further testing and refinement of existing features, especially AI vision input, immediate image display, and the `ChatPage.tsx` UI changes.
-- **Thoroughly test the new User Memory feature:**
+- **Thoroughly test the new User Memory feature (Primary Next Step):**
     - Backend API functionality (CRUD for settings and contexts).
     - Frontend "Personalized Memory" panel in Settings.
     - Frontend session memory toggle on Chat Page.
     - Context injection logic and its impact on LLM responses.
     - Automatic context extraction behavior and accuracy.
     - Uniqueness and recency logic for context storage.
+- Thoroughly test the S3 file deletion feature when deleting chat sessions.
+- Further testing and refinement of existing features, especially AI vision input, immediate image display, and the `ChatPage.tsx` UI changes (including the recent input field fix).
 - Address the persistent "Parameter 's' implicitly has an 'any' type" error in `ChatPage.tsx` (around line 694-699) if it causes runtime issues or blocks compilation.
 - Confirm which specific Perplexity models support vision via API and update backend/frontend accordingly.
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. Recent work focused on the initial implementation of the User Memory feature, including backend model/controller/routes, frontend UI in Settings and Chat pages, and integration with the chat processing logic. Prior to this, S3 file deletion and various UI/TypeScript enhancements were completed.
+The project is actively being developed. The User Memory feature has been implemented. The immediate next step is comprehensive testing of this feature. Recent work also included fixing the chat input UI layout.
 
 ## Known Issues
 - A persistent TypeScript error ("Parameter 's' implicitly has an 'any' type") remains in `ChatPage.tsx` (around line 694-699) despite multiple attempts to resolve it. This is being monitored.
 - Vision support for specific Perplexity models via API is unconfirmed.
-- The automatic context extraction for User Memory is currently very basic and may require further refinement for better accuracy and relevance.
+- The automatic context extraction for User Memory is currently very basic and may require further refinement for better accuracy and relevance (this will be assessed during testing).
 
 ## Evolution of Project Decisions
 - Added S3 file deletion to the chat session deletion process to manage storage and remove orphaned files.

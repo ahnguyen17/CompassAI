@@ -100,7 +100,7 @@
 
 .iconRow {
     display: flex;
-    align-items: center; /* Default alignment for icons */
+    align-items: flex-end; /* Changed from center to flex-end */
     width: 100%;
     gap: 8px; /* Consistent gap for icons */
 }

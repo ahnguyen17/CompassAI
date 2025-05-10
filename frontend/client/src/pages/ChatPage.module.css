@@ -77,8 +77,8 @@
 
 .inputControls {
     display: flex;
-    align-items: flex-end; /* Align items to the bottom for multi-line textarea */
-    gap: 10px;
+    align-items: center; /* Align items to the center for single-line consistency */
+    gap: 8px; /* Slightly reduce gap for a more compact look */
     padding: 8px;
     background-color: var(--surface-color); /* Use surface color for input area background */
     border: 1px solid var(--input-border);
@@ -194,11 +194,11 @@
     background-color: transparent; /* Inherit from .inputControls */
     color: var(--text-color);
     resize: none; /* Disable manual resize, let it grow with content */
-    min-height: 24px; /* Match button icon line height */
+    /* min-height: 24px; */ /* Remove fixed min-height, allow dynamic height */
     line-height: 1.5;
     outline: none; /* Remove default outline */
-    max-height: 150px; /* From inline style */
-    overflow-y: auto; /* From inline style */
+    max-height: 150px; /* Max height before scrolling */
+    overflow-y: auto; 
 }
 
 .messageInput::placeholder {

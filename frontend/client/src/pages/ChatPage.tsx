@@ -721,6 +721,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loadingMessages]); // Trigger on message array change or when loading finishes
 
+  // Effect for auto-expanding textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'; // Reset height to correctly calculate scrollHeight
+      // Only set new height if scrollHeight is greater than a baseline (e.g., for single line)
+      // and less than or equal to max-height (CSS will enforce max-height anyway)
+      const newHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  }, [newMessage]); // Trigger when newMessage changes
+
   // REMOVED: Effect to open sidebar when no chat is selected (Keep default collapsed)
   // useEffect(() => {
   //   if (!currentSession && !isSidebarVisible) {
@@ -1039,54 +1050,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
 
               {/* Input Area */}
               <form onSubmit={handleSendMessage} className={styles.inputForm}>
-                   {/* Model Select, Mic, and Reasoning Toggle Row */}
-                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}> {/* Changed gap to space-between */}
-                        {/* Model Selector - Pass the combined state */}
-                        {/* Check if either baseModels or customModels have entries before rendering */}
-                        {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) ? (
-                            <ModelSelectorDropdown
-                                availableModels={availableModels} // Pass the state variable directly
-                               selectedModel={selectedModel}
-                               onModelChange={(newModel) => {
-                                   setSelectedModel(newModel);
-                                   // Automatically enable reasoning/streaming if a known reasoning model is selected
-                                   if (REASONING_MODELS.includes(newModel)) {
-                                       setShowReasoning(true);
-                                   }
-                               }}
-                                disabled={sendingMessage || loadingMessages}
-                            />
-                        ) : ( <div /> /* Placeholder to maintain space-between */)}
-                        
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            {/* Session Memory Toggle Icon Button */}
-                            <button
-                                type="button"
-                                onClick={() => setIsSessionMemoryActive(!isSessionMemoryActive)}
-                                title={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"}
-                                aria-label={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"}
-                                aria-pressed={isSessionMemoryActive}
-                                className={styles.reasoningToggle} // Reuse styling
-                                style={{ opacity: isSessionMemoryActive ? 1 : 0.6 }}
-                            >
-                                <MdAutoAwesome />
-                            </button>
-
-                            {/* Reasoning Toggle Icon Button */}
-                            <button
-                                type="button"
-                                onClick={() => setShowReasoning(!showReasoning)}
-                                title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
-                                aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
-                                aria-pressed={showReasoning}
-                                className={styles.reasoningToggle} // Use new class
-                                style={{ opacity: showReasoning ? 1 : 0.6 }} // Keep opacity for visual feedback
-                            >
-                                <MdLightbulbOutline />
-                            </button>
-                        </div>
-                 </div>
-                 {/* Preview Area */}
+                 {/* Preview Area - Moved above the inputControls div */}
                  {previewUrl && selectedFile && selectedFile.type.startsWith('image/') && (
                     <div style={{ marginBottom: '10px', position: 'relative', maxWidth: '150px' }}>
                         <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '4px' }} />
@@ -1102,7 +1066,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                     </div>
                  )}
 
-                 {/* Input Controls Row */}
+                 {/* Consolidated Input Controls Row */}
                  <div className={styles.inputControls}>
                      <input
                         type="file"
@@ -1122,6 +1086,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                      >
                          <MdAttachFile />
                      </button>
+                     {/* Model Selector - Moved here */}
+                     {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) ? (
+                        <ModelSelectorDropdown
+                            availableModels={availableModels}
+                            selectedModel={selectedModel}
+                            onModelChange={(newModel) => {
+                                setSelectedModel(newModel);
+                                if (REASONING_MODELS.includes(newModel)) {
+                                    setShowReasoning(true);
+                                }
+                            }}
+                            disabled={sendingMessage || loadingMessages}
+                        />
+                      ) : null }
                      {/* Removed selectedFile span from here, preview handles it */}
                         <textarea
                             ref={textareaRef}
@@ -1132,8 +1110,36 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                             disabled={sendingMessage || loadingMessages || !currentSession}
                             className={styles.messageInput}
                             onPaste={handlePaste}
-                            rows={1}
+                            // rows={1} // Removed rows attribute, height will be dynamic
                       />
+                        {/* Session Memory Toggle Icon Button - Moved here */}
+                        {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) && (
+                            <button
+                                type="button"
+                                onClick={() => setIsSessionMemoryActive(!isSessionMemoryActive)}
+                                title={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"}
+                                aria-label={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"}
+                                aria-pressed={isSessionMemoryActive}
+                                className={styles.reasoningToggle} // Reuse styling
+                                style={{ opacity: isSessionMemoryActive ? 1 : 0.6 }}
+                            >
+                                <MdAutoAwesome />
+                            </button>
+                        )}
+                        {/* Reasoning Toggle Icon Button - Moved here */}
+                        {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) && (
+                            <button
+                                type="button"
+                                onClick={() => setShowReasoning(!showReasoning)}
+                                title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
+                                aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
+                                aria-pressed={showReasoning}
+                                className={styles.reasoningToggle} // Use new class
+                                style={{ opacity: showReasoning ? 1 : 0.6 }} // Keep opacity for visual feedback
+                            >
+                                <MdLightbulbOutline />
+                            </button>
+                        )}
                         {/* Microphone Button */}
                         {recognitionRef.current && ( // Only show if API is supported
                             <button

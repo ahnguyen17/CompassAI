@@ -35,6 +35,14 @@ Implementation of the User Memory feature, enabling personalized chat responses 
 - **UI Update (Model Selector Icon):**
     - Changed the chat model selection icon in `ModelSelectorDropdown.tsx` from "🤖" to `MdPsychology`.
     - Adjusted CSS in `ModelSelectorDropdown.module.css` to make the icon size and button style consistent with other icons on the same line in `ChatPage.tsx` (e.g., reasoning toggle).
+- **Chat Input Redesign (Perplexity Style):**
+    - Restructured JSX in `ChatPage.tsx` to consolidate all input controls (file upload, model selector, textarea, toggles, mic, send) into a single-line layout within `styles.inputControls`.
+    - Added `useEffect` hook in `ChatPage.tsx` for auto-expanding textarea height based on content, up to a CSS-defined `max-height`.
+    - Updated `ChatPage.module.css`:
+        - Changed `align-items` to `center` for `styles.inputControls`.
+        - Adjusted `gap` in `styles.inputControls`.
+        - Removed `min-height` from `styles.messageInput` to support dynamic height.
+        - Removed `rows={1}` attribute from `textarea` in `ChatPage.tsx`.
 
 ## Next Steps
 - Thoroughly test the new User Memory feature:

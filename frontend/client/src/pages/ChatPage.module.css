@@ -456,7 +456,7 @@ body.dark .messageList {
 
 /* Message Bubbles - Dark mode styles */
 body.dark .messageBubbleUser {
-    background-color: var(--user-bubble-dark-bg); /* Use custom very dark green for user bubble in dark mode */
+    background-color: #113319; /* Directly use the intended very dark green */
     /* color: var(--text-on-primary-color); */ /* Inherits from .messageBubbleUser or can be re-stated */
 }
 body.dark .messageBubbleAi {

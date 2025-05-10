@@ -234,7 +234,7 @@
     margin: 0; /* Remove default margins */
     width: 100%; /* Ensure it takes full width in the column layout */
     box-sizing: border-box; /* Include padding and border in the element's total width and height */
-    margin-bottom: 8px; /* Space between textarea and icon row */
+    /* margin-bottom: 8px; */ /* Removed to reduce space, parent .inputControls has a gap */
 }
 
 /* .elevatedTextarea class is no longer needed, styles merged or adapted into .messageInput */

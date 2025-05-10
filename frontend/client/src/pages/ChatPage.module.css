@@ -80,12 +80,12 @@
     /* align-items: center; Will be controlled by elevated state */
     gap: 0px; /* Removed gap */
     padding: 8px;
-    background-color: var(--surface-color); 
+    background-color: var(--surface-color);
     border: 1px solid var(--input-border);
-    border-radius: 24px; 
+    border-radius: 24px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     transition: border-color 0.3s ease, background-color 0.3s ease, flex-direction 0.1s ease, align-items 0.1s ease;
-    
+
     /* Default to row for the non-elevated state, and center items vertically */
     /* flex-direction: row; */ /* No longer default, always column */
     /* align-items: center; */ /* No longer default, always stretch for column */
@@ -94,7 +94,7 @@
 }
 
 /* .inputControls:not(.inputControlsElevated) .iconRow {
-    align-items: center; 
+    align-items: center;
 } */ /* This rule can be removed or commented out */
 /* .inputControls.inputControlsElevated class is no longer needed */
 
@@ -226,10 +226,10 @@
     font-size: 1rem;
     background-color: transparent; /* Inherit from .inputControls */
     color: var(--text-color);
-    resize: none; 
+    resize: none;
     line-height: 1.5;
-    outline: none; 
-    max-height: 150px; 
+    outline: none;
+    max-height: 150px;
     overflow-y: auto;
     margin: 0; /* Remove default margins */
     width: 100%; /* Ensure it takes full width in the column layout */
@@ -400,7 +400,7 @@ body.dark .deleteSessionButton {
 body.dark .newChatButton {
      background-color: #0d6efd;
  }
- 
+
  /* New style for the close button next to the Chat History title */
  .sidebarHeaderCloseButton {
      background: none;
@@ -415,15 +415,15 @@ body.dark .newChatButton {
  .sidebarHeaderCloseButton:hover {
      color: #343a40; /* Darken on hover */
  }
- 
+
  body.dark .sidebarHeaderCloseButton {
      color: #aaa; /* Lighter subdued color for dark mode */
  }
- 
+
  body.dark .sidebarHeaderCloseButton:hover {
      color: #eee; /* Lighten on hover */
  }
- 
+
  body.dark .mainChatArea {
      /* Background is inherited from container */
 }
@@ -433,9 +433,9 @@ body.dark .sidebarToggleButton { /* Keep original style for button inside sideba
     border-color: #666;
     color: #eee;
  }
- 
+
  /* Removed dark mode styles for floating hidden button */
- 
+
 
 body.dark .mainChatArea h3 {
     color: #e0e0e0; /* Dark mode header */
@@ -456,8 +456,8 @@ body.dark .messageList {
 
 /* Message Bubbles - Dark mode styles */
 body.dark .messageBubbleUser {
-    background-color: #113319; /* Directly use the intended very dark green */
-    /* color: var(--text-on-primary-color); */ /* Inherits from .messageBubbleUser or can be re-stated */
+    background-color: #0e5132; /* Darker green with better contrast */
+    color: white; /* Ensure text is white for maximum contrast */
 }
 body.dark .messageBubbleAi {
     background-color: #3a3d41;
@@ -514,11 +514,11 @@ body.dark .sendButton:disabled {
     cursor: pointer;
      transition: left 0.3s ease-in-out;
  }
- 
+
  /* Removed .sidebarToggleButtonHidden rule */
- 
+
  /* Removed .sidebarToggleButtonHidden:hover rule */
- 
+
  /* --- Mobile Styles --- */
 @media (max-width: 767px) {
     .chatSidebar {
@@ -564,7 +564,7 @@ body.dark .sendButton:disabled {
     }
 
      /* Removed mobile styles for .sidebarToggleButtonHidden */
- 
+
      /* Adjust message bubble max-width for smaller screens */
     /* This would ideally go into a separate message bubble component CSS */
     /* Example: */
@@ -585,14 +585,14 @@ body.dark .sendButton:disabled {
     }
 
     /* Header in Main Chat Area */
-    .mainChatArea > div:first-child { 
+    .mainChatArea > div:first-child {
         margin-left: 0 !important; /* Override desktop inline style */
     }
 
     .mainChatArea > div:first-child h3 {
         min-width: 0; /* Allow title to shrink */
         overflow-wrap: break-word;
-        word-break: break-word; 
+        word-break: break-word;
     }
 
     /* Model Selector & Reasoning Toggle Row */

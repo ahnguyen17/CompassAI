@@ -65,6 +65,10 @@ Implementation of the User Memory feature, enabling personalized chat responses 
         - Modified the `body.dark .messageBubbleUser` rule to use `background-color: var(--user-bubble-dark-bg);`.
         - The `.messageBubbleUser` base rule (for light theme) remains unchanged, using `var(--primary-color)`.
     - Text color remains `var(--text-on-primary-color)` (white).
+- **Reasoning Toggle Hidden & Always On:**
+    - Removed the "Show Reasoning Steps" toggle button from `ChatPage.tsx`.
+    - The `showReasoning` state variable remains initialized to `true` and is no longer modifiable by the user via the UI.
+    - This ensures that reasoning steps are always displayed and message streaming is always active by default.
 
 ## Next Steps
 - Verify the latest chat input UI fixes (CSS padding, JS elevation logic, vertical spacing tweak) in the browser.

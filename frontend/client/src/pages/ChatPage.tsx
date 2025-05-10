@@ -1091,9 +1091,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                     selectedModel={selectedModel}
                                     onModelChange={(newModel) => {
                                         setSelectedModel(newModel);
-                                        if (REASONING_MODELS.includes(newModel)) {
-                                            setShowReasoning(true);
-                                        }
+                                        // REASONING_MODELS check and setShowReasoning(true) removed as reasoning is always on
                                     }}
                                     disabled={sendingMessage || loadingMessages}
                                 />
@@ -1105,11 +1103,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                 </button>
                             )}
 
-                            {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) && (
-                                <button type="button" onClick={() => setShowReasoning(!showReasoning)} title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')} aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')} aria-pressed={showReasoning} className={styles.reasoningToggle} style={{ opacity: showReasoning ? 1 : 0.6 }}>
-                                    <MdLightbulbOutline />
-                                </button>
-                            )}
+                            {/* Reasoning toggle button removed */}
                         </div>
 
                         {/* Right Icon Group */}

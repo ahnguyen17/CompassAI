@@ -114,7 +114,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
   const recognitionRef = useRef<SpeechRecognition | null>(null); // Ref to hold recognition instance
   const [previewUrl, setPreviewUrl] = useState<string | null>(null); // For image previews
   const [isSessionMemoryActive, setIsSessionMemoryActive] = useState(true); // State for session memory toggle
-  const [isTextareaElevated, setIsTextareaElevated] = useState(false); // State for elevated textarea
+  // const [isTextareaElevated, setIsTextareaElevated] = useState(false); // No longer needed, textarea is always "elevated"
 
     // --- Helper Function for Parsing Perplexity Content ---
   const parsePerplexityContent = (content: string): { reasoning: string | null; mainContent: string } => {
@@ -726,33 +726,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
   useEffect(() => {
     if (textareaRef.current) {
         // Always reset height to auto first to allow the textarea to naturally size to its content
-        textareaRef.current.style.height = 'auto'; 
+        textareaRef.current.style.height = 'auto';
         const scrollHeight = textareaRef.current.scrollHeight;
         
         // Now, set the actual height to this scrollHeight to show all content
         textareaRef.current.style.height = `${scrollHeight}px`;
 
-        const clientHeight = textareaRef.current.clientHeight;
-        const containsNewline = newMessage.includes('\n');
-
-        if (newMessage === '') {
-            setIsTextareaElevated(false);
-            // Ensure placeholder state is also not elevated and height is minimal
-            textareaRef.current.style.height = 'auto'; // Or a specific small height for placeholder
-        } else if (containsNewline) {
-            setIsTextareaElevated(true); // Explicit newline always elevates
-        } else {
-            // Elevate if the content's scrollHeight is greater than its clientHeight.
-            // This indicates the text has wrapped or would require scrolling if not expanded.
-            // Add a small tolerance (e.g., 1-2px) for very minor differences.
-            if (scrollHeight > clientHeight + 2) {
-                setIsTextareaElevated(true);
-            } else {
-                setIsTextareaElevated(false);
-            }
-        }
-    } else {
-        setIsTextareaElevated(false);
+        // isTextareaElevated logic removed as it's always "elevated" now
     }
   }, [newMessage]); // Trigger when newMessage changes
 
@@ -1090,22 +1070,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                     </div>
                  )}
 
-                 {/* Input Controls Container */}
-                 <div className={`${styles.inputControls} ${isTextareaElevated ? styles.inputControlsElevated : ''}`}>
-                    {/* Elevated Textarea (rendered first in DOM when elevated for flex column-reverse) */}
-                    {isTextareaElevated && (
-                        <textarea
-                            ref={textareaRef}
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder={t('chat_input_placeholder')}
-                            disabled={sendingMessage || loadingMessages || !currentSession}
-                            className={`${styles.messageInput} ${styles.elevatedTextarea}`}
-                            onPaste={handlePaste}
-                        />
-                    )}
-                    {/* Icon and Inline Textarea Row */}
+                 {/* Input Controls Container - isTextareaElevated class removed */}
+                 <div className={styles.inputControls}>
+                    {/* Textarea is now always rendered first (visually above icons due to CSS flex-direction: column) */}
+                    <textarea
+                        ref={textareaRef}
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={t('chat_input_placeholder')}
+                        disabled={sendingMessage || loadingMessages || !currentSession}
+                        className={styles.messageInput} // Use general messageInput style, .elevatedTextarea class might be merged or removed from CSS
+                        onPaste={handlePaste}
+                    />
+                    {/* Icon Row */}
                     <div className={styles.iconRow}>
                         {/* Model Selector */}
                         {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) ? (
@@ -1134,20 +1112,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                             <button type="button" onClick={() => setShowReasoning(!showReasoning)} title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')} aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')} aria-pressed={showReasoning} className={styles.reasoningToggle} style={{ opacity: showReasoning ? 1 : 0.6 }}>
                                 <MdLightbulbOutline />
                             </button>
-                        )}
-
-                        {/* Inline Textarea (rendered only when not elevated) */}
-                        {!isTextareaElevated && (
-                            <textarea
-                                ref={textareaRef}
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder={t('chat_input_placeholder')}
-                                disabled={sendingMessage || loadingMessages || !currentSession}
-                                className={styles.messageInput}
-                                onPaste={handlePaste}
-                            />
                         )}
                         
                         {/* Hidden File Input */}

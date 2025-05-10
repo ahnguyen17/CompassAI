@@ -87,17 +87,16 @@
     transition: border-color 0.3s ease, background-color 0.3s ease, flex-direction 0.1s ease, align-items 0.1s ease;
     
     /* Default to row for the non-elevated state, and center items vertically */
-    flex-direction: row; 
-    align-items: center; 
+    /* flex-direction: row; */ /* No longer default, always column */
+    /* align-items: center; */ /* No longer default, always stretch for column */
+    flex-direction: column; /* Textarea on top, icon row below */
+    align-items: stretch; /* Allow textarea to take full width */
 }
 
 /* .inputControls:not(.inputControlsElevated) .iconRow {
     align-items: center; 
 } */ /* This rule can be removed or commented out */
-.inputControls.inputControlsElevated {
-    flex-direction: column-reverse; /* Textarea on top, icon row below */
-    align-items: stretch; /* Allow textarea to take full width */
-}
+/* .inputControls.inputControlsElevated class is no longer needed */
 
 .iconRow {
     display: flex;
@@ -208,7 +207,7 @@
 
 .messageInput {
     flex: 1;
-    padding: 9px 15px 7px 15px; /* Adjusted for visual alignment: more top, less bottom */
+    padding: 8px 15px; /* Reverted to original or standard padding */
     border-radius: 20px; /* Keep rounded for inner input */
     border: none; /* Remove border, parent .inputControls has it */
     font-size: 1rem;
@@ -220,20 +219,12 @@
     max-height: 150px; 
     overflow-y: auto;
     margin: 0; /* Remove default margins */
+    width: 100%; /* Ensure it takes full width in the column layout */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    margin-bottom: 8px; /* Space between textarea and icon row */
 }
 
-.elevatedTextarea {
-    /* flex: 1; is not needed here as it takes full width due to parent's align-items: stretch */
-    width: 100%;
-    margin-bottom: 8px; /* Space between elevated textarea and icon row */
-    padding: 10px 15px; /* Match original messageInput padding */
-    border-radius: 18px; /* Slightly less than main bar if desired, or match */
-    border: 1px solid transparent; /* Keep consistent look or var(--input-border) if preferred */
-    background-color: transparent; /* Inherit from inputControls or set explicitly */
-    color: var(--text-color);
-    box-sizing: border-box; /* Ensure padding and border are included in width/height */
-    /* line-height: 1.5; Ensure consistency if needed */
-}
+/* .elevatedTextarea class is no longer needed, styles merged or adapted into .messageInput */
 
 .messageInput::placeholder {
     color: var(--text-secondary-color);

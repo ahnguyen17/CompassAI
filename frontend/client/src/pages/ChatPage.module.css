@@ -455,7 +455,10 @@ body.dark .messageList {
 }
 
 /* Message Bubbles - Dark mode styles */
-/* body.dark .messageBubbleUser rule removed as var(--primary-color) handles themes */
+body.dark .messageBubbleUser {
+    background-color: var(--button-primary-bg); /* Use darker green for user bubble in dark mode for better contrast */
+    /* color: var(--text-on-primary-color); */ /* Inherits from .messageBubbleUser or can be re-stated */
+}
 body.dark .messageBubbleAi {
     background-color: #3a3d41;
     color: #e0e0e0;

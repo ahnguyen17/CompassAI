@@ -63,7 +63,7 @@ Implementation of the User Memory feature, enabling personalized chat responses 
 
 ## Next Steps
 - Verify the latest chat input UI fixes (CSS padding, JS elevation logic, vertical spacing tweak) in the browser.
-- Verify the user chat bubble color fix in dark mode (now using inline style with color `#0a1410` directly in the React component).
+- Verify the user chat bubble color fix in dark mode (now using inline style with color `#10402c` directly in the React component).
 - Thoroughly test the new User Memory feature:
     - Backend API endpoints for creating, reading, updating, and deleting memory settings and contexts.
     - Frontend "Personalized Memory" panel in Settings: global toggles, context CRUD operations.

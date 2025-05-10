@@ -93,7 +93,7 @@
 - **User Chat Bubble Color:**
     - Updated the user's chat bubble background color to use the theme's primary color (`var(--primary-color)`). Text color uses `var(--text-on-primary-color)`.
     - **Dark Mode Contrast Fix (Iteration 2):** For dark mode, the user chat bubble background now uses an even darker green (`#113319`) for better contrast with white text. This was implemented by defining a new CSS variable `--user-bubble-dark-bg: #113319;` in `index.css` (dark theme) and applying it in `ChatPage.module.css`.
-    - **Dark Mode Contrast Fix (Iteration 3):** After previous CSS-based approaches failed to change the color, implemented a direct inline style solution in `ChatPage.tsx`. Now using `style={isDarkMode ? { backgroundColor: '#0a1410' } : undefined}` on the user chat bubble element to ensure the correct dark green color in dark mode.
+    - **Dark Mode Contrast Fix (Iteration 3):** After previous CSS-based approaches failed to change the color, implemented a direct inline style solution in `ChatPage.tsx`. Now using `style={isDarkMode ? { backgroundColor: '#10402c' } : undefined}` on the user chat bubble element to ensure the correct dark green color in dark mode.
 
 ## What's Left to Build
 - **Thoroughly test the new User Memory feature (Primary Next Step):**

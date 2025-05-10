@@ -102,8 +102,21 @@
     display: flex;
     align-items: center; /* Vertically center all children */
     width: 100%;
-    gap: 8px; 
+    /* gap: 8px; */ /* Gap will be handled by groups or space-between */
     flex-wrap: nowrap; /* Prevent wrapping of items */
+    justify-content: space-between; /* Push left and right groups apart */
+}
+
+.iconGroupLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Spacing within the left group of icons */
+}
+
+.iconGroupRight {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Spacing within the right group of icons */
 }
 
 .inputControls:focus-within {

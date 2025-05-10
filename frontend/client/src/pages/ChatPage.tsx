@@ -1003,11 +1003,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                         <>
                             {/* User Bubble */}
                             <div
-                                className={`${styles.messageBubble}`}
-                                style={{ // User bubble styles
-                                    background: isDarkMode ? '#0d6efd' : '#007bff',
-                                    color: 'white',
-                                }}
+                                className={`${styles.messageBubble} ${styles.messageBubbleUser}`}
+                                // Inline style for background and color removed, will be handled by CSS module
                             >
                                 {/* Copy Button moved inside */}
                                 <CopyButton

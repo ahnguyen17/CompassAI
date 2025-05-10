@@ -90,6 +90,7 @@
             - Clear all stored contexts.
         - Session-specific memory toggle (using `MdAutoAwesome` icon) added to `ChatPage.tsx` (`frontend/client/src/pages/ChatPage.tsx`) near the model selector, controlling the `useSessionMemory` flag sent to the backend.
 - **Chat Input UI Vertical Spacing:** Reduced the vertical space between the text input field and the icon row below it by adjusting the bottom padding of the `.messageInput` class in `ChatPage.module.css`.
+- **User Chat Bubble Color:** Updated the user's chat bubble background color to use the theme's primary color (`var(--primary-color)`), ensuring it adapts to light/dark modes. Text color uses `var(--text-on-primary-color)`. Changes were made in `ChatPage.module.css` and `ChatPage.tsx` (removed inline styles, applied CSS class).
 
 ## What's Left to Build
 - **Thoroughly test the new User Memory feature (Primary Next Step):**

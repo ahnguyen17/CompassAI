@@ -52,9 +52,17 @@ Implementation of the User Memory feature, enabling personalized chat responses 
 - **Chat Input UI Tweak (Vertical Spacing):**
     - Reduced the vertical space between the text input field (`.messageInput`) and the row of icons below it in `ChatPage.tsx`.
     - Achieved by changing `padding` in `.messageInput` from `8px 15px` to `8px 15px 4px 15px` in `frontend/client/src/pages/ChatPage.module.css`, effectively reducing its bottom padding from 8px to 4px.
+- **User Chat Bubble Color Update:**
+    - Changed the background color of the user's chat bubbles to match the theme's primary color.
+    - In `frontend/client/src/pages/ChatPage.module.css`:
+        - Modified `.messageBubbleUser` to use `background-color: var(--primary-color);` and `color: var(--text-on-primary-color);`.
+        - Removed the specific `body.dark .messageBubbleUser` rule as the theme variable handles dark mode.
+    - In `frontend/client/src/pages/ChatPage.tsx`:
+        - Added `styles.messageBubbleUser` class to the user message bubble `div`.
+        - Removed the inline `style` prop that previously set the background and text color for user bubbles.
 
 ## Next Steps
-- Verify the latest chat input UI fixes (CSS padding and JS elevation logic, and vertical spacing tweak) in the browser.
+- Verify the latest chat input UI fixes (CSS padding and JS elevation logic, vertical spacing tweak, and user chat bubble color) in the browser.
 - Thoroughly test the new User Memory feature:
     - Backend API endpoints for creating, reading, updating, and deleting memory settings and contexts.
     - Frontend "Personalized Memory" panel in Settings: global toggles, context CRUD operations.

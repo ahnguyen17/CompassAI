@@ -299,8 +299,8 @@
     opacity: 1;
 }
 .messageBubbleUser {
-    background-color: #007bff;
-    color: white;
+    background-color: var(--primary-color);
+    color: var(--text-on-primary-color);
 }
 .messageBubbleAi {
      background-color: #e9ecef;
@@ -455,10 +455,7 @@ body.dark .messageList {
 }
 
 /* Message Bubbles - Dark mode styles */
-body.dark .messageBubbleUser {
-    background-color: #0d6efd; /* Adjusted blue */
-    color: white;
-}
+/* body.dark .messageBubbleUser rule removed as var(--primary-color) handles themes */
 body.dark .messageBubbleAi {
     background-color: #3a3d41;
     color: #e0e0e0;

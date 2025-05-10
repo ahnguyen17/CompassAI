@@ -233,13 +233,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
    };
    // Removed local handleNewChat function - Navbar icon uses global store action now
 
-   // Handle keydown for textarea (Enter to send, Shift+Enter for newline)
+   // Handle keydown for textarea (Shift+Enter to send, Enter for newline)
    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-       if (e.key === 'Enter' && !e.shiftKey) { // Check for Enter without Shift
-           e.preventDefault(); // Prevent the default newline from Enter
+       if (e.key === 'Enter' && e.shiftKey) { // Check for Shift+Enter
+           e.preventDefault(); // Prevent default newline from Shift+Enter if any
            handleSendMessage(); // Send the message
        }
-       // If Shift+Enter is pressed, do nothing here,
+       // If only Enter is pressed (without Shift), do nothing here,
        // allowing the default newline behavior of the textarea.
    };
 

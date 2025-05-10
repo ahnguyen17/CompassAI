@@ -85,6 +85,7 @@
     border-radius: 24px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     transition: border-color 0.3s ease, background-color 0.3s ease;
+    align-items: center; /* Center items vertically */
 }
 
 .iconRow {
@@ -92,7 +93,6 @@
     align-items: center; /* Default alignment for icons */
     flex-wrap: wrap;
     gap: 8px; /* Consistent gap for icons */
-    order: 2; /* Place icons below the textarea when it's expanded */
 }
 
 .inputControls:focus-within {
@@ -206,14 +206,22 @@
     outline: none;
     max-height: 150px;
     overflow-y: auto;
-    order: 1; /* Place textarea above icons */
     min-width: 0; /* Allow shrinking */
 }
 
-/* When textarea is elevated (multi-line), make it take full width */
+/* When textarea is elevated (multi-line), make it take full width and move to top */
 .inputControls.inputControlsElevated .messageInput {
     width: 100%;
     flex-basis: 100%;
+    order: 0; /* Place at the top when elevated */
+    margin-bottom: 8px; /* Add space between textarea and icons */
+}
+
+/* When textarea is elevated, move icons below */
+.inputControls.inputControlsElevated .iconRow {
+    order: 1;
+    width: 100%; /* Take full width */
+    justify-content: flex-start; /* Align icons to the left */
 }
 
 .messageInput::placeholder {

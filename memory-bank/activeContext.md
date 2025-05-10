@@ -4,6 +4,11 @@
 Implementation of the User Memory feature, enabling personalized chat responses based on stored user-specific contexts.
 
 ## Recent Changes
+- **Shared Chat Page Color Scheme Update:**
+    - Updated the user chat bubble background color in `SharedChatPage.tsx` to match the colors used in `ChatPage.tsx`:
+        - Dark mode: `#10402c` (dark green)
+        - Light mode: `#057A55` (primary green)
+    - Updated the "Chat with AI" button to use the same color scheme.
 - **User Memory Feature Implementation:**
     - **Backend:**
         - Created new Mongoose model `UserMemory` (`backend/models/UserMemory.js`) to store user-specific contexts, global enable/disable settings, and max context limits. Includes sub-document schema `ContextItemSchema` with timestamps and a pre-save hook for sorting and trimming contexts.

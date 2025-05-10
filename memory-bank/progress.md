@@ -1,6 +1,11 @@
 # Progress: CompassAI
 
 ## What Works
+- **Shared Chat Page Color Scheme Update:**
+    - Updated the user chat bubble background color in `SharedChatPage.tsx` to match the colors used in `ChatPage.tsx`:
+        - Dark mode: `#10402c` (dark green)
+        - Light mode: `#057A55` (primary green)
+    - Updated the "Chat with AI" button to use the same color scheme for visual consistency.
 - Basic structure for both backend and frontend is in place.
 - Backend has models, controllers, and routes for various entities.
 - Frontend has components and pages for different functionalities.

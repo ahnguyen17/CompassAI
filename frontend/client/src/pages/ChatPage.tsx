@@ -1082,6 +1082,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                         disabled={sendingMessage || loadingMessages || !currentSession}
                         className={styles.messageInput} // Use general messageInput style, .elevatedTextarea class might be merged or removed from CSS
                         onPaste={handlePaste}
+                        rows={1} // Add rows={1}
                     />
                     {/* Icon Row */}
                     <div className={styles.iconRow}>

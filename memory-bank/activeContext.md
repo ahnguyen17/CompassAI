@@ -32,6 +32,7 @@ Implementation of the User Memory feature, enabling personalized chat responses 
 - **Previous Work (S3 File Deletion, UI Redesign, TypeScript Fixes):**
     - S3 file deletion on session delete was finalized.
     - `ChatPage.tsx` UI redesign and various TypeScript error resolutions were completed.
+- **UI Update:** Changed the chat model selection icon in `ModelSelectorDropdown.tsx` from "🤖" to `MdPsychology` for better theme consistency.
 
 ## Next Steps
 - Thoroughly test the new User Memory feature:

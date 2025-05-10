@@ -43,6 +43,7 @@
     - **Fixed:** Resolved TypeScript build error (`TS2719`) in `ChatPage.tsx` by updating its local `CustomModelData` interface definition to include `baseModelSupportsVision`, aligning it with `ModelSelectorDropdown.tsx` and backend data.
     - **Fixed:** Resolved backend ReferenceError in `chatMessages.js` by ensuring `modelIdentifierForApi` is initialized before use in vision checks.
     - **Fixed:** Corrected OpenAI/Perplexity API request formatting for `image_url` to send an object `{ "url": "data:..." }` instead of a string, resolving 400 errors.
+- **UI Update (Model Selector):** Changed the chat model selection icon in `ModelSelectorDropdown.tsx` from "🤖" to `MdPsychology` for better theme consistency.
 - **S3 File Deletion on Session Delete:**
     - Implemented logic in `backend/controllers/chatSessions.js` (`deleteChatSession` function) to:
         - Identify `ChatMessage` documents with `fileInfo.filename`.
@@ -114,6 +115,7 @@ The project is actively being developed. Recent work focused on the initial impl
 - Corrected variable initialization order and API payload formatting in `chatMessages.js` to prevent runtime errors when handling vision models.
 - Refactored frontend image URL construction to correctly use the base server URL without the API path prefix.
 - Modified backend response and frontend message handling to enable immediate display of uploaded images without page refresh.
+- Updated the model selector dropdown icon to `MdPsychology` for better visual consistency with other icons used in the application.
 - Extended vision icon display logic in the frontend model selector to custom models by checking a new `baseModelSupportsVision` flag provided by the backend.
 - **User Memory Feature:**
     - Adopted a hybrid model for context management (manual + basic automatic extraction).

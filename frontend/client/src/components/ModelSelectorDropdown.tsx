@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, Fragment } from 'react'; // Added Fragment
+import { MdPsychology } from 'react-icons/md'; // Import the new icon
 import styles from './ModelSelectorDropdown.module.css';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
@@ -95,7 +96,7 @@ const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        🤖
+        <MdPsychology />
       </button>
       {/* Render dropdown panel */}
       {isOpen && (

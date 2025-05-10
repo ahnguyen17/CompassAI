@@ -725,23 +725,46 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
   // Effect for auto-expanding textarea
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'; // Reset height to correctly calculate scrollHeight
-      const newHeight = textareaRef.current.scrollHeight;
-      textareaRef.current.style.height = `${newHeight}px`;
+      // Always reset height to auto first to get the natural scrollHeight of the current content
+      textareaRef.current.style.height = 'auto';
+      const currentContentScrollHeight = textareaRef.current.scrollHeight;
 
-      // Logic to set isTextareaElevated
       const containsNewline = newMessage.includes('\n');
-      // Estimate single line height - this might need adjustment based on actual styling and font.
-      // Let's assume a single line with padding is roughly 40-45px.
-      // If scrollHeight (which is newHeight here) is greater than this, it's likely multi-line.
-      const singleLineHeightThreshold = 45; 
 
       if (newMessage === '') {
         setIsTextareaElevated(false);
-      } else if (containsNewline || newHeight > singleLineHeightThreshold) {
+        textareaRef.current.style.height = 'auto'; // Keep it auto for placeholder
+      } else if (containsNewline) {
         setIsTextareaElevated(true);
+        textareaRef.current.style.height = `${currentContentScrollHeight}px`;
       } else {
-        setIsTextareaElevated(false);
+        // Logic for single line text without explicit newlines
+        const originalRows = textareaRef.current.rows;
+        const originalOverflowY = textareaRef.current.style.overflowY;
+
+        // Temporarily force to single line to get its clientHeight
+        textareaRef.current.rows = 1;
+        // Temporarily hide scrollbar that might appear due to forcing rows=1
+        // and affect clientHeight calculation for a single line.
+        textareaRef.current.style.overflowY = 'hidden'; 
+        textareaRef.current.style.height = 'auto'; // Recalculate height for 1 row
+        
+        const singleRowRenderedClientHeight = textareaRef.current.clientHeight;
+        
+        // Restore original rows and overflow style
+        textareaRef.current.rows = originalRows;
+        textareaRef.current.style.overflowY = originalOverflowY;
+        
+        // Set final height based on full content
+        textareaRef.current.style.height = `${currentContentScrollHeight}px`;
+
+        // Elevate if the full content's scrollHeight is greater than the rendered height of a single row + tolerance
+        // A small tolerance (e.g., 2-5px) can help account for sub-pixel rendering or minor box model variations.
+        if (currentContentScrollHeight > singleRowRenderedClientHeight + 3) { 
+          setIsTextareaElevated(true);
+        } else {
+          setIsTextareaElevated(false);
+        }
       }
     } else {
       setIsTextareaElevated(false);

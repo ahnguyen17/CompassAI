@@ -85,9 +85,10 @@
     border-radius: 24px; 
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     transition: border-color 0.3s ease, background-color 0.3s ease, flex-direction 0.1s ease, align-items 0.1s ease;
-    /* Default to row for the non-elevated state */
+    
+    /* Default to row for the non-elevated state, and center items vertically */
     flex-direction: row; 
-    align-items: center; /* Align items vertically in the row */
+    align-items: center; 
 }
 
 /* .inputControls:not(.inputControlsElevated) .iconRow {
@@ -100,9 +101,9 @@
 
 .iconRow {
     display: flex;
-    align-items: flex-end; /* Changed from center to flex-end */
+    align-items: center; /* Ensure icons and inline textarea align vertically */
     width: 100%;
-    gap: 8px; /* Consistent gap for icons */
+    gap: 8px; 
 }
 
 .inputControls:focus-within {
@@ -215,10 +216,13 @@
     line-height: 1.5;
     outline: none; 
     max-height: 150px; 
-    overflow-y: auto; 
+    overflow-y: auto;
+    /* Add this to help with vertical alignment with icons */
+    align-self: center; 
 }
 
 .elevatedTextarea {
+    /* flex: 1; is not needed here as it takes full width due to parent's align-items: stretch */
     width: 100%;
     margin-bottom: 8px; /* Space between elevated textarea and icon row */
     padding: 10px 15px; /* Match original messageInput padding */
@@ -227,6 +231,7 @@
     background-color: transparent; /* Inherit from inputControls or set explicitly */
     color: var(--text-color);
     box-sizing: border-box; /* Ensure padding and border are included in width/height */
+    /* line-height: 1.5; Ensure consistency if needed */
 }
 
 .messageInput::placeholder {

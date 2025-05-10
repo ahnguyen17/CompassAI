@@ -40,21 +40,23 @@ Implementation of the User Memory feature, enabling personalized chat responses 
         - Added `isTextareaElevated` state to control layout.
         - When text input is multi-line or contains newlines, the textarea moves to a line above the main icon row.
         - Reordered icons in the main input row to: Model Selector, Session Memory Toggle, Reasoning Toggle, (inline textarea or placeholder), File Attachment, Voice, Send.
-    - Updated `useEffect` in `ChatPage.tsx` to manage `isTextareaElevated` state and continue auto-expanding textarea height.
+    - Updated `useEffect` in `ChatPage.tsx` to manage `isTextareaElevated` state (using dynamic single-row height calculation) and continue auto-expanding textarea height.
     - Updated `ChatPage.module.css`:
-        - Modified `styles.inputControls` to support `flex-direction: column-reverse` when textarea is elevated.
-        - Added `styles.iconRow` for the persistent row of icons.
+        - Modified `styles.inputControls` to default to `flex-direction: row` and `align-items: center` for the non-elevated state, and `flex-direction: column-reverse` with `align-items: stretch` for the elevated state.
+        - Ensured `styles.iconRow` uses `align-items: center` for proper inline alignment of icons and the non-elevated textarea.
+        - Added `align-self: center` to `styles.messageInput` to aid its vertical alignment within the icon row.
         - Added `styles.elevatedTextarea` for styling the textarea when it's on its own line above icons.
 
 ## Next Steps
+- Verify the chat input UI fixes in the browser.
 - Thoroughly test the new User Memory feature:
     - Backend API endpoints for creating, reading, updating, and deleting memory settings and contexts.
     - Frontend "Personalized Memory" panel in Settings: global toggles, context CRUD operations.
     - Frontend session memory toggle on the Chat Page and its effect on context injection.
     - Automatic context extraction logic (verify its behavior and effectiveness).
     - Ensure context prioritization (recency) and uniqueness (exact match) are working as expected.
-- Update other Memory Bank files: `progress.md`, `systemPatterns.md`, `productContext.md`, and `techContext.md` to document the User Memory feature.
-- Present the completed User Memory feature to the user.
+- Update other Memory Bank files (`progress.md`, `systemPatterns.md`, `productContext.md`, and `techContext.md`) to document the User Memory feature and the chat input UI fixes.
+- Present the completed User Memory feature and UI fixes to the user.
 
 ## Active Decisions and Considerations
 - The current automatic context extraction in `chatMessages.js` is very basic (short, non-question user messages). This is an area for potential future enhancement with more sophisticated NLP techniques if desired.

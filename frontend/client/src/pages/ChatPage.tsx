@@ -588,7 +588,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
 
                       // Update global sessions list as well - Mirroring the working streaming logic structure
                       setSessions(
-                        sessions.map((s: ChatSession): ChatSession => 
+                        sessions.map((s: ChatSession): ChatSession =>
                           s._id === currentSession._id ? { ...s, title: newTitle } : s
                         )
                       );
@@ -728,7 +728,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
         // Always reset height to auto first to allow the textarea to naturally size to its content
         textareaRef.current.style.height = 'auto';
         const scrollHeight = textareaRef.current.scrollHeight;
-        
+
         // Now, set the actual height to this scrollHeight to show all content
         textareaRef.current.style.height = `${scrollHeight}px`;
 
@@ -1004,7 +1004,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                             {/* User Bubble */}
                             <div
                                 className={`${styles.messageBubble} ${styles.messageBubbleUser}`}
-                                // Inline style for background and color removed, will be handled by CSS module
                             >
                                 {/* Copy Button moved inside */}
                                 <CopyButton

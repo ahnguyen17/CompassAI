@@ -456,8 +456,8 @@ body.dark .messageList {
 
 /* Message Bubbles - Dark mode styles */
 body.dark .messageBubbleUser {
-    background-color: #0e5132; /* Darker green with better contrast */
-    color: white; /* Ensure text is white for maximum contrast */
+    background-color: #0d8050 !important; /* Vibrant green with better contrast */
+    color: white !important; /* Ensure text is white for maximum contrast */
 }
 body.dark .messageBubbleAi {
     background-color: #3a3d41;

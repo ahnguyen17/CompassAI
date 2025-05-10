@@ -47,9 +47,14 @@ Implementation of the User Memory feature, enabling personalized chat responses 
         - Confirmed `styles.iconRow` uses `align-items: center`.
         - Removed `align-self: center` from `styles.messageInput` as parent alignment should suffice.
         - Added `styles.elevatedTextarea` for styling the textarea when it's on its own line above icons.
+- **Chat Input Keydown Behavior:**
+    - Modified `handleKeyDown` in `ChatPage.tsx` so that pressing "Enter" now adds a newline, and "Shift+Enter" sends the message. This reverses the previous behavior.
+- **Chat Input UI Tweak (Vertical Spacing):**
+    - Reduced the vertical space between the text input field (`.messageInput`) and the row of icons below it in `ChatPage.tsx`.
+    - Achieved by changing `padding` in `.messageInput` from `8px 15px` to `8px 15px 4px 15px` in `frontend/client/src/pages/ChatPage.module.css`, effectively reducing its bottom padding from 8px to 4px.
 
 ## Next Steps
-- Verify the latest chat input UI fixes (CSS padding and JS elevation logic) in the browser.
+- Verify the latest chat input UI fixes (CSS padding and JS elevation logic, and vertical spacing tweak) in the browser.
 - Thoroughly test the new User Memory feature:
     - Backend API endpoints for creating, reading, updating, and deleting memory settings and contexts.
     - Frontend "Personalized Memory" panel in Settings: global toggles, context CRUD operations.

@@ -220,7 +220,7 @@
 
 .messageInput {
     /* flex: 1; */ /* Removed to allow natural height based on content and rows attribute */
-    padding: 8px 15px; /* Reverted to original or standard padding */
+    padding: 8px 15px 4px 15px; /* Reduced bottom padding from 8px to 4px */
     border-radius: 20px; /* Keep rounded for inner input */
     border: none; /* Remove border, parent .inputControls has it */
     font-size: 1rem;

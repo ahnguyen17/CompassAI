@@ -50,7 +50,7 @@ The project follows a client-server architecture. The backend is built using Nod
 - `CustomProvider` has a one-to-many relationship with `CustomModel`.
 - `CustomModel` references a `CustomProvider`.
 - The `chatMessages` controller checks if a requested model ID is a `CustomModel` ObjectId. If so, it uses the linked `baseModelIdentifier` and `systemPrompt` for the API call. It also checks if the `baseModelIdentifier` supports vision (using data from `providers.js`) and formats the API call accordingly if an image is present.
-- `ChatPage.tsx` on the frontend handles file selection, image pasting, preview generation, and sending file data along with messages. It also renders uploaded images and file links. It now includes a session-specific toggle for user memory usage and sends a `useSessionMemory` flag to the backend.
+- `ChatPage.tsx` on the frontend handles file selection, image pasting, preview generation, sending file data along with messages, and manages chat input behavior (Enter for newline, Shift+Enter for send). It also renders uploaded images and file links. It now includes a session-specific toggle for user memory usage and sends a `useSessionMemory` flag to the backend.
 - `ModelSelectorDropdown.tsx` displays models and indicates vision support for base models directly, and for custom models based on their underlying base model's capabilities, using data from the `providers` controller.
 - `userMemoryController.js` handles business logic for the `UserMemory` model.
 - `chatMessages.js` controller now:

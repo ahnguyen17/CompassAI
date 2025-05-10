@@ -13,7 +13,7 @@
 - ChatPage.tsx now defaults the "brain" toggle (reasoning/streaming) to the 'on' state.
 - ChatPage.tsx speech recognition now dynamically uses Vietnamese ('vi-VN') when the application language is set to Vietnamese ('vi'), otherwise defaults to English ('en-US').
 - ChatPage.tsx microphone icon now glows when speech recognition is active, using CSS animations defined in `ChatPage.module.css`.
-- ChatPage.tsx input field now uses "Enter" for newline and "Shift+Enter" to send the message.
+- ChatPage.tsx input field now uses "Enter" for newline and "Shift+Enter" to send the message (behavior updated from Enter to send).
 - **Custom Models Feature:**
     - Admins can create/delete "Custom Providers" in settings.
     - Admins can create/edit "Custom Models" under a provider, linking them to a base model and adding a custom system prompt.
@@ -89,6 +89,7 @@
             - Manually add, view, edit, and delete individual context items.
             - Clear all stored contexts.
         - Session-specific memory toggle (using `MdAutoAwesome` icon) added to `ChatPage.tsx` (`frontend/client/src/pages/ChatPage.tsx`) near the model selector, controlling the `useSessionMemory` flag sent to the backend.
+- **Chat Input UI Vertical Spacing:** Reduced the vertical space between the text input field and the icon row below it by adjusting the bottom padding of the `.messageInput` class in `ChatPage.module.css`.
 
 ## What's Left to Build
 - **Thoroughly test the new User Memory feature (Primary Next Step):**

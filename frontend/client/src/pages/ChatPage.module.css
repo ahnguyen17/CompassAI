@@ -78,7 +78,7 @@
 .inputControls {
     display: flex;
     /* align-items: center; Will be controlled by elevated state */
-    gap: 2px; /* Reduced gap */
+    gap: 0px; /* Removed gap */
     padding: 8px;
     background-color: var(--surface-color); 
     border: 1px solid var(--input-border);

@@ -77,30 +77,22 @@
 
 .inputControls {
     display: flex;
-    /* align-items: center; Will be controlled by elevated state */
-    gap: 8px; 
+    flex-wrap: wrap;
+    gap: 8px;
     padding: 8px;
-    background-color: var(--surface-color); 
+    background-color: var(--surface-color);
     border: 1px solid var(--input-border);
-    border-radius: 24px; 
+    border-radius: 24px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    transition: border-color 0.3s ease, background-color 0.3s ease, flex-direction 0.1s ease, align-items 0.1s ease;
-    flex-direction: column; /* Default to column, will be overridden for non-elevated */
-}
-
-.inputControls:not(.inputControlsElevated) .iconRow {
-    align-items: center; /* Center items when in single row */
-}
-.inputControls.inputControlsElevated {
-    flex-direction: column-reverse; /* Textarea on top, icon row below */
-    align-items: stretch; /* Allow textarea to take full width */
+    transition: border-color 0.3s ease, background-color 0.3s ease;
 }
 
 .iconRow {
     display: flex;
     align-items: center; /* Default alignment for icons */
-    width: 100%;
+    flex-wrap: wrap;
     gap: 8px; /* Consistent gap for icons */
+    order: 2; /* Place icons below the textarea when it's expanded */
 }
 
 .inputControls:focus-within {
@@ -209,22 +201,19 @@
     font-size: 1rem;
     background-color: transparent; /* Inherit from .inputControls */
     color: var(--text-color);
-    resize: none; 
+    resize: none;
     line-height: 1.5;
-    outline: none; 
-    max-height: 150px; 
-    overflow-y: auto; 
+    outline: none;
+    max-height: 150px;
+    overflow-y: auto;
+    order: 1; /* Place textarea above icons */
+    min-width: 0; /* Allow shrinking */
 }
 
-.elevatedTextarea {
+/* When textarea is elevated (multi-line), make it take full width */
+.inputControls.inputControlsElevated .messageInput {
     width: 100%;
-    margin-bottom: 8px; /* Space between elevated textarea and icon row */
-    padding: 10px 15px; /* Match original messageInput padding */
-    border-radius: 18px; /* Slightly less than main bar if desired, or match */
-    border: 1px solid transparent; /* Keep consistent look or var(--input-border) if preferred */
-    background-color: transparent; /* Inherit from inputControls or set explicitly */
-    color: var(--text-color);
-    box-sizing: border-box; /* Ensure padding and border are included in width/height */
+    flex-basis: 100%;
 }
 
 .messageInput::placeholder {
@@ -388,7 +377,7 @@ body.dark .deleteSessionButton {
 body.dark .newChatButton {
      background-color: #0d6efd;
  }
- 
+
  /* New style for the close button next to the Chat History title */
  .sidebarHeaderCloseButton {
      background: none;
@@ -403,27 +392,25 @@ body.dark .newChatButton {
  .sidebarHeaderCloseButton:hover {
      color: #343a40; /* Darken on hover */
  }
- 
+
  body.dark .sidebarHeaderCloseButton {
      color: #aaa; /* Lighter subdued color for dark mode */
  }
- 
+
  body.dark .sidebarHeaderCloseButton:hover {
      color: #eee; /* Lighten on hover */
  }
- 
- body.dark .mainChatArea {
-     /* Background is inherited from container */
-}
+
+/* Dark mode main chat area background is inherited from container */
 
 body.dark .sidebarToggleButton { /* Keep original style for button inside sidebar */
     background: #444;
     border-color: #666;
     color: #eee;
  }
- 
+
  /* Removed dark mode styles for floating hidden button */
- 
+
 
 body.dark .mainChatArea h3 {
     color: #e0e0e0; /* Dark mode header */
@@ -502,11 +489,11 @@ body.dark .sendButton:disabled {
     cursor: pointer;
      transition: left 0.3s ease-in-out;
  }
- 
+
  /* Removed .sidebarToggleButtonHidden rule */
- 
+
  /* Removed .sidebarToggleButtonHidden:hover rule */
- 
+
  /* --- Mobile Styles --- */
 @media (max-width: 767px) {
     .chatSidebar {
@@ -552,7 +539,7 @@ body.dark .sendButton:disabled {
     }
 
      /* Removed mobile styles for .sidebarToggleButtonHidden */
- 
+
      /* Adjust message bubble max-width for smaller screens */
     /* This would ideally go into a separate message bubble component CSS */
     /* Example: */
@@ -573,14 +560,14 @@ body.dark .sendButton:disabled {
     }
 
     /* Header in Main Chat Area */
-    .mainChatArea > div:first-child { 
+    .mainChatArea > div:first-child {
         margin-left: 0 !important; /* Override desktop inline style */
     }
 
     .mainChatArea > div:first-child h3 {
         min-width: 0; /* Allow title to shrink */
         overflow-wrap: break-word;
-        word-break: break-word; 
+        word-break: break-word;
     }
 
     /* Model Selector & Reasoning Toggle Row */

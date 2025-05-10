@@ -52,15 +52,17 @@ Implementation of the User Memory feature, enabling personalized chat responses 
 - **Chat Input UI Tweak (Vertical Spacing):**
     - Reduced the vertical space between the text input field (`.messageInput`) and the row of icons below it in `ChatPage.tsx`.
     - Achieved by changing `padding` in `.messageInput` from `8px 15px` to `8px 15px 4px 15px` in `frontend/client/src/pages/ChatPage.module.css`, effectively reducing its bottom padding from 8px to 4px.
-- **User Chat Bubble Color Update (Dark Mode Contrast Fix):**
-    - Adjusted the user's chat bubble background color in dark mode for better contrast with white text.
+- **User Chat Bubble Color Update (Dark Mode Contrast Fix Iteration 2):**
+    - Further adjusted the user's chat bubble background color in dark mode to an even darker green (`#113319`) for improved contrast, per user request.
+    - In `frontend/client/src/index.css`:
+        - Added a new CSS variable ` --user-bubble-dark-bg: #113319;` within the `body.dark` rule.
     - In `frontend/client/src/pages/ChatPage.module.css`:
-        - The `.messageBubbleUser` continues to use `background-color: var(--primary-color);` and `color: var(--text-on-primary-color);` for the base (light theme).
-        - Added a specific rule `body.dark .messageBubbleUser` to set `background-color: var(--button-primary-bg);`. This uses a darker green (`#26A146`) in dark mode, improving contrast with the white text (`var(--text-on-primary-color)`).
-    - No changes were needed in `frontend/client/src/pages/ChatPage.tsx` for this specific fix, as it already used the appropriate classes from the previous update.
+        - Modified the `body.dark .messageBubbleUser` rule to use `background-color: var(--user-bubble-dark-bg);`.
+        - The `.messageBubbleUser` base rule (for light theme) remains unchanged, using `var(--primary-color)`.
+    - Text color remains `var(--text-on-primary-color)` (white).
 
 ## Next Steps
-- Verify the latest chat input UI fixes (CSS padding, JS elevation logic, vertical spacing tweak, and user chat bubble color including dark mode contrast) in the browser.
+- Verify the latest chat input UI fixes (CSS padding, JS elevation logic, vertical spacing tweak, and user chat bubble color including the new dark mode contrast) in the browser.
 - Thoroughly test the new User Memory feature:
     - Backend API endpoints for creating, reading, updating, and deleting memory settings and contexts.
     - Frontend "Personalized Memory" panel in Settings: global toggles, context CRUD operations.

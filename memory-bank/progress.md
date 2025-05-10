@@ -92,7 +92,7 @@
 - **Chat Input UI Vertical Spacing:** Reduced the vertical space between the text input field and the icon row below it by adjusting the bottom padding of the `.messageInput` class in `ChatPage.module.css`.
 - **User Chat Bubble Color:**
     - Updated the user's chat bubble background color to use the theme's primary color (`var(--primary-color)`). Text color uses `var(--text-on-primary-color)`.
-    - **Dark Mode Contrast Fix:** Specifically for dark mode, the user chat bubble background now uses `var(--button-primary-bg)` (a darker green) for improved contrast with white text. This change was made in `ChatPage.module.css`.
+    - **Dark Mode Contrast Fix (Iteration 2):** For dark mode, the user chat bubble background now uses an even darker green (`#113319`) for better contrast with white text. This was implemented by defining a new CSS variable `--user-bubble-dark-bg: #113319;` in `index.css` (dark theme) and applying it in `ChatPage.module.css`.
 
 ## What's Left to Build
 - **Thoroughly test the new User Memory feature (Primary Next Step):**

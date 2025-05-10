@@ -45,6 +45,7 @@ body.dark {
   --button-primary-bg: #26A146; /* Slightly darker green for buttons */
   --button-primary-hover-bg: #1f8a3a;
   --button-primary-active-bg: #1a7330;
+  --user-bubble-dark-bg: #113319; /* Custom dark green for user chat bubble */
 
   --background-color: #1a1a1a;
   --surface-color: #2a2a2a; /* Card/modal backgrounds */

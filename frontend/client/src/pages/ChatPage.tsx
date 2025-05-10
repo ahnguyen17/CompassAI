@@ -114,6 +114,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
   const recognitionRef = useRef<SpeechRecognition | null>(null); // Ref to hold recognition instance
   const [previewUrl, setPreviewUrl] = useState<string | null>(null); // For image previews
   const [isSessionMemoryActive, setIsSessionMemoryActive] = useState(true); // State for session memory toggle
+  const [isTextareaElevated, setIsTextareaElevated] = useState(false); // State for elevated textarea
 
     // --- Helper Function for Parsing Perplexity Content ---
   const parsePerplexityContent = (content: string): { reasoning: string | null; mainContent: string } => {
@@ -725,10 +726,25 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'; // Reset height to correctly calculate scrollHeight
-      // Only set new height if scrollHeight is greater than a baseline (e.g., for single line)
-      // and less than or equal to max-height (CSS will enforce max-height anyway)
       const newHeight = textareaRef.current.scrollHeight;
       textareaRef.current.style.height = `${newHeight}px`;
+
+      // Logic to set isTextareaElevated
+      const containsNewline = newMessage.includes('\n');
+      // Estimate single line height - this might need adjustment based on actual styling and font.
+      // Let's assume a single line with padding is roughly 40-45px.
+      // If scrollHeight (which is newHeight here) is greater than this, it's likely multi-line.
+      const singleLineHeightThreshold = 45; 
+
+      if (newMessage === '') {
+        setIsTextareaElevated(false);
+      } else if (containsNewline || newHeight > singleLineHeightThreshold) {
+        setIsTextareaElevated(true);
+      } else {
+        setIsTextareaElevated(false);
+      }
+    } else {
+      setIsTextareaElevated(false);
     }
   }, [newMessage]); // Trigger when newMessage changes
 
@@ -1050,7 +1066,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
 
               {/* Input Area */}
               <form onSubmit={handleSendMessage} className={styles.inputForm}>
-                 {/* Preview Area - Moved above the inputControls div */}
+                 {/* Preview Area - Remains above the input bar */}
                  {previewUrl && selectedFile && selectedFile.type.startsWith('image/') && (
                     <div style={{ marginBottom: '10px', position: 'relative', maxWidth: '150px' }}>
                         <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '4px' }} />
@@ -1066,41 +1082,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                     </div>
                  )}
 
-                 {/* Consolidated Input Controls Row */}
-                 <div className={styles.inputControls}>
-                     <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        style={{ display: 'none' }}
-                        id="file-upload"
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
-                     />
-                     <button
-                         type="button"
-                         onClick={() => fileInputRef.current?.click()}
-                         disabled={sendingMessage || loadingMessages || !currentSession}
-                         className={styles.fileUploadButton}
-                         title={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')}
-                         aria-label={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')}
-                     >
-                         <MdAttachFile />
-                     </button>
-                     {/* Model Selector - Moved here */}
-                     {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) ? (
-                        <ModelSelectorDropdown
-                            availableModels={availableModels}
-                            selectedModel={selectedModel}
-                            onModelChange={(newModel) => {
-                                setSelectedModel(newModel);
-                                if (REASONING_MODELS.includes(newModel)) {
-                                    setShowReasoning(true);
-                                }
-                            }}
-                            disabled={sendingMessage || loadingMessages}
-                        />
-                      ) : null }
-                     {/* Removed selectedFile span from here, preview handles it */}
+                 {/* Input Controls Container */}
+                 <div className={`${styles.inputControls} ${isTextareaElevated ? styles.inputControlsElevated : ''}`}>
+                    {/* Elevated Textarea (rendered first in DOM when elevated for flex column-reverse) */}
+                    {isTextareaElevated && (
                         <textarea
                             ref={textareaRef}
                             value={newMessage}
@@ -1108,61 +1093,76 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                             onKeyDown={handleKeyDown}
                             placeholder={t('chat_input_placeholder')}
                             disabled={sendingMessage || loadingMessages || !currentSession}
-                            className={styles.messageInput}
+                            className={`${styles.messageInput} ${styles.elevatedTextarea}`}
                             onPaste={handlePaste}
-                            // rows={1} // Removed rows attribute, height will be dynamic
-                      />
-                        {/* Session Memory Toggle Icon Button - Moved here */}
+                        />
+                    )}
+                    {/* Icon and Inline Textarea Row */}
+                    <div className={styles.iconRow}>
+                        {/* Model Selector */}
+                        {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) ? (
+                            <ModelSelectorDropdown
+                                availableModels={availableModels}
+                                selectedModel={selectedModel}
+                                onModelChange={(newModel) => {
+                                    setSelectedModel(newModel);
+                                    if (REASONING_MODELS.includes(newModel)) {
+                                        setShowReasoning(true);
+                                    }
+                                }}
+                                disabled={sendingMessage || loadingMessages}
+                            />
+                        ) : null}
+
+                        {/* Session Memory Toggle */}
                         {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) && (
-                            <button
-                                type="button"
-                                onClick={() => setIsSessionMemoryActive(!isSessionMemoryActive)}
-                                title={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"}
-                                aria-label={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"}
-                                aria-pressed={isSessionMemoryActive}
-                                className={styles.reasoningToggle} // Reuse styling
-                                style={{ opacity: isSessionMemoryActive ? 1 : 0.6 }}
-                            >
+                            <button type="button" onClick={() => setIsSessionMemoryActive(!isSessionMemoryActive)} title={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"} aria-label={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"} aria-pressed={isSessionMemoryActive} className={styles.reasoningToggle} style={{ opacity: isSessionMemoryActive ? 1 : 0.6 }}>
                                 <MdAutoAwesome />
                             </button>
                         )}
-                        {/* Reasoning Toggle Icon Button - Moved here */}
+
+                        {/* Reasoning Toggle */}
                         {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) && (
-                            <button
-                                type="button"
-                                onClick={() => setShowReasoning(!showReasoning)}
-                                title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
-                                aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
-                                aria-pressed={showReasoning}
-                                className={styles.reasoningToggle} // Use new class
-                                style={{ opacity: showReasoning ? 1 : 0.6 }} // Keep opacity for visual feedback
-                            >
+                            <button type="button" onClick={() => setShowReasoning(!showReasoning)} title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')} aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')} aria-pressed={showReasoning} className={styles.reasoningToggle} style={{ opacity: showReasoning ? 1 : 0.6 }}>
                                 <MdLightbulbOutline />
                             </button>
                         )}
-                        {/* Microphone Button */}
-                        {recognitionRef.current && ( // Only show if API is supported
-                            <button
-                                type="button"
-                                onClick={handleToggleListening}
+
+                        {/* Inline Textarea (rendered only when not elevated) */}
+                        {!isTextareaElevated && (
+                            <textarea
+                                ref={textareaRef}
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder={t('chat_input_placeholder')}
                                 disabled={sendingMessage || loadingMessages || !currentSession}
-                                className={`${styles.micButton} ${isListening ? styles.micButtonListening : ''}`}
-                                title={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
-                                aria-label={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
-                            >
+                                className={styles.messageInput}
+                                onPaste={handlePaste}
+                            />
+                        )}
+                        
+                        {/* Hidden File Input */}
+                        <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} id="file-upload" accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" />
+                        
+                        {/* File Attachment Button */}
+                        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={sendingMessage || loadingMessages || !currentSession} className={styles.fileUploadButton} title={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')} aria-label={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')}>
+                            <MdAttachFile />
+                        </button>
+
+                        {/* Microphone Button */}
+                        {recognitionRef.current && (
+                            <button type="button" onClick={handleToggleListening} disabled={sendingMessage || loadingMessages || !currentSession} className={`${styles.micButton} ${isListening ? styles.micButtonListening : ''}`} title={isListening ? t('chat_stop_listening') : t('chat_start_listening')} aria-label={isListening ? t('chat_stop_listening') : t('chat_start_listening')}>
                                 {isListening ? <MdMicOff /> : <MdMic />}
                             </button>
                         )}
-                      <button
-                          type="submit"
-                          disabled={sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)}
-                          className={styles.sendButton}
-                          title={t('chat_send_button')}
-                          aria-label={t('chat_send_button')}
-                     >
-                         <MdSend />
-                     </button>
-                </div>
+
+                        {/* Send Button */}
+                        <button type="submit" disabled={sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)} className={styles.sendButton} title={t('chat_send_button')} aria-label={t('chat_send_button')}>
+                            <MdSend />
+                        </button>
+                    </div>
+                 </div>
              </form>
            </>
          ) : (

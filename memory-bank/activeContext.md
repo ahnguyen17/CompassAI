@@ -34,15 +34,17 @@ Implementation of the User Memory feature, enabling personalized chat responses 
     - `ChatPage.tsx` UI redesign and various TypeScript error resolutions were completed.
 - **UI Update (Model Selector Icon):**
     - Changed the chat model selection icon in `ModelSelectorDropdown.tsx` from "🤖" to `MdPsychology`.
-    - Adjusted CSS in `ModelSelectorDropdown.module.css` to make the icon size and button style consistent with other icons on the same line in `ChatPage.tsx` (e.g., reasoning toggle).
-- **Chat Input Redesign (Perplexity Style):**
-    - Restructured JSX in `ChatPage.tsx` to consolidate all input controls (file upload, model selector, textarea, toggles, mic, send) into a single-line layout within `styles.inputControls`.
-    - Added `useEffect` hook in `ChatPage.tsx` for auto-expanding textarea height based on content, up to a CSS-defined `max-height`.
+    - Adjusted CSS in `ModelSelectorDropdown.module.css` to make the icon size and button style consistent.
+- **Chat Input Redesign (Advanced Perplexity Style):**
+    - Restructured JSX in `ChatPage.tsx` for a new input layout:
+        - Added `isTextareaElevated` state to control layout.
+        - When text input is multi-line or contains newlines, the textarea moves to a line above the main icon row.
+        - Reordered icons in the main input row to: Model Selector, Session Memory Toggle, Reasoning Toggle, (inline textarea or placeholder), File Attachment, Voice, Send.
+    - Updated `useEffect` in `ChatPage.tsx` to manage `isTextareaElevated` state and continue auto-expanding textarea height.
     - Updated `ChatPage.module.css`:
-        - Changed `align-items` to `center` for `styles.inputControls`.
-        - Adjusted `gap` in `styles.inputControls`.
-        - Removed `min-height` from `styles.messageInput` to support dynamic height.
-        - Removed `rows={1}` attribute from `textarea` in `ChatPage.tsx`.
+        - Modified `styles.inputControls` to support `flex-direction: column-reverse` when textarea is elevated.
+        - Added `styles.iconRow` for the persistent row of icons.
+        - Added `styles.elevatedTextarea` for styling the textarea when it's on its own line above icons.
 
 ## Next Steps
 - Thoroughly test the new User Memory feature:

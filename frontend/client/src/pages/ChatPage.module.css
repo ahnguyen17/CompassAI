@@ -77,14 +77,30 @@
 
 .inputControls {
     display: flex;
-    align-items: center; /* Align items to the center for single-line consistency */
-    gap: 8px; /* Slightly reduce gap for a more compact look */
+    /* align-items: center; Will be controlled by elevated state */
+    gap: 8px; 
     padding: 8px;
-    background-color: var(--surface-color); /* Use surface color for input area background */
+    background-color: var(--surface-color); 
     border: 1px solid var(--input-border);
-    border-radius: 24px; /* Rounded corners for the whole input bar */
+    border-radius: 24px; 
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    transition: border-color 0.3s ease, background-color 0.3s ease;
+    transition: border-color 0.3s ease, background-color 0.3s ease, flex-direction 0.1s ease, align-items 0.1s ease;
+    flex-direction: column; /* Default to column, will be overridden for non-elevated */
+}
+
+.inputControls:not(.inputControlsElevated) .iconRow {
+    align-items: center; /* Center items when in single row */
+}
+.inputControls.inputControlsElevated {
+    flex-direction: column-reverse; /* Textarea on top, icon row below */
+    align-items: stretch; /* Allow textarea to take full width */
+}
+
+.iconRow {
+    display: flex;
+    align-items: center; /* Default alignment for icons */
+    width: 100%;
+    gap: 8px; /* Consistent gap for icons */
 }
 
 .inputControls:focus-within {
@@ -193,12 +209,22 @@
     font-size: 1rem;
     background-color: transparent; /* Inherit from .inputControls */
     color: var(--text-color);
-    resize: none; /* Disable manual resize, let it grow with content */
-    /* min-height: 24px; */ /* Remove fixed min-height, allow dynamic height */
+    resize: none; 
     line-height: 1.5;
-    outline: none; /* Remove default outline */
-    max-height: 150px; /* Max height before scrolling */
+    outline: none; 
+    max-height: 150px; 
     overflow-y: auto; 
+}
+
+.elevatedTextarea {
+    width: 100%;
+    margin-bottom: 8px; /* Space between elevated textarea and icon row */
+    padding: 10px 15px; /* Match original messageInput padding */
+    border-radius: 18px; /* Slightly less than main bar if desired, or match */
+    border: 1px solid transparent; /* Keep consistent look or var(--input-border) if preferred */
+    background-color: transparent; /* Inherit from inputControls or set explicitly */
+    color: var(--text-color);
+    box-sizing: border-box; /* Ensure padding and border are included in width/height */
 }
 
 .messageInput::placeholder {

@@ -43,13 +43,14 @@
     - **Fixed:** Resolved TypeScript build error (`TS2719`) in `ChatPage.tsx` by updating its local `CustomModelData` interface definition to include `baseModelSupportsVision`, aligning it with `ModelSelectorDropdown.tsx` and backend data.
     - **Fixed:** Resolved backend ReferenceError in `chatMessages.js` by ensuring `modelIdentifierForApi` is initialized before use in vision checks.
     - **Fixed:** Corrected OpenAI/Perplexity API request formatting for `image_url` to send an object `{ "url": "data:..." }` instead of a string, resolving 400 errors.
-- **UI Update (Model Selector Icon & Chat Input Redesign):**
-    - Changed the chat model selection icon in `ModelSelectorDropdown.tsx` from "🤖" to `MdPsychology`.
-    - Adjusted CSS in `ModelSelectorDropdown.module.css` to make the icon size and button style consistent.
-    - Redesigned the chat input area in `ChatPage.tsx` to a single-line layout inspired by Perplexity's UI.
-        - Consolidated all input controls (file upload, model selector, textarea, toggles, mic, send) into one row.
-        - Implemented auto-expanding textarea height based on content.
-        - Updated relevant CSS in `ChatPage.module.css` for the new layout and textarea behavior.
+- **UI Update (Advanced Chat Input Redesign - Perplexity Style):**
+    - Changed the chat model selection icon in `ModelSelectorDropdown.tsx` from "🤖" to `MdPsychology` and standardized its button styling.
+    - Significantly redesigned the chat input area in `ChatPage.tsx`:
+        - Implemented a new layout where the textarea moves to a line above the main icon row when its content becomes multi-line or includes newlines.
+        - Introduced `isTextareaElevated` state in `ChatPage.tsx` to manage this conditional layout.
+        - Reordered icons on the main input row to: Model Selector, Session Memory Toggle, Reasoning Toggle, (inline textarea/placeholder), File Attachment, Voice, Send.
+        - The textarea continues to auto-expand vertically based on content.
+        - Updated `ChatPage.module.css` with new classes (`.inputControlsElevated`, `.iconRow`, `.elevatedTextarea`) and modified existing styles to support this dynamic two-state layout.
 - **S3 File Deletion on Session Delete:**
     - Implemented logic in `backend/controllers/chatSessions.js` (`deleteChatSession` function) to:
         - Identify `ChatMessage` documents with `fileInfo.filename`.
@@ -122,7 +123,7 @@ The project is actively being developed. Recent work focused on the initial impl
 - Refactored frontend image URL construction to correctly use the base server URL without the API path prefix.
 - Modified backend response and frontend message handling to enable immediate display of uploaded images without page refresh.
 - Updated the model selector dropdown icon to `MdPsychology` and standardized its button styling.
-- Redesigned chat input to a single, auto-expanding line for a cleaner, more minimal interface.
+- Redesigned chat input for a more dynamic Perplexity-like experience, where the textarea elevates above icons when multi-line, and icons are reordered.
 - Extended vision icon display logic in the frontend model selector to custom models by checking a new `baseModelSupportsVision` flag provided by the backend.
 - **User Memory Feature:**
     - Adopted a hybrid model for context management (manual + basic automatic extraction).

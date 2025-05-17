@@ -18,6 +18,7 @@ const statsRoutes = require('./routes/stats'); // Import stats routes
 const settingsRoutes = require('./routes/settings'); // Import settings routes
 const customProviderRoutes = require('./routes/customProviders'); // Import custom provider routes
 const customModelRoutes = require('./routes/customModels'); // Import custom model routes
+const userMemoryRoutes = require('./routes/userMemoryRoutes'); // Import user memory routes
 
 // Connect to Database
 connectDB();
@@ -64,10 +65,6 @@ const corsOptions = {
 app.use(cors(corsOptions)); // Use the original options again
 app.use(express.json()); // Parse JSON request bodies
 
-// Serve static files from the 'uploads' directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-console.log(`Serving static files from ${path.join(__dirname, 'uploads')} at /uploads`); // Add log
-
 // Basic route
 app.get('/', (req, res) => {
   res.send('AI Chatbox Backend is running!');
@@ -85,6 +82,7 @@ app.use('/api/v1/stats', statsRoutes); // Mount stats routes
 app.use('/api/v1/settings', settingsRoutes); // Mount settings routes
 app.use('/api/v1/customproviders', customProviderRoutes); // Mount custom provider routes
 app.use('/api/v1/custommodels', customModelRoutes); // Mount custom model routes (handles nested too)
+app.use('/api/v1/usermemory', userMemoryRoutes); // Mount user memory routes
 
 // Define the port
 const PORT = process.env.PORT || 5000; // Use port from .env or default to 5000

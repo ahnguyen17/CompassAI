@@ -243,7 +243,7 @@ const SharedChatPage: React.FC = () => { // Removed props
                       <div style={{
                           padding: '10px 15px',
                           borderRadius: '15px',
-                          background: isDarkMode ? '#0d6efd' : '#007bff', // User Background
+                          background: isDarkMode ? '#10402c' : '#057A55', // User Background - matching ChatPage colors
                           color: 'white', // User Text Color
                           maxWidth: '75%',
                           wordWrap: 'break-word',
@@ -266,7 +266,7 @@ const SharedChatPage: React.FC = () => { // Removed props
               <button
                 onClick={handleCopyChat}
                 disabled={isCopying}
-                style={{ padding: '10px 20px', cursor: 'pointer', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px' }}
+                style={{ padding: '10px 20px', cursor: 'pointer', background: isDarkMode ? '#10402c' : '#057A55', color: 'white', border: 'none', borderRadius: '5px' }}
               >
                 {isCopying ? 'Copying...' : 'Chat with AI'}
               </button>

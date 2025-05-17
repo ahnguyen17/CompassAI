@@ -6,7 +6,15 @@ import apiClient, {
     MonthlyUserStat, // Renamed
     AllTimeUserStat,  // Renamed
     MonthlyModelStat, // New
-    AllTimeModelStat  // New
+    AllTimeModelStat,  // New
+    UserMemoryData,   // New: For User Memory
+    ContextItemData,  // New: For Context Items
+    getUserMemory,
+    updateUserMemorySettings,
+    addMemoryContext,
+    updateMemoryContext,
+    deleteMemoryContext,
+    clearAllMemoryContexts,
 } from '../services/api';
 import useAuthStore from '../store/authStore'; // Import the store
 import Switch from 'react-switch'; // Import a toggle switch component
@@ -211,6 +219,34 @@ const SettingsPage: React.FC = () => { // Removed props
   const [modelFormError, setModelFormError] = useState('');
   // --- End Custom Provider/Model State ---
 
+  // --- User Memory State (All Users) --- NEW ---
+  const [userMemory, setUserMemory] = useState<UserMemoryData | null>(null);
+  const [loadingUserMemory, setLoadingUserMemory] = useState(true);
+  const [fetchUserMemoryError, setFetchUserMemoryError] = useState('');
+  
+  const [memoryGlobalSettings, setMemoryGlobalSettings] = useState<{ isGloballyEnabled: boolean; maxContexts: number }>({ isGloballyEnabled: true, maxContexts: 50 });
+  const [updateMemorySettingsLoading, setUpdateMemorySettingsLoading] = useState(false);
+  const [updateMemorySettingsError, setUpdateMemorySettingsError] = useState('');
+  const [updateMemorySettingsSuccess, setUpdateMemorySettingsSuccess] = useState('');
+
+
+  const [newMemoryText, setNewMemoryText] = useState('');
+  const [addMemoryContextLoading, setAddMemoryContextLoading] = useState(false);
+  const [addMemoryContextError, setAddMemoryContextError] = useState('');
+
+  const [editingContextItem, setEditingContextItem] = useState<ContextItemData | null>(null);
+  const [editTextValue, setEditTextValue] = useState('');
+  const [showMemoryContextModal, setShowMemoryContextModal] = useState(false);
+  const [editMemoryContextLoading, setEditMemoryContextLoading] = useState(false);
+  const [editMemoryContextError, setEditMemoryContextError] = useState('');
+  
+  const [deleteMemoryContextLoading, setDeleteMemoryContextLoading] = useState<string | null>(null); // contextId
+  const [deleteMemoryContextError, setDeleteMemoryContextError] = useState('');
+
+  const [clearAllContextsLoading, setClearAllContextsLoading] = useState(false);
+  const [clearAllContextsError, setClearAllContextsError] = useState('');
+  // --- End User Memory State ---
+
 
   // --- Initialize Profile Form ---
   useEffect(() => {
@@ -395,6 +431,8 @@ const SettingsPage: React.FC = () => { // Removed props
   // Initial data fetching
   useEffect(() => {
     fetchApiKeys(); // All users need API keys
+    fetchUserMemoryDetails(); // Fetch user memory for all logged-in users
+
     if (currentUser?.role === 'admin') {
          fetchUsers();
          fetchReferralCodes();
@@ -423,6 +461,149 @@ const SettingsPage: React.FC = () => { // Removed props
           setCustomModels([]); // Clear models if no provider is selected
       }
   }, [selectedCustomProviderId]); // Dependency on selected provider ID
+
+  // --- User Memory Handlers --- NEW ---
+  const fetchUserMemoryDetails = async () => {
+    if (!currentUser) return;
+    setLoadingUserMemory(true);
+    setFetchUserMemoryError('');
+    try {
+      const response = await getUserMemory();
+      if (response.success) {
+        setUserMemory(response.data);
+        setMemoryGlobalSettings({
+          isGloballyEnabled: response.data.isGloballyEnabled,
+          maxContexts: response.data.maxContexts,
+        });
+      } else {
+        setFetchUserMemoryError(response.error || 'Failed to fetch user memory.');
+      }
+    } catch (err: any) {
+      setFetchUserMemoryError(err.response?.data?.error || 'Error fetching user memory.');
+    } finally {
+      setLoadingUserMemory(false);
+    }
+  };
+
+  const handleUpdateMemoryGlobalSettings = async () => {
+    setUpdateMemorySettingsLoading(true);
+    setUpdateMemorySettingsError('');
+    setUpdateMemorySettingsSuccess('');
+    try {
+      const response = await updateUserMemorySettings(memoryGlobalSettings);
+      if (response.success) {
+        setUserMemory(response.data); // Update local state with full response
+        setMemoryGlobalSettings({ // Ensure local form state matches
+            isGloballyEnabled: response.data.isGloballyEnabled,
+            maxContexts: response.data.maxContexts
+        });
+        setUpdateMemorySettingsSuccess('Memory settings updated!');
+        setTimeout(() => setUpdateMemorySettingsSuccess(''), 3000);
+      } else {
+        setUpdateMemorySettingsError(response.error || 'Failed to update memory settings.');
+      }
+    } catch (err: any) {
+      setUpdateMemorySettingsError(err.response?.data?.error || 'Error updating memory settings.');
+    } finally {
+      setUpdateMemorySettingsLoading(false);
+    }
+  };
+
+  const handleAddManualContext = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMemoryText.trim()) {
+      setAddMemoryContextError('Context text cannot be empty.');
+      return;
+    }
+    setAddMemoryContextLoading(true);
+    setAddMemoryContextError('');
+    try {
+      const response = await addMemoryContext({ text: newMemoryText, source: 'manual' });
+      if (response.success) {
+        setUserMemory(response.data);
+        setNewMemoryText('');
+      } else {
+        setAddMemoryContextError(response.error || 'Failed to add context.');
+      }
+    } catch (err: any) {
+      setAddMemoryContextError(err.response?.data?.error || 'Error adding context.');
+    } finally {
+      setAddMemoryContextLoading(false);
+    }
+  };
+
+  const openEditMemoryContextModal = (context: ContextItemData) => {
+    setEditingContextItem(context);
+    setEditTextValue(context.text);
+    setShowMemoryContextModal(true);
+    setEditMemoryContextError('');
+  };
+
+  const closeEditMemoryContextModal = () => {
+    setShowMemoryContextModal(false);
+    setEditingContextItem(null);
+    setEditTextValue('');
+  };
+
+  const handleSaveEditedMemoryContext = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingContextItem || !editTextValue.trim()) {
+      setEditMemoryContextError('Context text cannot be empty.');
+      return;
+    }
+    setEditMemoryContextLoading(true);
+    setEditMemoryContextError('');
+    try {
+      const response = await updateMemoryContext(editingContextItem._id, { text: editTextValue });
+      if (response.success) {
+        setUserMemory(response.data);
+        closeEditMemoryContextModal();
+      } else {
+        setEditMemoryContextError(response.error || 'Failed to update context.');
+      }
+    } catch (err: any) {
+      setEditMemoryContextError(err.response?.data?.error || 'Error updating context.');
+    } finally {
+      setEditMemoryContextLoading(false);
+    }
+  };
+
+  const handleDeleteSingleMemoryContext = async (contextId: string) => {
+    if (!window.confirm('Are you sure you want to delete this context item?')) return;
+    setDeleteMemoryContextLoading(contextId);
+    setDeleteMemoryContextError('');
+    try {
+      const response = await deleteMemoryContext(contextId);
+      if (response.success) {
+        setUserMemory(response.data);
+      } else {
+        setDeleteMemoryContextError(response.error || 'Failed to delete context.');
+      }
+    } catch (err: any) {
+      setDeleteMemoryContextError(err.response?.data?.error || 'Error deleting context.');
+    } finally {
+      setDeleteMemoryContextLoading(null);
+    }
+  };
+
+  const handleClearUserContexts = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL your personalized contexts? This action cannot be undone.')) return;
+    setClearAllContextsLoading(true);
+    setClearAllContextsError('');
+    try {
+      const response = await clearAllMemoryContexts();
+      if (response.success) {
+        setUserMemory(response.data);
+      } else {
+        setClearAllContextsError(response.error || 'Failed to clear contexts.');
+      }
+    } catch (err: any) {
+      setClearAllContextsError(err.response?.data?.error || 'Error clearing contexts.');
+    } finally {
+      setClearAllContextsLoading(false);
+    }
+  };
+  // --- End User Memory Handlers ---
 
 
   // --- Fetch Usage Statistics (Admin) --- UPDATED
@@ -1185,10 +1366,114 @@ const SettingsPage: React.FC = () => { // Removed props
            </section>
        )}
 
+      {/* Personalized Memory Section (All Users) --- NEW --- */}
+      {currentUser && (
+        <details style={sectionStyle} open>
+            <summary style={{...h3Style, cursor: 'pointer', display: 'list-item'}}>Personalized Memory</summary>
+            {loadingUserMemory && <p>Loading memory settings...</p>}
+            {fetchUserMemoryError && <p style={{color: 'red'}}>{fetchUserMemoryError}</p>}
+            {!loadingUserMemory && userMemory && (
+                <>
+                    {/* Global Settings for Memory */}
+                    <div style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}` }}>
+                        <h4 style={h4Style}>Global Memory Settings</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+                            <label htmlFor="memoryGloballyEnabledToggle" style={{ ...labelStyle, marginBottom: 0 }}>
+                                Enable Personalized Memory:
+                            </label>
+                            <Switch
+                                id="memoryGloballyEnabledToggle"
+                                onChange={(checked) => setMemoryGlobalSettings(prev => ({ ...prev, isGloballyEnabled: checked }))}
+                                checked={memoryGlobalSettings.isGloballyEnabled}
+                                disabled={updateMemorySettingsLoading}
+                                onColor="#86d3ff" onHandleColor="#2693e6" handleDiameter={24}
+                                uncheckedIcon={false} checkedIcon={false} boxShadow="0px 1px 5px rgba(0, 0, 0, 0.6)"
+                                activeBoxShadow="0px 0px 1px 10px rgba(0, 0, 0, 0.2)" height={18} width={40}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                            <label htmlFor="memoryMaxContexts" style={{ ...labelStyle, marginBottom: 0 }}>
+                                Max Stored Contexts (1-200):
+                            </label>
+                            <input
+                                type="number"
+                                id="memoryMaxContexts"
+                                value={memoryGlobalSettings.maxContexts}
+                                onChange={(e) => setMemoryGlobalSettings(prev => ({ ...prev, maxContexts: parseInt(e.target.value, 10) || 1 }))}
+                                min="1"
+                                max="200"
+                                style={{...inputStyle, width: '80px'}}
+                                disabled={updateMemorySettingsLoading}
+                            />
+                        </div>
+                        <button onClick={handleUpdateMemoryGlobalSettings} disabled={updateMemorySettingsLoading} style={updateMemorySettingsLoading ? disabledButtonStyle : buttonStyle}>
+                            {updateMemorySettingsLoading ? 'Saving...' : 'Save Memory Settings'}
+                        </button>
+                        {updateMemorySettingsError && <p style={{ color: 'red', marginTop: '10px' }}>{updateMemorySettingsError}</p>}
+                        {updateMemorySettingsSuccess && <p style={{ color: 'green', marginTop: '10px' }}>{updateMemorySettingsSuccess}</p>}
+                    </div>
+
+                    {/* Manage Contexts */}
+                    <div>
+                        <h4 style={h4Style}>Manage Stored Contexts ({userMemory.contexts.length} / {userMemory.maxContexts})</h4>
+                        <form onSubmit={handleAddManualContext} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '15px' }}>
+                            <input
+                                type="text"
+                                placeholder="Enter new context..."
+                                value={newMemoryText}
+                                onChange={(e) => setNewMemoryText(e.target.value)}
+                                style={{...inputStyle, flexGrow: 1, minWidth: '200px'}}
+                            />
+                            <button type="submit" disabled={addMemoryContextLoading} style={addMemoryContextLoading ? disabledButtonStyle : buttonStyle}>
+                                {addMemoryContextLoading ? 'Adding...' : 'Add Manual Context'}
+                            </button>
+                        </form>
+                        {addMemoryContextError && <p style={{ color: 'red', marginBottom: '10px' }}>{addMemoryContextError}</p>}
+                        
+                        {userMemory.contexts.length > 0 ? (
+                            <>
+                                <ul style={{ listStyle: 'none', padding: 0, maxHeight: '300px', overflowY: 'auto', border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`, borderRadius: '4px', paddingLeft: '10px', paddingRight: '10px' }}>
+                                    {userMemory.contexts.slice().sort((a,b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).map(context => (
+                                        <li key={context._id} style={{ borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}`, padding: '10px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                                            <div style={{ flexGrow: 1 }}>
+                                                <p style={{ margin: 0, wordBreak: 'break-word' }}>{context.text}</p>
+                                                <small style={{ color: isDarkMode ? '#aaa' : '#777' }}>
+                                                    Source: {context.source} | Last Updated: {new Date(context.updatedAt).toLocaleString()}
+                                                </small>
+                                            </div>
+                                            <div style={{ flexShrink: 0, display: 'flex', gap: '5px', paddingTop: '5px' }}>
+                                                <button onClick={() => openEditMemoryContextModal(context)} style={smallButtonStyle} disabled={deleteMemoryContextLoading === context._id}>Edit</button>
+                                                <button onClick={() => handleDeleteSingleMemoryContext(context._id)} style={deleteMemoryContextLoading === context._id ? {...deleteButtonStyle, opacity: 0.6} : deleteButtonStyle} disabled={deleteMemoryContextLoading === context._id}>
+                                                    {deleteMemoryContextLoading === context._id ? '...' : 'Del'}
+                                                </button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                                {deleteMemoryContextError && <p style={{ color: 'red', marginTop: '10px' }}>{deleteMemoryContextError}</p>}
+                                <button 
+                                    onClick={handleClearUserContexts} 
+                                    disabled={clearAllContextsLoading} 
+                                    style={{...deleteButtonStyle, marginTop: '15px', padding: '8px 15px'}}
+                                >
+                                    {clearAllContextsLoading ? 'Clearing...' : 'Clear All Contexts'}
+                                </button>
+                                {clearAllContextsError && <p style={{ color: 'red', marginTop: '10px' }}>{clearAllContextsError}</p>}
+                            </>
+                        ) : (
+                            <p>No personalized contexts stored yet.</p>
+                        )}
+                    </div>
+                </>
+            )}
+        </details>
+      )}
+      {/* --- End Personalized Memory Section --- */}
+
 
       {/* API Key Management - Only show if user is admin */}
       {currentUser?.role === 'admin' && (
-          <section style={sectionStyle}>
+          <details style={sectionStyle}> {/* Changed section to details and removed open */}
             <h3 style={h3Style}>{t('settings_api_keys_title')}</h3>
             <h4 style={h4Style}>Existing Keys (Sorted by Priority)</h4>
             {loadingApiKeys && <p>Loading...</p>}
@@ -1251,7 +1536,7 @@ const SettingsPage: React.FC = () => { // Removed props
                  {addApiKeyError && <p style={{ color: 'red', marginTop: '10px' }}>{addApiKeyError}</p>}
              </div>
              {apiKeyActionError && <p style={{ color: 'red', marginTop: '10px' }}>{apiKeyActionError}</p>}
-          </section>
+          </details>
       )}
 
       {/* User Management (Admin Only) */}
@@ -1838,7 +2123,46 @@ const SettingsPage: React.FC = () => { // Removed props
                 </div>
             </div>
         )}
-        {/* --- End Modal --- */}
+        {/* --- End Custom Model Modal --- */}
+
+        {/* --- User Memory Context Edit Modal --- NEW --- */}
+        {showMemoryContextModal && editingContextItem && (
+             <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.6)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', zIndex: 1000
+            }}>
+                <div style={{
+                    background: isDarkMode ? '#333' : 'white', padding: '25px', borderRadius: '8px',
+                    width: '90%', maxWidth: '500px',
+                    color: isDarkMode ? '#e0e0e0' : 'inherit'
+                }}>
+                    <h4 style={{ marginTop: 0, marginBottom: '20px' }}>Edit Memory Context</h4>
+                    <form onSubmit={handleSaveEditedMemoryContext}>
+                        {editMemoryContextError && <p style={{ color: 'red', marginBottom: '15px' }}>{editMemoryContextError}</p>}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label htmlFor="editMemoryContextText" style={labelStyle}>Context Text:</label>
+                            <textarea
+                                id="editMemoryContextText"
+                                value={editTextValue}
+                                onChange={(e) => setEditTextValue(e.target.value)}
+                                rows={4}
+                                required
+                                style={{...inputStyle, height: 'auto', maxWidth: '100%'}}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                            <button type="button" onClick={closeEditMemoryContextModal} style={{...smallButtonStyle, background: isDarkMode ? '#555' : '#ccc'}}>Cancel</button>
+                            <button type="submit" disabled={editMemoryContextLoading} style={editMemoryContextLoading ? disabledButtonStyle : buttonStyle}>
+                                {editMemoryContextLoading ? 'Saving...' : 'Save Changes'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
+        {/* --- End User Memory Context Edit Modal --- */}
+
 
     </div>
   );

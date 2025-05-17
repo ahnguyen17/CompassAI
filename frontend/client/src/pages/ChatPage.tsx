@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { MdSend, MdAttachFile, MdMic, MdMicOff, MdLightbulbOutline, MdClose, MdChevronLeft, MdShare, MdLinkOff, MdAddCircleOutline } from 'react-icons/md'; // Added MdAddCircleOutline
+import { MdSend, MdAttachFile, MdMic, MdMicOff, MdLightbulbOutline, MdClose, MdChevronLeft, MdShare, MdLinkOff, MdAddCircleOutline, MdAutoAwesome } from 'react-icons/md'; // Added MdAutoAwesome
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
  // Import both light and dark themes
@@ -111,8 +111,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
     const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for the end of the messages list
     const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for textarea
     const [isListening, setIsListening] = useState(false); // State for speech recognition
-    const recognitionRef = useRef<SpeechRecognition | null>(null); // Ref to hold recognition instance
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null); // For image previews
+  const recognitionRef = useRef<SpeechRecognition | null>(null); // Ref to hold recognition instance
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // For image previews
+  const [isSessionMemoryActive, setIsSessionMemoryActive] = useState(true); // State for session memory toggle
+  // const [isTextareaElevated, setIsTextareaElevated] = useState(false); // No longer needed, textarea is always "elevated"
 
     // --- Helper Function for Parsing Perplexity Content ---
   const parsePerplexityContent = (content: string): { reasoning: string | null; mainContent: string } => {
@@ -231,13 +233,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
    };
    // Removed local handleNewChat function - Navbar icon uses global store action now
 
-   // Handle keydown for textarea (Enter to send, Shift+Enter for newline)
+   // Handle keydown for textarea (Shift+Enter to send, Enter for newline)
    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-       if (e.key === 'Enter' && !e.shiftKey) { // Check for Enter without Shift
-           e.preventDefault(); // Prevent the default newline from Enter
+       if (e.key === 'Enter' && e.shiftKey) { // Check for Shift+Enter
+           e.preventDefault(); // Prevent default newline from Shift+Enter if any
            handleSendMessage(); // Send the message
        }
-       // If Shift+Enter is pressed, do nothing here,
+       // If only Enter is pressed (without Shift), do nothing here,
        // allowing the default newline behavior of the textarea.
    };
 
@@ -324,6 +326,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
       if (showReasoning) { // Use showReasoning to control streaming
           // --- Streaming Logic ---
           console.log("Streaming enabled via reasoning toggle."); // Add log
+          formData.append('useSessionMemory', isSessionMemoryActive.toString()); // Add session memory flag
           const optimisticAiMessageId = `temp-ai-${Date.now()}`;
           const optimisticAiMessage: ChatMessage = {
               _id: optimisticAiMessageId,
@@ -558,6 +561,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
               // Use apiClient.post (expects single JSON response with AI message)
               // Add stream=false parameter for non-streaming requests
               formData.append('stream', 'false');
+              formData.append('useSessionMemory', isSessionMemoryActive.toString()); // Add session memory flag
 
               const response = await apiClient.post(`/chatsessions/${sessionId}/messages`, formData, {
                   headers: {
@@ -584,7 +588,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
 
                       // Update global sessions list as well - Mirroring the working streaming logic structure
                       setSessions(
-                        sessions.map((s: ChatSession): ChatSession => 
+                        sessions.map((s: ChatSession): ChatSession =>
                           s._id === currentSession._id ? { ...s, title: newTitle } : s
                         )
                       );
@@ -717,6 +721,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
     // Scroll to bottom smoothly after messages load or a new message is added
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loadingMessages]); // Trigger on message array change or when loading finishes
+
+  // Effect for auto-expanding textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+        // Always reset height to auto first to allow the textarea to naturally size to its content
+        textareaRef.current.style.height = 'auto';
+        const scrollHeight = textareaRef.current.scrollHeight;
+
+        // Now, set the actual height to this scrollHeight to show all content
+        textareaRef.current.style.height = `${scrollHeight}px`;
+
+        // isTextareaElevated logic removed as it's always "elevated" now
+    }
+  }, [newMessage]); // Trigger when newMessage changes
 
   // REMOVED: Effect to open sidebar when no chat is selected (Keep default collapsed)
   // useEffect(() => {
@@ -911,15 +929,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                             <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${isDarkMode ? '#555' : '#ddd'}` }}>
                                                 {msg.fileInfo.mimetype.startsWith('image/') ? (
                                                     <img
-                                                        // Corrected URL Construction: Remove /api/v1 if present
-                                                        src={`${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/v1$/, '')}/${msg.fileInfo.path}`}
+                                                        // Use fileInfo.path directly as it's now a full S3 URL
+                                                        src={msg.fileInfo.path}
                                                         alt={msg.fileInfo.originalname}
                                                         style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '4px', marginTop: '5px' }}
                                                     />
                                                 ) : (
                                                     <a
-                                                        // Corrected URL Construction: Remove /api/v1 if present
-                                                        href={`${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/v1$/, '')}/${msg.fileInfo.path}`}
+                                                        // Use fileInfo.path directly as it's now a full S3 URL
+                                                        href={msg.fileInfo.path}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         download={msg.fileInfo.originalname}
@@ -985,11 +1003,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                         <>
                             {/* User Bubble */}
                             <div
-                                className={`${styles.messageBubble}`}
-                                style={{ // User bubble styles
-                                    background: isDarkMode ? '#0d6efd' : '#007bff',
-                                    color: 'white',
-                                }}
+                                className={`${styles.messageBubble} ${styles.messageBubbleUser}`}
+                                style={isDarkMode ? { backgroundColor: '#10402c' } : undefined}
                             >
                                 {/* Copy Button moved inside */}
                                 <CopyButton
@@ -1002,15 +1017,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                     <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${isDarkMode ? '#3a87fd' : '#3390ff'}` }}>
                                         {msg.fileInfo.mimetype.startsWith('image/') ? (
                                             <img
-                                                // Corrected URL Construction: Remove /api/v1 if present
-                                                src={`${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/v1$/, '')}/${msg.fileInfo.path}`}
+                                                // Use fileInfo.path directly as it's now a full S3 URL
+                                                src={msg.fileInfo.path}
                                                 alt={msg.fileInfo.originalname}
                                                 style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '4px', marginTop: '5px' }}
                                             />
                                         ) : (
                                             <a
-                                                // Corrected URL Construction: Remove /api/v1 if present
-                                                href={`${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/v1$/, '')}/${msg.fileInfo.path}`}
+                                                // Use fileInfo.path directly as it's now a full S3 URL
+                                                href={msg.fileInfo.path}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 download={msg.fileInfo.originalname}
@@ -1036,39 +1051,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
 
               {/* Input Area */}
               <form onSubmit={handleSendMessage} className={styles.inputForm}>
-                   {/* Model Select, Mic, and Reasoning Toggle Row */}
-                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}> {/* Changed gap to space-between */}
-                        {/* Model Selector - Pass the combined state */}
-                        {/* Check if either baseModels or customModels have entries before rendering */}
-                        {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) ? (
-                            <ModelSelectorDropdown
-                                availableModels={availableModels} // Pass the state variable directly
-                               selectedModel={selectedModel}
-                               onModelChange={(newModel) => {
-                                   setSelectedModel(newModel);
-                                   // Automatically enable reasoning/streaming if a known reasoning model is selected
-                                   if (REASONING_MODELS.includes(newModel)) {
-                                       setShowReasoning(true);
-                                   }
-                               }}
-                                disabled={sendingMessage || loadingMessages}
-                            />
-                        ) : ( <div /> /* Placeholder to maintain space-between */)}
-
-                       {/* Reasoning Toggle Icon Button */}
-                       <button
-                           type="button"
-                           onClick={() => setShowReasoning(!showReasoning)}
-                           title={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
-                           aria-label={showReasoning ? t('chat_reasoning_hide_tooltip') : t('chat_reasoning_show_tooltip')}
-                           aria-pressed={showReasoning}
-                           className={styles.reasoningToggle} // Use new class
-                           style={{ opacity: showReasoning ? 1 : 0.6 }} // Keep opacity for visual feedback
-                       >
-                         <MdLightbulbOutline />
-                     </button>
-                 </div>
-                 {/* Preview Area */}
+                 {/* Preview Area - Remains above the input bar */}
                  {previewUrl && selectedFile && selectedFile.type.startsWith('image/') && (
                     <div style={{ marginBottom: '10px', position: 'relative', maxWidth: '150px' }}>
                         <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '4px' }} />
@@ -1084,61 +1067,64 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                     </div>
                  )}
 
-                 {/* Input Controls Row */}
+                 {/* Input Controls Container - isTextareaElevated class removed */}
                  <div className={styles.inputControls}>
-                     <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        style={{ display: 'none' }}
-                        id="file-upload"
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
-                     />
-                     <button
-                         type="button"
-                         onClick={() => fileInputRef.current?.click()}
-                         disabled={sendingMessage || loadingMessages || !currentSession}
-                         className={styles.fileUploadButton}
-                         title={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')}
-                         aria-label={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')}
-                     >
-                         <MdAttachFile />
-                     </button>
-                     {/* Removed selectedFile span from here, preview handles it */}
-                        <textarea
-                            ref={textareaRef}
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder={t('chat_input_placeholder')}
-                            disabled={sendingMessage || loadingMessages || !currentSession}
-                            className={styles.messageInput}
-                            onPaste={handlePaste}
-                            rows={1}
-                      />
-                        {/* Microphone Button */}
-                        {recognitionRef.current && ( // Only show if API is supported
-                            <button
-                                type="button"
-                                onClick={handleToggleListening}
-                                disabled={sendingMessage || loadingMessages || !currentSession}
-                                className={`${styles.micButton} ${isListening ? styles.micButtonListening : ''}`}
-                                title={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
-                                aria-label={isListening ? t('chat_stop_listening') : t('chat_start_listening')}
-                            >
-                                {isListening ? <MdMicOff /> : <MdMic />}
+                    {/* Textarea is now always rendered first (visually above icons due to CSS flex-direction: column) */}
+                    <textarea
+                        ref={textareaRef}
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={t('chat_input_placeholder')}
+                        disabled={sendingMessage || loadingMessages || !currentSession}
+                        className={styles.messageInput} // Use general messageInput style, .elevatedTextarea class might be merged or removed from CSS
+                        onPaste={handlePaste}
+                        rows={1} // Add rows={1}
+                    />
+                    {/* Icon Row */}
+                    <div className={styles.iconRow}>
+                        {/* Left Icon Group */}
+                        <div className={styles.iconGroupLeft}>
+                            {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) ? (
+                                <ModelSelectorDropdown
+                                    availableModels={availableModels}
+                                    selectedModel={selectedModel}
+                                    onModelChange={(newModel) => {
+                                        setSelectedModel(newModel);
+                                        // REASONING_MODELS check and setShowReasoning(true) removed as reasoning is always on
+                                    }}
+                                    disabled={sendingMessage || loadingMessages}
+                                />
+                            ) : null}
+
+                            {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) && (
+                                <button type="button" onClick={() => setIsSessionMemoryActive(!isSessionMemoryActive)} title={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"} aria-label={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"} aria-pressed={isSessionMemoryActive} className={styles.reasoningToggle} style={{ opacity: isSessionMemoryActive ? 1 : 0.6 }}>
+                                    <MdAutoAwesome />
+                                </button>
+                            )}
+
+                            {/* Reasoning toggle button removed */}
+                        </div>
+
+                        {/* Right Icon Group */}
+                        <div className={styles.iconGroupRight}>
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} id="file-upload" accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" />
+                            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={sendingMessage || loadingMessages || !currentSession} className={styles.fileUploadButton} title={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')} aria-label={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')}>
+                                <MdAttachFile />
                             </button>
-                        )}
-                      <button
-                          type="submit"
-                          disabled={sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)}
-                          className={styles.sendButton}
-                          title={t('chat_send_button')}
-                          aria-label={t('chat_send_button')}
-                     >
-                         <MdSend />
-                     </button>
-                </div>
+
+                            {recognitionRef.current && (
+                                <button type="button" onClick={handleToggleListening} disabled={sendingMessage || loadingMessages || !currentSession} className={`${styles.micButton} ${isListening ? styles.micButtonListening : ''}`} title={isListening ? t('chat_stop_listening') : t('chat_start_listening')} aria-label={isListening ? t('chat_stop_listening') : t('chat_start_listening')}>
+                                    {isListening ? <MdMicOff /> : <MdMic />}
+                                </button>
+                            )}
+
+                            <button type="submit" disabled={sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)} className={styles.sendButton} title={t('chat_send_button')} aria-label={t('chat_send_button')}>
+                                <MdSend />
+                            </button>
+                        </div>
+                    </div>
+                 </div>
              </form>
            </>
          ) : (

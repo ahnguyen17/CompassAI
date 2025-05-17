@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs-extra'); // Import fs-extra for directory creation
+// const path = require('path'); // No longer needed for diskStorage
+// const fs = require('fs-extra'); // No longer needed for diskStorage
 const {
   getMessagesForSession,
   addMessageToSession
@@ -10,26 +10,8 @@ const {
 // Import protection middleware
 const { protect } = require('../middleware/auth');
 
-// Configure Multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // Create uploads directory on-demand if it doesn't exist
-    const uploadPath = path.join(__dirname, '..', 'uploads');
-    try {
-      // ensureDirSync creates the directory if it doesn't exist
-      fs.ensureDirSync(uploadPath);
-      console.log(`Uploads directory ensured: ${uploadPath}`);
-      cb(null, uploadPath);
-    } catch (err) {
-      console.error(`Error ensuring uploads directory: ${err.message}`);
-      cb(err);
-    }
-  },
-  filename: function (req, file, cb) {
-    // Create a unique filename: fieldname-timestamp.ext
-    cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
-  }
-});
+// Configure Multer for file uploads using memoryStorage
+const storage = multer.memoryStorage();
 
 // Optional: Add file filter (e.g., limit file types or size)
 // const fileFilter = (req, file, cb) => { ... };

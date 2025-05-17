@@ -77,14 +77,46 @@
 
 .inputControls {
     display: flex;
-    align-items: flex-end; /* Align items to the bottom for multi-line textarea */
-    gap: 10px;
+    /* align-items: center; Will be controlled by elevated state */
+    gap: 0px; /* Removed gap */
     padding: 8px;
-    background-color: var(--surface-color); /* Use surface color for input area background */
+    background-color: var(--surface-color);
     border: 1px solid var(--input-border);
-    border-radius: 24px; /* Rounded corners for the whole input bar */
+    border-radius: 24px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    transition: border-color 0.3s ease, background-color 0.3s ease;
+    transition: border-color 0.3s ease, background-color 0.3s ease, flex-direction 0.1s ease, align-items 0.1s ease;
+
+    /* Default to row for the non-elevated state, and center items vertically */
+    /* flex-direction: row; */ /* No longer default, always column */
+    /* align-items: center; */ /* No longer default, always stretch for column */
+    flex-direction: column; /* Textarea on top, icon row below */
+    align-items: stretch; /* Allow textarea to take full width */
+}
+
+/* .inputControls:not(.inputControlsElevated) .iconRow {
+    align-items: center;
+} */ /* This rule can be removed or commented out */
+/* .inputControls.inputControlsElevated class is no longer needed */
+
+.iconRow {
+    display: flex;
+    align-items: center; /* Vertically center all children */
+    width: 100%;
+    /* gap: 8px; */ /* Gap will be handled by groups or space-between */
+    flex-wrap: nowrap; /* Prevent wrapping of items */
+    justify-content: space-between; /* Push left and right groups apart */
+}
+
+.iconGroupLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Spacing within the left group of icons */
+}
+
+.iconGroupRight {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Spacing within the right group of icons */
 }
 
 .inputControls:focus-within {
@@ -107,6 +139,7 @@
     flex-shrink: 0;
     width: 40px; /* Fixed width */
     height: 40px; /* Fixed height */
+    margin: 0; /* Remove default margins */
 }
 
 .fileUploadButton:hover, .micButton:hover, .sendButton:not(:disabled):hover, .reasoningToggle:hover {
@@ -186,20 +219,25 @@
 }
 
 .messageInput {
-    flex: 1;
-    padding: 10px 15px; /* Adjusted padding */
+    /* flex: 1; */ /* Removed to allow natural height based on content and rows attribute */
+    padding: 8px 15px 4px 15px; /* Reduced bottom padding from 8px to 4px */
     border-radius: 20px; /* Keep rounded for inner input */
     border: none; /* Remove border, parent .inputControls has it */
     font-size: 1rem;
     background-color: transparent; /* Inherit from .inputControls */
     color: var(--text-color);
-    resize: none; /* Disable manual resize, let it grow with content */
-    min-height: 24px; /* Match button icon line height */
+    resize: none;
     line-height: 1.5;
-    outline: none; /* Remove default outline */
-    max-height: 150px; /* From inline style */
-    overflow-y: auto; /* From inline style */
+    outline: none;
+    max-height: 150px;
+    overflow-y: auto;
+    margin: 0; /* Remove default margins */
+    width: 100%; /* Ensure it takes full width in the column layout */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    /* margin-bottom: 8px; */ /* Removed to reduce space, parent .inputControls has a gap */
 }
+
+/* .elevatedTextarea class is no longer needed, styles merged or adapted into .messageInput */
 
 .messageInput::placeholder {
     color: var(--text-secondary-color);
@@ -261,8 +299,8 @@
     opacity: 1;
 }
 .messageBubbleUser {
-    background-color: #007bff;
-    color: white;
+    background-color: var(--primary-color);
+    color: var(--text-on-primary-color);
 }
 .messageBubbleAi {
      background-color: #e9ecef;
@@ -362,7 +400,7 @@ body.dark .deleteSessionButton {
 body.dark .newChatButton {
      background-color: #0d6efd;
  }
- 
+
  /* New style for the close button next to the Chat History title */
  .sidebarHeaderCloseButton {
      background: none;
@@ -377,15 +415,15 @@ body.dark .newChatButton {
  .sidebarHeaderCloseButton:hover {
      color: #343a40; /* Darken on hover */
  }
- 
+
  body.dark .sidebarHeaderCloseButton {
      color: #aaa; /* Lighter subdued color for dark mode */
  }
- 
+
  body.dark .sidebarHeaderCloseButton:hover {
      color: #eee; /* Lighten on hover */
  }
- 
+
  body.dark .mainChatArea {
      /* Background is inherited from container */
 }
@@ -395,9 +433,9 @@ body.dark .sidebarToggleButton { /* Keep original style for button inside sideba
     border-color: #666;
     color: #eee;
  }
- 
+
  /* Removed dark mode styles for floating hidden button */
- 
+
 
 body.dark .mainChatArea h3 {
     color: #e0e0e0; /* Dark mode header */
@@ -418,8 +456,8 @@ body.dark .messageList {
 
 /* Message Bubbles - Dark mode styles */
 body.dark .messageBubbleUser {
-    background-color: #0d6efd; /* Adjusted blue */
-    color: white;
+    background-color: #0a1410 !important; /* Very dark green as requested */
+    color: white !important; /* Ensure text is white for maximum contrast */
 }
 body.dark .messageBubbleAi {
     background-color: #3a3d41;
@@ -476,11 +514,11 @@ body.dark .sendButton:disabled {
     cursor: pointer;
      transition: left 0.3s ease-in-out;
  }
- 
+
  /* Removed .sidebarToggleButtonHidden rule */
- 
+
  /* Removed .sidebarToggleButtonHidden:hover rule */
- 
+
  /* --- Mobile Styles --- */
 @media (max-width: 767px) {
     .chatSidebar {
@@ -526,7 +564,7 @@ body.dark .sendButton:disabled {
     }
 
      /* Removed mobile styles for .sidebarToggleButtonHidden */
- 
+
      /* Adjust message bubble max-width for smaller screens */
     /* This would ideally go into a separate message bubble component CSS */
     /* Example: */
@@ -547,14 +585,14 @@ body.dark .sendButton:disabled {
     }
 
     /* Header in Main Chat Area */
-    .mainChatArea > div:first-child { 
+    .mainChatArea > div:first-child {
         margin-left: 0 !important; /* Override desktop inline style */
     }
 
     .mainChatArea > div:first-child h3 {
         min-width: 0; /* Allow title to shrink */
         overflow-wrap: break-word;
-        word-break: break-word; 
+        word-break: break-word;
     }
 
     /* Model Selector & Reasoning Toggle Row */

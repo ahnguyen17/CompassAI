@@ -655,11 +655,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                   console.log('Stream finished with done event, updating session.');
                                   const updatedSessionFromServer = jsonData.updatedSession as ChatSession;
                                   setCurrentSession(updatedSessionFromServer); // Update local currentSession
-                                  setSessions((prevSessions: ChatSession[]) => // Update global sessions list
-                                    prevSessions.map((s: ChatSession) => 
-                                      s._id === updatedSessionFromServer._id ? updatedSessionFromServer : s
-                                    )
+                                  
+                                  // Correctly update global sessions list using the store's current sessions
+                                  const currentGlobalSessions = useAuthStore.getState().sessions;
+                                  const newGlobalSessions = currentGlobalSessions.map((s: ChatSession) => 
+                                    s._id === updatedSessionFromServer._id ? updatedSessionFromServer : s
                                   );
+                                  setSessions(newGlobalSessions); 
+                                  
                                   // The rest of the 'done' logic (clearing streaming state) is handled by the existing 'done' block below
                               }
                           } catch (e: any) { console.error('Failed to parse SSE data:', e, 'Line:', line); }

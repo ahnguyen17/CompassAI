@@ -80,10 +80,7 @@ interface DateGroup {
 
 // Helper function to group sessions by date
 const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): DateGroup[] => {
-  console.log('=== GROUPING SESSIONS DEBUG ===');
-  console.log('Total sessions to group:', sessions.length);
-  console.log('Current date/time:', currentDateTime);
-
+  // Debug logs removed from this section
   const groups: { [key: string]: ChatSession[] } = {};
   const outputOrder: string[] = [];
 
@@ -98,43 +95,22 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
 
   const startOfThisYear = new Date(today.getFullYear(), 0, 1);
   const startOfPreviousYear = new Date(today.getFullYear() - 1, 0, 1);
-  const startOfTwoYearsAgo = new Date(today.getFullYear() - 2, 0, 1); // For "Older" category
-
-  console.log('Date boundaries:');
-  console.log('  Today:', today);
-  console.log('  Seven days ago:', sevenDaysAgo);
-  console.log('  Thirty days ago:', thirtyDaysAgo);
-  console.log('  Start of this year:', startOfThisYear);
-  console.log('  Start of previous year:', startOfPreviousYear);
+  // const startOfTwoYearsAgo = new Date(today.getFullYear() - 2, 0, 1); // For "Older" category - Not strictly needed if logic handles < startOfPreviousYear
 
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
 
-  // Define group titles, also helps with ordering
   const groupTitles = {
-    previous7Days: "date_group_previous_7_days", // Translation key
-    previous30Days: "date_group_previous_30_days", // Translation key
-    // Dynamic titles for months and years will be generated
+    previous7Days: "date_group_previous_7_days", 
+    previous30Days: "date_group_previous_30_days", 
   };
 
-  sessions.forEach((session, index) => {
-    // Prioritize lastMessageTimestamp, then createdAt for grouping
-    const dateToUse = session.lastMessageTimestamp || session.createdAt; // MODIFIED LINE
+  sessions.forEach((session) => { // Removed 'index' as it's not used without logs
+    const dateToUse = session.lastMessageTimestamp || session.createdAt; 
     const sessionDate = new Date(dateToUse);
-    sessionDate.setHours(0, 0, 0, 0); // Normalize session date to start of day for comparison
-
-    console.log(`Session ${index + 1} (${session._id}):`, {
-      title: session.title,
-      lastMessageTimestamp: session.lastMessageTimestamp,
-      lastAccessedAt: session.lastAccessedAt, // Still log for context
-      createdAt: session.createdAt,
-      dateToUse: dateToUse,
-      sessionDate: sessionDate,
-      isLastMessageTimestampUsed: !!session.lastMessageTimestamp,
-      isCreatedAtUsedAsFallback: !session.lastMessageTimestamp && !!session.createdAt // New debug field
-    });
+    sessionDate.setHours(0, 0, 0, 0); 
 
     let groupKey: string | null = null;
 
@@ -143,24 +119,18 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
     } else if (sessionDate >= thirtyDaysAgo && sessionDate < sevenDaysAgo) {
       groupKey = groupTitles.previous30Days;
     } else if (sessionDate >= startOfThisYear && sessionDate < thirtyDaysAgo) { 
-      // Current year, older than 30 days: Group by month of current year
       groupKey = `${monthNames[sessionDate.getMonth()]} ${sessionDate.getFullYear()}`;
     } else if (sessionDate >= startOfPreviousYear && sessionDate < startOfThisYear) {
-      // Previous year, by month
       groupKey = `${monthNames[sessionDate.getMonth()]} ${sessionDate.getFullYear()}`;
     } else if (sessionDate < startOfPreviousYear) {
-      // Older years
       groupKey = `${sessionDate.getFullYear()}`;
     }
-
-    console.log(`  -> Assigned to group: ${groupKey}`);
 
     if (groupKey) {
       if (!groups[groupKey]) {
         groups[groupKey] = [];
-        if (!outputOrder.includes(groupKey)) { // Keep track of order of appearance for dynamic keys
-            // Add dynamic keys in a somewhat logical order initially
-            if (groupKey.includes(String(today.getFullYear() -1))) { // Previous year months
+        if (!outputOrder.includes(groupKey)) { 
+            if (groupKey.includes(String(today.getFullYear() -1))) { 
                 const existingPrevYearMonths = outputOrder.filter(k => k.includes(String(today.getFullYear() -1)));
                 if (existingPrevYearMonths.length === 0) {
                     const thirtyDaysIndex = outputOrder.indexOf(groupTitles.previous30Days);
@@ -170,12 +140,11 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
                         outputOrder.push(groupKey);
                     }
                 } else {
-                     // Simple push, will be sorted later
                     outputOrder.push(groupKey);
                 }
-            } else if (!isNaN(parseInt(groupKey))) { // Older years
-                 outputOrder.push(groupKey); // Simple push, will be sorted later
-            } else if (!outputOrder.includes(groupKey)){ // For fixed keys like 7/30 days
+            } else if (!isNaN(parseInt(groupKey))) { 
+                 outputOrder.push(groupKey); 
+            } else if (!outputOrder.includes(groupKey)){ 
                  outputOrder.push(groupKey);
             }
         }
@@ -184,80 +153,53 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
     }
   });
 
-  // Sort sessions within each group by the chosen timestamp (lastMessageTimestamp prioritized, then createdAt) descending
   for (const key in groups) {
     groups[key].sort((a, b) => {
-      const dateA = new Date(a.lastMessageTimestamp || a.createdAt); // MODIFIED LINE
-      const dateB = new Date(b.lastMessageTimestamp || b.createdAt); // MODIFIED LINE
+      const dateA = new Date(a.lastMessageTimestamp || a.createdAt); 
+      const dateB = new Date(b.lastMessageTimestamp || b.createdAt); 
       return dateB.getTime() - dateA.getTime();
     });
   }
   
-  // Define the desired order of fixed groups
   const fixedOrder = [groupTitles.previous7Days, groupTitles.previous30Days];
   
-  // Extract dynamic groups (months of previous year and older years)
   const dynamicGroups = Object.keys(groups)
     .filter(key => !fixedOrder.includes(key))
     .sort((a, b) => {
-      // Check if 'a' and 'b' are year strings (e.g., "2023")
       const isAYear = /^\d{4}$/.test(a);
       const isBYear = /^\d{4}$/.test(b);
-
-      // Check if 'a' and 'b' are "Month YYYY" strings
       const isAMonthYear = /^[A-Za-z]+ \d{4}$/.test(a);
       const isBMonthYear = /^[A-Za-z]+ \d{4}$/.test(b);
 
       if (isAMonthYear && isBMonthYear) {
-        // Both are "Month YYYY", sort by date descending
-        const dateA = new Date(a); // e.g., "December 2024" -> Date object
+        const dateA = new Date(a); 
         const dateB = new Date(b);
         return dateB.getTime() - dateA.getTime();
       } else if (isAYear && isBYear) {
-        // Both are "YYYY", sort numerically descending
         return parseInt(b) - parseInt(a);
       } else if (isAMonthYear && isBYear) {
-        // MonthYear comes before Year if month's year is greater or equal
         const yearA = parseInt(a.split(' ')[1]);
         const yearB = parseInt(b);
-        return yearB - yearA  // This effectively sorts YearB before MonthYearA if YearB > YearA
+        return yearB - yearA;
       } else if (isAYear && isBMonthYear) {
         const yearA = parseInt(a);
         const yearB = parseInt(b.split(' ')[1]);
-        return yearB - yearA; // This effectively sorts MonthYearB before YearA if YearB > YearA
+        return yearB - yearA; 
       }
-      // Fallback or if one is month-year and other is year, needs careful thought
-      // For now, this should handle distinct categories okay.
-      // If a is a month-year (e.g. "Dec 2024") and b is a year (e.g. "2023"), "Dec 2024" should come first.
-      if (isAMonthYear && isBYear) return -1; // MonthYear before Year
-      if (isAYear && isBMonthYear) return 1;  // Year after MonthYear
-
-      return 0; // Should not happen if logic is correct
+      if (isAMonthYear && isBYear) return -1; 
+      if (isAYear && isBMonthYear) return 1;  
+      return 0; 
     });
 
   const finalOutputOrder = [...fixedOrder, ...dynamicGroups];
 
   const result = finalOutputOrder
-    .filter(key => groups[key] && groups[key].length > 0) // Only include keys that have sessions
+    .filter(key => groups[key] && groups[key].length > 0) 
     .map(key => ({
       title: key,
       sessions: groups[key]
     }));
-
-  console.log('Final grouped result:', result.map(group => ({
-    title: group.title,
-    sessionCount: group.sessions.length,
-    sessions: group.sessions.map(s => ({ 
-      id: s._id, 
-      title: s.title, 
-      lastMessageTimestamp: s.lastMessageTimestamp, 
-      lastAccessedAt: s.lastAccessedAt,
-      createdAt: s.createdAt // Log createdAt for better debugging of fallback
-    }))
-  })));
-
-  console.log('=== END GROUPING SESSIONS DEBUG ===');
-
+  // Debug logs removed from this section
   return result;
 };
 

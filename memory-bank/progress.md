@@ -1,168 +1,53 @@
 # Progress: CompassAI
 
 ## What Works
+- **Chat History Date Grouping & Sorting (Finalized & Debug Logs Removed):**
+    - Chat sessions in the sidebar of `ChatPage.tsx` are now grouped by date categories: "Previous 7 Days", "Previous 30 Days", current year by month (e.g., "April 2025"), previous year by month (e.g., "December 2024"), and older years (e.g., "2023").
+    - **Backend (`chatMessages.js`):** `lastMessageTimestamp` on `ChatSession` is reliably updated to the timestamp of the *new AI message* after it's saved. The updated session object is returned in API responses/SSE events.
+    - **Frontend (`ChatPage.tsx`):**
+        - `groupSessionsByDate` function uses `session.lastMessageTimestamp || session.createdAt` for determining the `dateToUse` for grouping and for intra-group sorting. `lastAccessedAt` is no longer a primary factor.
+        - An explicit call to `fetchSessions()` was added at the end of `handleSendMessage` to ensure the session list is re-fetched and the sidebar UI refreshes automatically, moving the active session to the correct group.
+    - All debugging `console.log` statements previously added to `groupSessionsByDate` have been removed.
 - **Shared Chat Page Color Scheme Update:**
-    - Updated the user chat bubble background color in `SharedChatPage.tsx` to match the colors used in `ChatPage.tsx`:
-        - Dark mode: `#10402c` (dark green)
-        - Light mode: `#057A55` (primary green)
-    - Updated the "Chat with AI" button to use the same color scheme for visual consistency.
-- Basic structure for both backend and frontend is in place.
-- Backend has models, controllers, and routes for various entities.
-- Frontend has components and pages for different functionalities.
-- Memory Bank initialization is complete with core files created.
-- User and Setting models are defined.
-- Settings controller provides endpoints for getting and updating global settings.
-- SettingsPage.tsx manages various settings on the client side.
-- ChatPage.tsx handles chat functionality, including session management and message sending.
-- ChatPage.tsx now displays a "Start New Chat" button below the prompt when no chat session is selected, allowing users to easily initiate a new session from the initial view.
-- ChatPage.tsx now defaults the "brain" toggle (reasoning/streaming) to the 'on' state.
-- ChatPage.tsx speech recognition now dynamically uses Vietnamese ('vi-VN') when the application language is set to Vietnamese ('vi'), otherwise defaults to English ('en-US').
-- ChatPage.tsx microphone icon now glows when speech recognition is active, using CSS animations defined in `ChatPage.module.css`.
-- ChatPage.tsx input field now uses "Enter" for newline and "Shift+Enter" to send the message (behavior updated from Enter to send).
-- **Custom Models Feature:**
-    - Admins can create/delete "Custom Providers" in settings.
-    - Admins can create/edit "Custom Models" under a provider, linking them to a base model and adding a custom system prompt.
-    - **Fixed:** Deleting custom models now works correctly (replaced deprecated `.remove()` with `findByIdAndDelete()` in `backend/controllers/customModels.js`).
-    - Chat page model selector now displays both base models and custom models, grouped by provider.
-    - Selecting a custom model in the chat page automatically applies its system prompt during AI response generation.
-- **Load Last Viewed Session:** The chat page now loads the most recently viewed or interacted with session by default, instead of the most recently created one. This is achieved by tracking and sorting sessions by a `lastAccessedAt` timestamp in the backend.
-- **Settings Page UI:** Several admin panels ("User Management", "Model Visibility", "Usage Statistics", "Custom Providers & Models") are now collapsed by default using `<details>` elements for a cleaner initial view.
-- **Model Selector Dropdown UI:** Updated text color for model items in light mode to `#34495e` (dark slate blue) for better readability as requested, modified in `ModelSelectorDropdown.module.css`.
-- **Navbar "New Chat" Icon:** Added an SVG icon button next to the logo in the Navbar (`Navbar.tsx`). Clicking this button (visible when logged in) triggers a new chat session creation via a global state action (`authStore.ts`) and navigates the user to the new chat.
-- **Centralized Session State:** Moved chat session list management (state, loading, errors, fetch/delete actions) from `ChatPage.tsx` to the global store (`authStore.ts`) to fix UI update issues when creating new chats from the navbar. Refactored `ChatPage.tsx` accordingly.
-- **Navbar Logo Sidebar Toggle:** Removed the hamburger icon. The logo in `Navbar.tsx` now toggles the sidebar visibility when clicked on chat pages (`/` or `/chat/...`) and acts as a home link on other pages.
-- **Navbar Icon Order:** Swapped the positions of the language dropdown and theme toggle icons in `Navbar.tsx`.
-- **Multilingual Title Generation:** Refined the backend prompt (`chatMessages.js`) again to instruct the AI to detect the language of the first message, generate the title in Vietnamese if detected, otherwise generate it in English, and respond *only* with the title text.
-- **Custom Model Usage Stats Name Fix:** Modified the backend aggregation pipelines in `backend/controllers/stats.js` to include custom model names instead of IDs in the usage statistics.
-- **File/Image Previews & Paste Functionality:**
-    - Backend (`server.js`) now statically serves the `uploads` directory.
-    - Frontend (`ChatPage.tsx`) allows pasting images, selecting files, and shows previews before sending.
-    - Uploaded images are displayed in chat messages; other file types are shown as downloadable links.
-    - CSS (`ChatPage.module.css`) updated for preview elements.
-    - **Fixed:** Corrected image URL construction in `ChatPage.tsx` to properly display uploaded images.
-    - **Fixed:** Implemented immediate display of uploaded images in chat by sending the saved user message back from the backend and updating the frontend state accordingly.
-- **AI Vision Input (Multimodal):**
-    - Backend (`providers.js`) updated to flag vision-capable models (OpenAI GPT-4o/Turbo/4.1 series, Anthropic Claude 3 series, Gemini 1.5 series) and to enrich custom model data with a `baseModelSupportsVision` flag.
-    - Backend (`chatMessages.js`) updated to read uploaded images, base64 encode them, and format API requests with image data for supported providers/models.
-    - Frontend (`ModelSelectorDropdown.tsx`) updated to display an icon (`👁️`) next to vision-capable base models and custom models (if their base model supports vision).
-    - **Fixed:** Resolved TypeScript build error (`TS2719`) in `ChatPage.tsx` by updating its local `CustomModelData` interface definition to include `baseModelSupportsVision`, aligning it with `ModelSelectorDropdown.tsx` and backend data.
-    - **Fixed:** Resolved backend ReferenceError in `chatMessages.js` by ensuring `modelIdentifierForApi` is initialized before use in vision checks.
-    - **Fixed:** Corrected OpenAI/Perplexity API request formatting for `image_url` to send an object `{ "url": "data:..." }` instead of a string, resolving 400 errors.
-- **UI Update (Advanced Chat Input Redesign - Perplexity Style):**
-    - Changed the chat model selection icon in `ModelSelectorDropdown.tsx` from "🤖" to `MdPsychology` and standardized its button styling.
-    - Significantly redesigned the chat input area in `ChatPage.tsx`:
-        - Implemented a new layout where the textarea moves to a line above the main icon row when its content becomes multi-line or includes newlines.
-        - Introduced `isTextareaElevated` state in `ChatPage.tsx` to manage this conditional layout.
-        - Reordered icons on the main input row to: Model Selector, Session Memory Toggle, Reasoning Toggle, (inline textarea/placeholder), File Attachment, Voice, Send.
-        - The textarea continues to auto-expand vertically based on content.
-        - **Fixed:** Updated `ChatPage.module.css` (`.inputControls`, `.iconRow`, `.messageInput`) and `ChatPage.tsx` (`useEffect` for `isTextareaElevated`) to correctly handle the inline and elevated states of the chat input textarea. The inline textarea should now properly align with icons, and elevation should trigger correctly based on content height vs. single-line height.
-- **S3 File Deletion on Session Delete:**
-    - Implemented logic in `backend/controllers/chatSessions.js` (`deleteChatSession` function) to:
-        - Identify `ChatMessage` documents with `fileInfo.filename`.
-        - Delete the corresponding objects from AWS S3 using `DeleteObjectCommand`.
-        - Then proceed to delete `ChatMessage` and `ChatSession` records from MongoDB.
-- **`ChatPage.tsx` Cleanup and TypeScript Error Resolution:**
-    - Successfully removed extraneous text appended to `ChatPage.tsx` after a previous `write_to_file` operation.
-    - **`vite-env.d.ts` Updates:**
-        - Added module declarations for `react-router-dom`, `react-markdown`, `remark-gfm`, `react-i18next`, `react-syntax-highlighter`, and `react-syntax-highlighter/dist/esm/styles/prism`.
-        - Provided specific type signatures for `useParams`, `useNavigate`, `Link`, `useLocation`, `Routes`, `Route`, `Navigate`, `Outlet`, and `BrowserRouter` from `react-router-dom`.
-        - Added `ImportMetaEnv` interface to define Vite environment variables like `VITE_API_BASE_URL`.
-    - Most TypeScript module resolution and `import.meta.env` errors in `ChatPage.tsx` have been resolved.
-- **Build Error Resolution (Netlify):**
-    - Installed `react-icons` as a dependency in `frontend/client/package.json` to fix "Cannot find module 'react-icons/md'" (TS2307) error during Netlify builds.
-    - Updated `vite-env.d.ts` to include declarations for `Routes`, `Route`, `Navigate`, `Outlet`, and `BrowserRouter` from `react-router-dom` to resolve TS2305 errors.
-- **`ChatPage.tsx` UI Redesign:**
-    - Input controls layout updated: Microphone button moved into the main input bar.
-    - Share button updated to use `MdShare` / `MdLinkOff` icons.
-    - New Chat button in sidebar header updated to use `MdAddCircleOutline` icon and calls `startNewChat` from `authStore`.
-    - **Mobile Responsiveness:** Updated `ChatPage.module.css` to keep the Model Selector/Reasoning Toggle row on a single line (`flex-wrap: nowrap;`) for mobile devices, adjusted header margins, and ensured message bubble max-width.
-- **User Memory Feature (Personalized Context):**
-    - **Backend:**
-        - New `UserMemory` Mongoose model created (`backend/models/UserMemory.js`) for storing contexts, global enable status, and max context count. Includes sub-documents for context items with timestamps and a pre-save hook for sorting/trimming.
-        - New `userMemoryController.js` (`backend/controllers/userMemoryController.js`) implemented with CRUD operations for memory settings and individual context items.
-        - New `userMemoryRoutes.js` (`backend/routes/userMemoryRoutes.js`) established for the controller actions, protected by authentication.
-        - User memory routes mounted in `backend/server.js`.
-        - `chatMessages.js` controller (`backend/controllers/chatMessages.js`) updated to:
-            - Accept a `useSessionMemory` flag from the frontend.
-            - Fetch and inject user memory contexts into the LLM prompt if enabled.
-            - Implement basic automatic context extraction from short, statement-like user messages.
-    - **Frontend:**
-        - `api.ts` service (`frontend/client/src/services/api.ts`) updated with interfaces (`UserMemoryData`, `ContextItemData`) and functions for user memory API endpoints.
-        - "Personalized Memory" management panel added to `SettingsPage.tsx` (`frontend/client/src/pages/SettingsPage.tsx`), allowing users to:
-            - Toggle global memory enablement.
-            - Set maximum number of stored contexts.
-            - Manually add, view, edit, and delete individual context items.
-            - Clear all stored contexts.
-        - Session-specific memory toggle (using `MdAutoAwesome` icon) added to `ChatPage.tsx` (`frontend/client/src/pages/ChatPage.tsx`) near the model selector, controlling the `useSessionMemory` flag sent to the backend.
-- **Chat Input UI Vertical Spacing:** Reduced the vertical space between the text input field and the icon row below it by adjusting the bottom padding of the `.messageInput` class in `ChatPage.module.css`.
-- **User Chat Bubble Color:**
-    - Updated the user's chat bubble background color to use the theme's primary color (`var(--primary-color)`). Text color uses `var(--text-on-primary-color)`.
-    - **Dark Mode Contrast Fix (Iteration 2):** For dark mode, the user chat bubble background now uses an even darker green (`#113319`) for better contrast with white text. This was implemented by defining a new CSS variable `--user-bubble-dark-bg: #113319;` in `index.css` (dark theme) and applying it in `ChatPage.module.css`.
-    - **Dark Mode Contrast Fix (Iteration 3):** After previous CSS-based approaches failed to change the color, implemented a direct inline style solution in `ChatPage.tsx`. Now using `style={isDarkMode ? { backgroundColor: '#10402c' } : undefined}` on the user chat bubble element to ensure the correct dark green color in dark mode.
-- **Reasoning Toggle Hidden & Always On (ChatPage.tsx):**
-    - Removed the UI toggle for showing/hiding reasoning steps.
-    - Reasoning steps display and message streaming are now always active by default, as the underlying `showReasoning` state is initialized to `true` and no longer user-modifiable through the UI.
-- **Chat History Date Grouping:**
-    - Chat sessions in the sidebar of `ChatPage.tsx` are now grouped by date categories: "Previous 7 Days", "Previous 30 Days", "Previous Year (by month)", and "Older (by year)".
-    - Group titles like "Previous 7 Days" are internationalized using `i18next` and translation keys added to `i18n.ts`.
-    - Month names for "Previous Year" groups are localized using JavaScript's date formatting capabilities.
-    - Styling for group titles added to `ChatPage.module.css`.
-    - Logic for grouping is handled client-side in `ChatPage.tsx`.
-    - **Fixed & Refined:** Chat history groups now update based on `lastMessageTimestamp` (timestamp of the last message in the session) instead of `createdAt` or just `lastAccessedAt`. This ensures that only sessions with new message activity move to more recent groups. This involved:
-        - Adding `lastMessageTimestamp: Date` to the `ChatSession` Mongoose model.
-        - Updating the `addMessageToSession` controller in the backend to set this `lastMessageTimestamp` when a new message is saved.
-        - Modifying the `ChatSession` interface on the frontend (`ChatPage.tsx`, `authStore.ts`) to include `lastMessageTimestamp`.
-        - Updating the `groupSessionsByDate` function in `ChatPage.tsx` to prioritize `lastMessageTimestamp` for grouping and sorting.
-        - Ensuring the frontend correctly receives and updates this timestamp in its state after interactions.
-    - **Backend Fix for Grouping:**
-        - Corrected sorting in `getChatSessions` (in `backend/controllers/chatSessions.js`) to use `lastMessageTimestamp` descending as the primary sort key, falling back to `lastAccessedAt`.
-        - Ensured `createChatSession` (in `backend/controllers/chatSessions.js`) initializes `lastMessageTimestamp` for new sessions.
+    - Updated user chat bubble background and "Chat with AI" button colors in `SharedChatPage.tsx` for consistency with `ChatPage.tsx`.
+- **User Memory Feature Implementation:**
+    - **Backend:** New `UserMemory` model, controller, and routes for CRUD operations on personalized contexts. `chatMessages.js` updated to inject these contexts and perform basic automatic extraction.
+    - **Frontend:** "Personalized Memory" panel in `SettingsPage.tsx` for managing memory settings and contexts. Session-specific memory toggle added to `ChatPage.tsx`.
+- **S3 File Deletion on Session Delete:** Implemented in `backend/controllers/chatSessions.js`.
+- **`ChatPage.tsx` UI Redesign & TypeScript Fixes:** Advanced chat input, various UI tweaks, and resolution of most TypeScript errors.
+- **AI Vision Input (Multimodal):** Backend and frontend updated to support image inputs with vision-capable models.
+- **Centralized Session State:** Chat session management moved to `authStore.ts`.
+- **Navbar Enhancements:** "New Chat" icon, logo as sidebar toggle, reordered icons.
+- **Multilingual Title Generation:** Refined backend prompt for English/Vietnamese titles.
+- **Custom Model Enhancements:** Usage stats name fix, vision capability display.
+- **File/Image Previews & Paste:** Implemented in `ChatPage.tsx` with backend support.
+- **User Chat Bubble Color & Reasoning Toggle:** UI updates for consistency and always-on reasoning.
 
 ## What's Left to Build
-- **Thoroughly test the chat history grouping to ensure it now correctly uses `lastMessageTimestamp` (Primary Next Step).**
-- **Thoroughly test the new User Memory feature:**
+- **Thoroughly test the User Memory feature (Primary Next Step):**
     - Backend API functionality (CRUD for settings and contexts).
     - Frontend "Personalized Memory" panel in Settings.
     - Frontend session memory toggle on Chat Page.
     - Context injection logic and its impact on LLM responses.
     - Automatic context extraction behavior and accuracy.
     - Uniqueness and recency logic for context storage.
-- **Thoroughly test the new Chat History Date Grouping feature:**
-    - Verify correct grouping and dynamic updates based on `lastAccessedAt` across different date ranges and languages.
-    - Check UI rendering and styling of group titles.
-- Thoroughly test the S3 file deletion feature when deleting chat sessions.
-- Further testing and refinement of existing features, especially AI vision input and immediate image display.
-- Verify the `ChatPage.tsx` chat input UI fixes in a browser.
 - Address the persistent "Parameter 's' implicitly has an 'any' type" error in `ChatPage.tsx` (around line 694-699) if it causes runtime issues or blocks compilation.
 - Confirm which specific Perplexity models support vision via API and update backend/frontend accordingly.
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. The User Memory feature and Chat History Date Grouping have been implemented. Iterative fixes have been applied to the chat input UI layout and elevation logic. The immediate next steps are to verify the UI changes in a browser and then proceed with comprehensive testing of these new features.
+The project is actively being developed. The Chat History Date Grouping and User Memory features have been implemented and refined. The immediate next steps are to conduct comprehensive testing of the User Memory feature.
 
 ## Known Issues
-- A persistent TypeScript error ("Parameter 's' implicitly has an 'any' type") remains in `ChatPage.tsx` (around line 694-699) despite multiple attempts to resolve it. This is being monitored.
+- A persistent TypeScript error ("Parameter 's' implicitly has an 'any' type") remains in `ChatPage.tsx`.
 - Vision support for specific Perplexity models via API is unconfirmed.
-- The automatic context extraction for User Memory is currently very basic and may require further refinement for better accuracy and relevance (this will be assessed during testing).
-- Chat input UI behavior requires browser verification after recent fixes.
+- Automatic context extraction for User Memory is basic and may require further refinement.
 
 ## Evolution of Project Decisions
-- Added S3 file deletion to the chat session deletion process to manage storage and remove orphaned files.
-- Leveraged existing OpenAI vision implementation logic to easily enable support for the GPT-4.1 series models.
-- Implemented multimodal support by adding provider-specific logic to the backend message controller.
-- Used base64 encoding as the primary method for sending image data to AI APIs.
-- Updated the frontend model selector to clearly indicate vision capabilities.
-- The `ChatMessage` model already had a suitable `fileInfo` structure, simplifying backend changes for file metadata storage.
-- Corrected variable initialization order and API payload formatting in `chatMessages.js` to prevent runtime errors when handling vision models.
-- Refactored frontend image URL construction to correctly use the base server URL without the API path prefix.
-- Modified backend response and frontend message handling to enable immediate display of uploaded images without page refresh.
-- Updated the model selector dropdown icon to `MdPsychology` and standardized its button styling.
-- Redesigned chat input for a more dynamic Perplexity-like experience, where the textarea elevates above icons when multi-line, and icons are reordered.
-- Extended vision icon display logic in the frontend model selector to custom models by checking a new `baseModelSupportsVision` flag provided by the backend.
-- **User Memory Feature:**
-    - Adopted a hybrid model for context management (manual + basic automatic extraction).
-    - Implemented context storage with a user-configurable maximum limit (default 50), prioritizing recency (`updatedAt`).
-    - Uniqueness of contexts is based on an exact text match for the initial version.
-    - Provided a global enable/disable setting for the memory feature in user settings.
-    - Added a session-specific toggle on the chat page to override memory usage for individual chat sessions.
-    - Memory contexts are injected into the system prompt sent to the LLM.
+- Prioritized `lastMessageTimestamp` (falling back to `createdAt`) for chat history sorting to ensure accuracy and reflect true last activity, removing `lastAccessedAt` from this core logic.
+- Implemented an explicit `fetchSessions()` call after message sending to ensure immediate UI refresh of the sorted chat history.
+- Added S3 file deletion to the chat session deletion process.
+- Leveraged existing OpenAI vision implementation logic for other vision models.
+- Implemented multimodal support by adding provider-specific logic.
+- Redesigned chat input for a Perplexity-like experience.
+- Adopted a hybrid model (manual + basic auto-extraction) for User Memory.

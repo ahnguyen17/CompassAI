@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import * as React from 'react'; // Explicit import
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { MdSend, MdAttachFile, MdMic, MdMicOff, MdLightbulbOutline, MdClose, MdChevronLeft, MdShare, MdLinkOff, MdAddCircleOutline, MdAutoAwesome } from 'react-icons/md'; // Added MdAutoAwesome
@@ -70,7 +71,149 @@ interface ChatMessage {
    isSidebarVisible: boolean;
    toggleSidebarVisibility: () => void; // Add toggle function prop
  }
-const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisibility }) => { // Accept props
+
+ // Interface for date-grouped sessions
+interface DateGroup {
+  title: string;
+  sessions: ChatSession[];
+}
+
+// Helper function to group sessions by date
+const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): DateGroup[] => {
+  const groups: { [key: string]: ChatSession[] } = {};
+  const outputOrder: string[] = [];
+
+  const today = new Date(currentDateTime);
+  today.setHours(0, 0, 0, 0);
+
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 7);
+
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(today.getDate() - 30);
+
+  const startOfThisYear = new Date(today.getFullYear(), 0, 1);
+  const startOfPreviousYear = new Date(today.getFullYear() - 1, 0, 1);
+  const startOfTwoYearsAgo = new Date(today.getFullYear() - 2, 0, 1); // For "Older" category
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  // Define group titles, also helps with ordering
+  const groupTitles = {
+    previous7Days: "Previous 7 Days",
+    previous30Days: "Previous 30 Days",
+    // Dynamic titles for months and years will be generated
+  };
+
+  sessions.forEach(session => {
+    const sessionDate = new Date(session.createdAt);
+    sessionDate.setHours(0, 0, 0, 0); // Normalize session date to start of day for comparison
+
+    let groupKey: string | null = null;
+
+    if (sessionDate >= sevenDaysAgo && sessionDate <= today) {
+      groupKey = groupTitles.previous7Days;
+    } else if (sessionDate >= thirtyDaysAgo && sessionDate < sevenDaysAgo) {
+      groupKey = groupTitles.previous30Days;
+    } else if (sessionDate >= startOfPreviousYear && sessionDate < startOfThisYear) {
+      // Previous year, by month
+      groupKey = `${monthNames[sessionDate.getMonth()]} ${sessionDate.getFullYear()}`;
+    } else if (sessionDate < startOfPreviousYear) {
+      // Older years
+      groupKey = `${sessionDate.getFullYear()}`;
+    }
+
+    if (groupKey) {
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+        if (!outputOrder.includes(groupKey)) { // Keep track of order of appearance for dynamic keys
+            // Add dynamic keys in a somewhat logical order initially
+            if (groupKey.includes(String(today.getFullYear() -1))) { // Previous year months
+                const existingPrevYearMonths = outputOrder.filter(k => k.includes(String(today.getFullYear() -1)));
+                if (existingPrevYearMonths.length === 0) {
+                    const thirtyDaysIndex = outputOrder.indexOf(groupTitles.previous30Days);
+                    if (thirtyDaysIndex !== -1) {
+                        outputOrder.splice(thirtyDaysIndex + 1, 0, groupKey);
+                    } else {
+                        outputOrder.push(groupKey);
+                    }
+                } else {
+                     // Simple push, will be sorted later
+                    outputOrder.push(groupKey);
+                }
+            } else if (!isNaN(parseInt(groupKey))) { // Older years
+                 outputOrder.push(groupKey); // Simple push, will be sorted later
+            } else if (!outputOrder.includes(groupKey)){ // For fixed keys like 7/30 days
+                 outputOrder.push(groupKey);
+            }
+        }
+      }
+      groups[groupKey].push(session);
+    }
+  });
+
+  // Sort sessions within each group by createdAt descending
+  for (const key in groups) {
+    groups[key].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  // Define the desired order of fixed groups
+  const fixedOrder = [groupTitles.previous7Days, groupTitles.previous30Days];
+  
+  // Extract dynamic groups (months of previous year and older years)
+  const dynamicGroups = Object.keys(groups)
+    .filter(key => !fixedOrder.includes(key))
+    .sort((a, b) => {
+      // Check if 'a' and 'b' are year strings (e.g., "2023")
+      const isAYear = /^\d{4}$/.test(a);
+      const isBYear = /^\d{4}$/.test(b);
+
+      // Check if 'a' and 'b' are "Month YYYY" strings
+      const isAMonthYear = /^[A-Za-z]+ \d{4}$/.test(a);
+      const isBMonthYear = /^[A-Za-z]+ \d{4}$/.test(b);
+
+      if (isAMonthYear && isBMonthYear) {
+        // Both are "Month YYYY", sort by date descending
+        const dateA = new Date(a); // e.g., "December 2024" -> Date object
+        const dateB = new Date(b);
+        return dateB.getTime() - dateA.getTime();
+      } else if (isAYear && isBYear) {
+        // Both are "YYYY", sort numerically descending
+        return parseInt(b) - parseInt(a);
+      } else if (isAMonthYear && isBYear) {
+        // MonthYear comes before Year if month's year is greater or equal
+        const yearA = parseInt(a.split(' ')[1]);
+        const yearB = parseInt(b);
+        return yearB - yearA  // This effectively sorts YearB before MonthYearA if YearB > YearA
+      } else if (isAYear && isBMonthYear) {
+        const yearA = parseInt(a);
+        const yearB = parseInt(b.split(' ')[1]);
+        return yearB - yearA; // This effectively sorts MonthYearB before YearA if YearB > YearA
+      }
+      // Fallback or if one is month-year and other is year, needs careful thought
+      // For now, this should handle distinct categories okay.
+      // If a is a month-year (e.g. "Dec 2024") and b is a year (e.g. "2023"), "Dec 2024" should come first.
+      if (isAMonthYear && isBYear) return -1; // MonthYear before Year
+      if (isAYear && isBMonthYear) return 1;  // Year after MonthYear
+
+      return 0; // Should not happen if logic is correct
+    });
+
+  const finalOutputOrder = [...fixedOrder, ...dynamicGroups];
+
+  return finalOutputOrder
+    .filter(key => groups[key] && groups[key].length > 0) // Only include keys that have sessions
+    .map(key => ({
+      title: key,
+      sessions: groups[key]
+    }));
+};
+
+
+const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisibility }: ChatPageProps): JSX.Element => { // Explicit return type
   // Get state and actions from the global store
   const {
     isDarkMode,
@@ -91,6 +234,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
   const [sendingMessage, setSendingMessage] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null); // Keep local delete loading indicator for UI feedback
+  const [groupedSessions, setGroupedSessions] = useState<DateGroup[]>([]); // State for grouped sessions
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
    // Update state to use the new combined interface and initialize appropriately
@@ -320,7 +464,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
       };
       // Store the temp ID to find and replace later
       const optimisticUserMessageId = optimisticUserMessage._id;
-      setMessages(prev => [...prev, optimisticUserMessage]); // Add user message optimistically
+      setMessages((prev: ChatMessage[]) => [...prev, optimisticUserMessage]); // Add user message optimistically
 
       // --- Conditional Logic: Stream if showReasoning is true ---
       if (showReasoning) { // Use showReasoning to control streaming
@@ -335,7 +479,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
               timestamp: new Date().toISOString(),
               modelUsed: '...' // Placeholder
           };
-          setMessages(prev => [...prev, optimisticAiMessage]); // Add AI placeholder AFTER user message
+          setMessages((prev: ChatMessage[]) => [...prev, optimisticAiMessage]); // Add AI placeholder AFTER user message
           setStreamingMessageId(optimisticAiMessageId);
 
           abortControllerRef.current = new AbortController();
@@ -387,21 +531,21 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                           try {
                               const jsonData = JSON.parse(line.substring(6));
                               if (jsonData.type === 'chunk') {
-                                  setStreamingMessageContent(prev => prev + jsonData.content);
+                                  setStreamingMessageContent((prev: string) => prev + jsonData.content);
                                   finalContent += jsonData.content;
                               } else if (jsonData.type === 'model_info') {
-                                  setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, modelUsed: jsonData.modelUsed || 'unknown' } : msg));
+                                  setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) => msg._id === optimisticAiMessageId ? { ...msg, modelUsed: jsonData.modelUsed || 'unknown' } : msg));
                               } else if (jsonData.type === 'citations') {
                                   console.log('Received citations in streaming mode:', jsonData.citations);
                                   if (jsonData.citations && jsonData.citations.length > 0) {
                                       console.log(`Citations count: ${jsonData.citations.length}`);
                                       // Store citations in the message
-                                      setMessages(prev => {
+                                      setMessages((prev: ChatMessage[]) => {
                                           // Deep clone the citations to ensure we're not sharing references
                                           const citationsCopy = JSON.parse(JSON.stringify(jsonData.citations));
                                           console.log('Citations copy:', citationsCopy);
 
-                                          const updatedMessages = prev.map(msg =>
+                                          const updatedMessages = prev.map((msg: ChatMessage) =>
                                               msg._id === optimisticAiMessageId
                                                   ? {
                                                       ...msg,
@@ -411,7 +555,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                           );
 
                                           // Log the updated message to verify citations were added
-                                          const updatedMsg = updatedMessages.find(m => m._id === optimisticAiMessageId);
+                                          const updatedMsg = updatedMessages.find((m: ChatMessage) => m._id === optimisticAiMessageId);
                                           console.log('Updated message with citations:', {
                                               id: updatedMsg?._id,
                                               hasCitations: !!updatedMsg?.citations,
@@ -421,7 +565,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
 
                                           // Debug: Log all messages to see if citations are being stored
                                           console.log('All messages after citation update:',
-                                              updatedMessages.map(m => ({
+                                              updatedMessages.map((m: ChatMessage) => ({
                                                   id: m._id,
                                                   sender: m.sender,
                                                   hasCitations: !!m.citations,
@@ -439,23 +583,23 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                   // Accumulate reasoning content as a string locally
                                   accumulatedReasoning += jsonData.content;
                                   // Update the temporary state for immediate display
-                                  setReasoningSteps(prev => ({
+                                  setReasoningSteps((prev: { [messageId: string]: string }) => ({
                                       ...prev,
                                       [optimisticAiMessageId]: accumulatedReasoning
                                   }));
                               } else if (jsonData.type === 'title_update' && currentSession) {
-                                  setCurrentSession(prev => prev ? { ...prev, title: jsonData.title } : null);
+                                  setCurrentSession((prev: ChatSession | null) => prev ? { ...prev, title: jsonData.title } : null);
                                   // Update global sessions list as well
                                   setSessions(sessions.map((s: ChatSession): ChatSession => s._id === currentSession._id ? { ...s, title: jsonData.title } : s ));
                               } else if (jsonData.type === 'error') {
-                                  setError(`AI Error: ${jsonData.message}`); console.error('SSE Error Event:', jsonData.message); setStreamingMessageId(null); setMessages(prev => prev.map(msg => msg._id === optimisticAiMessageId ? { ...msg, content: `[Error: ${jsonData.message}]`, modelUsed: 'error' } : msg)); reader.cancel(); return;
+                                  setError(`AI Error: ${jsonData.message}`); console.error('SSE Error Event:', jsonData.message); setStreamingMessageId(null); setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) => msg._id === optimisticAiMessageId ? { ...msg, content: `[Error: ${jsonData.message}]`, modelUsed: 'error' } : msg)); reader.cancel(); return;
                               } else if (jsonData.type === 'done') {
                                   console.log('Stream finished.');
                                   // Get accumulated reasoning for this message from the local variable
                                   const finalReasoning = accumulatedReasoning || null;
-                                  setMessages(prev => {
+                                  setMessages((prev: ChatMessage[]) => {
                                       // Find the current message to preserve its citations
-                                      const currentMsg = prev.find(m => m._id === optimisticAiMessageId);
+                                      const currentMsg = prev.find((m: ChatMessage) => m._id === optimisticAiMessageId);
                                       const currentCitations = currentMsg?.citations;
 
                                       console.log('Updating message at stream end:', {
@@ -464,7 +608,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                           citationsCount: currentCitations?.length || 0
                                       });
 
-                                      return prev.map(msg =>
+                                      return prev.map((msg: ChatMessage) =>
                                           msg._id === optimisticAiMessageId
                                               ? {
                                                   ...msg,
@@ -479,7 +623,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                   setStreamingMessageId(null);
                                   setStreamingMessageContent('');
                                   // Clean up reasoningSteps state for the temp ID
-                                  setReasoningSteps(prev => {
+                                  setReasoningSteps((prev: { [messageId: string]: string }) => {
                                       const newState = {...prev};
                                       delete newState[optimisticAiMessageId];
                                       return newState;
@@ -489,20 +633,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                   const savedUserMsg = jsonData.message as ChatMessage;
                                   console.log("Received saved user message:", savedUserMsg);
                                   // Replace the optimistic message with the confirmed one from backend
-                                  setMessages(prev => prev.map(msg =>
+                                  setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) =>
                                       msg._id === optimisticUserMessageId ? savedUserMsg : msg
                                   ));
                               }
-                          } catch (e) { console.error('Failed to parse SSE data:', e, 'Line:', line); }
+                          } catch (e: any) { console.error('Failed to parse SSE data:', e, 'Line:', line); }
                       }
                   }
               }
               // Handle stream ending without 'done' event (might happen on error/abort)
               console.log('Stream ended without done event.');
               const finalReasoningOnEnd = accumulatedReasoning || null;
-              setMessages(prev => {
+              setMessages((prev: ChatMessage[]) => {
                   // Find the current message to preserve its citations
-                  const currentMsg = prev.find(m => m._id === optimisticAiMessageId);
+                  const currentMsg = prev.find((m: ChatMessage) => m._id === optimisticAiMessageId);
                   const currentCitations = currentMsg?.citations;
 
                   console.log('Updating message at stream end (no done event):', {
@@ -511,7 +655,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                       citationsCount: currentCitations?.length || 0
                   });
 
-                  return prev.map(msg =>
+                  return prev.map((msg: ChatMessage) =>
                       msg._id === optimisticAiMessageId
                           ? {
                               ...msg,
@@ -525,7 +669,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
               });
               setStreamingMessageId(null);
               setStreamingMessageContent('');
-              setReasoningSteps(prev => {
+              setReasoningSteps((prev: { [key: string]: string }) => {
                   const newState = {...prev};
                   delete newState[optimisticAiMessageId];
                   return newState;
@@ -535,7 +679,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
           } catch (err: any) {
               if (err.name === 'AbortError') { console.log('Fetch aborted'); setError('Message sending cancelled.'); } else { console.error('Fetch error:', err); setError(err.message || 'Error sending message or processing stream.'); }
               // Remove only the AI placeholder on error, keep the user message
-              setMessages(prev => prev.filter(m => m._id !== optimisticAiMessageId));
+              setMessages((prev: ChatMessage[]) => prev.filter((m: ChatMessage) => m._id !== optimisticAiMessageId));
               setStreamingMessageId(null); setStreamingMessageContent(''); if (err.response?.status === 401) navigate('/login');
           } finally {
               // Ensure sendingMessage is set to false even if streaming continues in background
@@ -555,7 +699,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
               timestamp: new Date().toISOString(),
               modelUsed: '...'
           };
-          setMessages(prev => [...prev, optimisticAiMessage]); // Add AI placeholder
+          setMessages((prev: ChatMessage[]) => [...prev, optimisticAiMessage]); // Add AI placeholder
 
           try {
               // Use apiClient.post (expects single JSON response with AI message)
@@ -575,7 +719,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                   const savedUserMsg = response.data.userMessage; // Saved user message
 
                   // Replace optimistic user message and AI placeholder
-                  setMessages(prev => prev.map(msg => {
+                  setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) => {
                       if (msg._id === optimisticUserMessageId) return savedUserMsg; // Replace user msg
                       if (msg._id === optimisticAiMessageId) return aiMessage; // Replace AI placeholder
                       return msg;
@@ -584,7 +728,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                   if (aiMessage.modelUsed) setSelectedModel(aiMessage.modelUsed);
                   if (response.data.updatedSessionTitle && currentSession) {
                       const newTitle = response.data.updatedSessionTitle;
-                      setCurrentSession(prev => prev ? { ...prev, title: newTitle } : null);
+                      setCurrentSession((prev: ChatSession | null) => prev ? { ...prev, title: newTitle } : null);
 
                       // Update global sessions list as well - Mirroring the working streaming logic structure
                       setSessions(
@@ -596,13 +740,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
               } else {
                   setError(response.data?.error || 'Failed to send message or get AI response.');
                   // Remove AI placeholder on failure
-                  setMessages(prev => prev.filter(m => m._id !== optimisticAiMessageId));
+                  setMessages((prev: ChatMessage[]) => prev.filter((m: ChatMessage) => m._id !== optimisticAiMessageId));
               }
           } catch (err: any) {
               console.error("Send Message Error (apiClient):", err);
               setError(err.response?.data?.error || 'Error sending message.');
               // Remove AI placeholder on failure
-              setMessages(prev => prev.filter(m => m._id !== optimisticAiMessageId));
+              setMessages((prev: ChatMessage[]) => prev.filter((m: ChatMessage) => m._id !== optimisticAiMessageId));
               if (err.response?.status === 401) navigate('/login');
           } finally {
               setSendingMessage(false);
@@ -636,7 +780,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
          recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
              const transcript = event.results[event.results.length - 1][0].transcript.trim();
              console.log('Speech recognized:', transcript);
-             setNewMessage(prev => prev ? prev + ' ' + transcript : transcript); // Append transcript
+             setNewMessage((prev: string) => prev ? prev + ' ' + transcript : transcript); // Append transcript
          };
 
          recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -696,7 +840,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
     if (routeSessionId) {
         // If there's a session ID in the URL, try to load it
         if (routeSessionId !== currentSession?._id) {
-            const sessionFromRoute = sessions.find(s => s._id === routeSessionId);
+            const sessionFromRoute = sessions.find((s: ChatSession) => s._id === routeSessionId);
             if (sessionFromRoute) {
                 console.log("Loading session from URL:", routeSessionId);
                 setCurrentSession(sessionFromRoute);
@@ -709,12 +853,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
         }
     } else if (!currentSession && sessions.length > 0) {
         // If no session ID in URL and no session currently selected, load the most recent one
-        // Assuming sessions are sorted by backend (or sort here if needed: [...sessions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-        const mostRecentSession = sessions[0]; // Assuming the first one is the most recent
-        console.log("No session in URL, loading most recent:", mostRecentSession._id);
+        const mostRecentSession = sessions[0]; // Assuming the first one is the most recent (sorted by lastAccessedAt)
+        console.log("No session in URL, loading most recent by lastAccessedAt:", mostRecentSession._id);
         handleSelectSession(mostRecentSession); // This will navigate and fetch messages
     }
+
+    // Group sessions when sessions data changes
+    if (sessions.length > 0) {
+      const now = new Date(); // Use current time for grouping
+      setGroupedSessions(groupSessionsByDate(sessions, now));
+    } else {
+      setGroupedSessions([]); // Clear grouped sessions if no sessions
+    }
   }, [routeSessionId, sessions, currentSession, sessionsLoading, navigate]); // Dependencies updated
+
 
   // Effect to scroll to bottom when messages change or loading finishes
   useEffect(() => {
@@ -778,10 +930,36 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                      </div>
                  </div>
                  {/* Use global sessionsLoading and sessionsError */}
-                 {sessionsLoading ? <p>{t('chat_loading')}</p> : sessionsError ? <p style={{ color: 'red' }}>{sessionsError}</p> : sessions.length > 0 ? (
-                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                     {sessions.map((session: ChatSession) => ( <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}> <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}> {session.title || 'Untitled Chat'} </span> <button onClick={(e) => { e.stopPropagation(); deleteSession(session._id, currentSession?._id ?? null, navigate); }} disabled={deleteLoading === session._id} className={styles.deleteSessionButton} aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}> {deleteLoading === session._id ? '...' : <MdClose size="0.9em" />} </button> </li> ))}
-                </ul> ) : <p>{t('chat_no_history')}</p>}
+                 {sessionsLoading ? <p>{t('chat_loading')}</p> : sessionsError ? <p style={{ color: 'red' }}>{sessionsError}</p> : groupedSessions.length > 0 ? (
+                  <div style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {groupedSessions.map((group: DateGroup) => (
+                      <div key={group.title} className={styles.sessionGroup}>
+                        <h5 className={styles.sessionGroupTitle}>{t(group.title.toLowerCase().replace(/ /g, '_'), group.title)}</h5> {/* Basic i18n attempt */}
+                        {group.sessions.length > 0 ? (
+                          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                            {group.sessions.map((session: ChatSession) => (
+                              <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}>
+                                <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}>
+                                  {session.title || 'Untitled Chat'}
+                                </span>
+                                <button
+                                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); deleteSession(session._id, currentSession?._id ?? null, navigate); }}
+                                  disabled={deleteLoading === session._id}
+                                  className={styles.deleteSessionButton}
+                                  aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}
+                                >
+                                  {deleteLoading === session._id ? '...' : <MdClose size="0.9em" />}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className={styles.noSessionsInGroup}>{t('chat_no_sessions_in_group')}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : <p>{t('chat_no_history')}</p>}
              </>
          )}
       </div>
@@ -842,7 +1020,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
              {/* Messages */}
              <div className={styles.messageList}> {/* Keep ref removed from here */}
                {loadingMessages ? <p>{t('chat_loading_messages')}</p> : messages.length > 0 ? (
-                 messages.map((msg) => (
+                 messages.map((msg: ChatMessage) => (
                    <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>
 
                         {/* --- AI MESSAGE --- */}
@@ -973,7 +1151,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                             paddingTop: '10px'
                                         }}>
                                     <div style={{ marginBottom: '5px', fontWeight: 'bold' }}>Sources:</div>
-                                    {msg.citations.map((citation, index) => (
+                                    {msg.citations.map((citation: any, index: number) => (
                                         <div key={index} style={{ marginBottom: '8px' }}>
                                             <a
                                                 href={citation.url}
@@ -1089,7 +1267,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                 <ModelSelectorDropdown
                                     availableModels={availableModels}
                                     selectedModel={selectedModel}
-                                    onModelChange={(newModel) => {
+                                    onModelChange={(newModel: string) => {
                                         setSelectedModel(newModel);
                                         // REASONING_MODELS check and setShowReasoning(true) removed as reasoning is always on
                                     }}

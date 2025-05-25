@@ -53,7 +53,7 @@ interface CombinedAvailableModels {
   customModels: CustomModelData[];
 }
 // Re-define ChatSession locally as it's used extensively here
-interface ChatSession { _id: string; title: string; createdAt: string; isShared?: boolean; shareId?: string; }
+interface ChatSession { _id: string; title: string; createdAt: string; lastAccessedAt: string; isShared?: boolean; shareId?: string; }
 // Update ChatMessage interface to include optional reasoningContent
 interface ChatMessage {
     _id: string;
@@ -109,7 +109,9 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
   };
 
   sessions.forEach(session => {
-    const sessionDate = new Date(session.createdAt);
+    // Use lastAccessedAt for grouping, fall back to createdAt if undefined (should not happen with updated interface)
+    const dateToUse = session.lastAccessedAt || session.createdAt;
+    const sessionDate = new Date(dateToUse);
     sessionDate.setHours(0, 0, 0, 0); // Normalize session date to start of day for comparison
 
     let groupKey: string | null = null;
@@ -155,9 +157,13 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
     }
   });
 
-  // Sort sessions within each group by createdAt descending
+  // Sort sessions within each group by lastAccessedAt descending
   for (const key in groups) {
-    groups[key].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    groups[key].sort((a, b) => {
+      const dateA = new Date(a.lastAccessedAt || a.createdAt);
+      const dateB = new Date(b.lastAccessedAt || b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
   }
   
   // Define the desired order of fixed groups
@@ -356,6 +362,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
 
               const lastAiMessage = [...fetchedMessages].reverse().find(m => m.sender === 'ai' && m.modelUsed);
               setSelectedModel(lastAiMessage?.modelUsed || '');
+              // After fetching messages, the session's lastAccessedAt was updated on backend.
+              // Re-fetch all sessions to get the latest lastAccessedAt for correct grouping.
+              fetchSessions(); 
           } else {
               setError('Failed to load messages for this session.');
           }
@@ -369,7 +378,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
    const handleSelectSession = (session: ChatSession) => {
        setCurrentSession(session);
        navigate(`/chat/${session._id}`);
-       fetchMessages(session._id);
+       fetchMessages(session._id); // This will now also trigger fetchSessions() on success
        // Close sidebar if it's currently visible
        if (isSidebarVisible) {
            toggleSidebarVisibility();
@@ -588,9 +597,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                       [optimisticAiMessageId]: accumulatedReasoning
                                   }));
                               } else if (jsonData.type === 'title_update' && currentSession) {
-                                  setCurrentSession((prev: ChatSession | null) => prev ? { ...prev, title: jsonData.title } : null);
-                                  // Update global sessions list as well
-                                  setSessions(sessions.map((s: ChatSession): ChatSession => s._id === currentSession._id ? { ...s, title: jsonData.title } : s ));
+                                  // Assuming backend sends the full updated session object in jsonData.updatedSession
+                                  if (jsonData.updatedSession) {
+                                    const updatedSessionFromServer = jsonData.updatedSession as ChatSession;
+                                    setCurrentSession(updatedSessionFromServer);
+                                    setSessions(sessions.map((s: ChatSession): ChatSession => s._id === updatedSessionFromServer._id ? updatedSessionFromServer : s ));
+                                  } else if (jsonData.title && currentSession) { // Fallback to title only if full session not sent
+                                    setCurrentSession((prev: ChatSession | null) => prev ? { ...prev, title: jsonData.title } : null);
+                                    setSessions(sessions.map((s: ChatSession): ChatSession => s._id === currentSession._id ? { ...s, title: jsonData.title } : s ));
+                                  }
                               } else if (jsonData.type === 'error') {
                                   setError(`AI Error: ${jsonData.message}`); console.error('SSE Error Event:', jsonData.message); setStreamingMessageId(null); setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) => msg._id === optimisticAiMessageId ? { ...msg, content: `[Error: ${jsonData.message}]`, modelUsed: 'error' } : msg)); reader.cancel(); return;
                               } else if (jsonData.type === 'done') {
@@ -715,25 +730,32 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
               });
 
               if (response.data?.success) {
-                  const aiMessage = response.data.data; // AI response
+                  const aiMessageResponse = response.data.data; // AI response
                   const savedUserMsg = response.data.userMessage; // Saved user message
+                  const updatedSessionData = response.data.updatedSession as ChatSession; // Expect full session
 
                   // Replace optimistic user message and AI placeholder
                   setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) => {
                       if (msg._id === optimisticUserMessageId) return savedUserMsg; // Replace user msg
-                      if (msg._id === optimisticAiMessageId) return aiMessage; // Replace AI placeholder
+                      if (msg._id === optimisticAiMessageId) return aiMessageResponse; // Replace AI placeholder
                       return msg;
                   }));
 
-                  if (aiMessage.modelUsed) setSelectedModel(aiMessage.modelUsed);
-                  if (response.data.updatedSessionTitle && currentSession) {
-                      const newTitle = response.data.updatedSessionTitle;
-                      setCurrentSession((prev: ChatSession | null) => prev ? { ...prev, title: newTitle } : null);
-
-                      // Update global sessions list as well - Mirroring the working streaming logic structure
+                  if (aiMessageResponse.modelUsed) setSelectedModel(aiMessageResponse.modelUsed);
+                  
+                  if (updatedSessionData && currentSession) {
+                      setCurrentSession(updatedSessionData);
                       setSessions(
                         sessions.map((s: ChatSession): ChatSession =>
-                          s._id === currentSession._id ? { ...s, title: newTitle } : s
+                          s._id === updatedSessionData._id ? updatedSessionData : s
+                        )
+                      );
+                  } else if (response.data.updatedSessionTitle && currentSession) { // Fallback if only title is sent
+                      const newTitle = response.data.updatedSessionTitle;
+                      setCurrentSession((prev: ChatSession | null) => prev ? { ...prev, title: newTitle, lastAccessedAt: new Date().toISOString() } : null); // Optimistically update lastAccessedAt
+                      setSessions(
+                        sessions.map((s: ChatSession): ChatSession =>
+                          s._id === currentSession._id ? { ...s, title: newTitle, lastAccessedAt: new Date().toISOString() } : s // Optimistically update lastAccessedAt
                         )
                       );
                   }

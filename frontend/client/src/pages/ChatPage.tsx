@@ -103,8 +103,8 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
 
   // Define group titles, also helps with ordering
   const groupTitles = {
-    previous7Days: "Previous 7 Days",
-    previous30Days: "Previous 30 Days",
+    previous7Days: "date_group_previous_7_days", // Translation key
+    previous30Days: "date_group_previous_30_days", // Translation key
     // Dynamic titles for months and years will be generated
   };
 
@@ -934,7 +934,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                   <div style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                     {groupedSessions.map((group: DateGroup) => (
                       <div key={group.title} className={styles.sessionGroup}>
-                        <h5 className={styles.sessionGroupTitle}>{t(group.title.toLowerCase().replace(/ /g, '_'), group.title)}</h5> {/* Basic i18n attempt */}
+                        <h5 className={styles.sessionGroupTitle}>
+                          {group.title === "date_group_previous_7_days" || group.title === "date_group_previous_30_days"
+                            ? t(group.title)
+                            : group.title}
+                        </h5>
                         {group.sessions.length > 0 ? (
                           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                             {group.sessions.map((session: ChatSession) => (

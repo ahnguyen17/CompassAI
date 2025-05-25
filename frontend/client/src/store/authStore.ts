@@ -16,7 +16,8 @@ interface ChatSession {
     _id: string;
     title: string;
     createdAt: string;
-    lastAccessedAt: string; // Added for dynamic sorting/grouping
+    lastAccessedAt: string; 
+    lastMessageTimestamp?: string; // Added for last message based grouping
     isShared?: boolean;
     shareId?: string;
 }

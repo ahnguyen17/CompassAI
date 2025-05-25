@@ -53,7 +53,7 @@ interface CombinedAvailableModels {
   customModels: CustomModelData[];
 }
 // Re-define ChatSession locally as it's used extensively here
-interface ChatSession { _id: string; title: string; createdAt: string; lastAccessedAt: string; isShared?: boolean; shareId?: string; }
+interface ChatSession { _id: string; title: string; createdAt: string; lastAccessedAt: string; lastMessageTimestamp?: string; isShared?: boolean; shareId?: string; }
 // Update ChatMessage interface to include optional reasoningContent
 interface ChatMessage {
     _id: string;
@@ -109,8 +109,8 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
   };
 
   sessions.forEach(session => {
-    // Use lastAccessedAt for grouping, fall back to createdAt if undefined (should not happen with updated interface)
-    const dateToUse = session.lastAccessedAt || session.createdAt;
+    // Prioritize lastMessageTimestamp, then lastAccessedAt, then createdAt for grouping
+    const dateToUse = session.lastMessageTimestamp || session.lastAccessedAt || session.createdAt;
     const sessionDate = new Date(dateToUse);
     sessionDate.setHours(0, 0, 0, 0); // Normalize session date to start of day for comparison
 
@@ -157,11 +157,11 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
     }
   });
 
-  // Sort sessions within each group by lastAccessedAt descending
+  // Sort sessions within each group by the chosen timestamp (lastMessageTimestamp prioritized) descending
   for (const key in groups) {
     groups[key].sort((a, b) => {
-      const dateA = new Date(a.lastAccessedAt || a.createdAt);
-      const dateB = new Date(b.lastAccessedAt || b.createdAt);
+      const dateA = new Date(a.lastMessageTimestamp || a.lastAccessedAt || a.createdAt);
+      const dateB = new Date(b.lastMessageTimestamp || b.lastAccessedAt || b.createdAt);
       return dateB.getTime() - dateA.getTime();
     });
   }

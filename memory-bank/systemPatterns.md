@@ -21,7 +21,7 @@ The project follows a client-server architecture. The backend is built using Nod
 - `User`: Stores user authentication and profile data.
 - `Setting`: Stores global application settings (e.g., global streaming toggle).
 - `ApiKey`: Stores API keys for different providers, including priority and enabled status.
-- `ChatSession`: Represents a single chat conversation. Includes `lastAccessedAt` timestamp updated on view/interaction.
+- `ChatSession`: Represents a single chat conversation. Includes `lastAccessedAt` and `lastMessageTimestamp` (timestamp of the last message) updated on view/interaction/new message.
 - `ChatMessage`: Stores individual messages within a session.
     - Includes sender, content, model used, citations, and reasoning steps.
     - Includes `fileInfo` object to store metadata for uploaded files:
@@ -66,7 +66,7 @@ The project follows a client-server architecture. The backend is built using Nod
 - `/chatsessions`: CRUD for chat sessions. Sorted by `lastAccessedAt` descending.
 - `/chatsessions/:sessionId/messages`:
     - `GET`: Retrieve messages for a session. Updates session `lastAccessedAt`.
-    - `POST`: Add message (text and/or file) to session, triggers AI response. Updates session `lastAccessedAt`. Handles `multipart/form-data` for file uploads. Now supports sending image data to vision-capable AI models.
+    - `POST`: Add message (text and/or file) to session, triggers AI response. Updates session `lastAccessedAt` and `lastMessageTimestamp`. Handles `multipart/form-data` for file uploads. Now supports sending image data to vision-capable AI models.
 - `/providers/models`: Get available models (filtered base models + all custom models) for chat page dropdown. Base models include a `supportsVision` flag. Custom models now include a `baseModelSupportsVision` flag derived from their base model.
 - `/providers/all-models`: Get all hardcoded base models for admin settings dropdowns. Now returns array of objects including `supportsVision` flag.
 - `/referralcodes`: CRUD for referral codes (Admin).
@@ -83,9 +83,10 @@ The project follows a client-server architecture. The backend is built using Nod
     - `DELETE /contexts/:contextId`: Delete a specific context item.
     - `POST /contexts/clear`: Clear all contexts for the user.
 - **Chat History Display (Frontend - `ChatPage.tsx`):**
-    - Chat sessions are grouped client-side by date categories ("Previous 7 Days", "Previous 30 Days", "Previous Year by month", "Older by year") based on their `lastAccessedAt` timestamp (falling back to `createdAt` if `lastAccessedAt` is not present, though it should always be). This ensures recently active chats appear in more recent groups.
-    - The `ChatSession` interface on the frontend and in `authStore.ts` includes `lastAccessedAt`.
-    - The frontend state (`authStore.sessions`) is updated with the fresh `lastAccessedAt` after interactions (e.g., by re-fetching sessions via `fetchSessions()` after sending a message or selecting a session).
+    - Chat sessions are grouped client-side by date categories ("Previous 7 Days", "Previous 30 Days", "Previous Year by month", "Older by year") based on their `lastMessageTimestamp` (falling back to `lastAccessedAt` or `createdAt` if `lastMessageTimestamp` is not present). This ensures chats with recent message activity appear in more recent groups.
+    - The `ChatSession` Mongoose model includes a `lastMessageTimestamp` field, updated by the backend when a new message is added.
+    - The `ChatSession` interface on the frontend and in `authStore.ts` includes `lastMessageTimestamp`.
+    - The frontend state (`authStore.sessions`) is updated with the fresh `lastMessageTimestamp` after interactions (e.g., the backend returns the updated session object after a message is posted, or `fetchSessions()` is called after selecting a session).
     - Fixed group titles are internationalized using `i18next`.
     - Dynamic group titles (month names) are localized using JavaScript's `Date` object capabilities.
 

@@ -61,6 +61,9 @@ const resources = {
        "chat_sidebar_show_tooltip": "Show Chat History", // Added
        "chat_sidebar_hide_tooltip": "Hide Chat History", // Added
        "chat_delete_session_tooltip": "Delete chat: {{title}}", // Added
+       "date_group_previous_7_days": "Previous 7 Days",
+       "date_group_previous_30_days": "Previous 30 Days",
+       "chat_no_sessions_in_group": "No chats in this period",
        // Settings Page
        "settings_title": "Settings",
       "settings_general_title": "General Settings",
@@ -127,6 +130,9 @@ const resources = {
        "chat_sidebar_show_tooltip": "Hiện lịch sử trò chuyện", // Added
        "chat_sidebar_hide_tooltip": "Ẩn lịch sử trò chuyện", // Added
        "chat_delete_session_tooltip": "Xóa cuộc trò chuyện: {{title}}", // Added
+       "date_group_previous_7_days": "7 ngày qua",
+       "date_group_previous_30_days": "30 ngày qua",
+       "chat_no_sessions_in_group": "Không có cuộc trò chuyện nào trong khoảng thời gian này",
        // Settings Page
        "settings_title": "Cài đặt",
       "settings_general_title": "Cài đặt chung",

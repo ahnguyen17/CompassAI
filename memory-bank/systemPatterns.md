@@ -82,6 +82,12 @@ The project follows a client-server architecture. The backend is built using Nod
     - `PUT /contexts/:contextId`: Update an existing context item.
     - `DELETE /contexts/:contextId`: Delete a specific context item.
     - `POST /contexts/clear`: Clear all contexts for the user.
+- **Chat History Display (Frontend - `ChatPage.tsx`):**
+    - Chat sessions are grouped client-side by date categories ("Previous 7 Days", "Previous 30 Days", "Previous Year by month", "Older by year") based on their `lastAccessedAt` timestamp (falling back to `createdAt` if `lastAccessedAt` is not present, though it should always be). This ensures recently active chats appear in more recent groups.
+    - The `ChatSession` interface on the frontend and in `authStore.ts` includes `lastAccessedAt`.
+    - The frontend state (`authStore.sessions`) is updated with the fresh `lastAccessedAt` after interactions (e.g., by re-fetching sessions via `fetchSessions()` after sending a message or selecting a session).
+    - Fixed group titles are internationalized using `i18next`.
+    - Dynamic group titles (month names) are localized using JavaScript's `Date` object capabilities.
 
 ## Development Workflow Patterns
 1.  **Planning:** Utilize the `sequentialthinking` MCP to break down complex tasks or new features into detailed, logical steps before implementation.

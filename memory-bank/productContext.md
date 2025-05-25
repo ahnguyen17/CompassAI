@@ -19,6 +19,7 @@ CompassAI is designed to provide an interactive chat platform for users. It aims
 - Quick image sharing via paste functionality.
 - **NEW:** Transparent and user-controllable management of personalized memory contexts.
 - **NEW:** Clear indication and control over whether personalized memory is used in a given chat session.
+- **NEW:** Improved chat history navigation through date-based grouping, making it easier to find past conversations.
 
 ## Key User Journeys
 1. User registration and login.

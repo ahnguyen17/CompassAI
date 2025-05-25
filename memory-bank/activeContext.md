@@ -69,6 +69,16 @@ Implementation of the User Memory feature, enabling personalized chat responses 
     - Removed the "Show Reasoning Steps" toggle button from `ChatPage.tsx`.
     - The `showReasoning` state variable remains initialized to `true` and is no longer modifiable by the user via the UI.
     - This ensures that reasoning steps are always displayed and message streaming is always active by default.
+- **Chat History Date Grouping:**
+    - Implemented client-side logic in `ChatPage.tsx` to group chat sessions by date categories: "Previous 7 Days", "Previous 30 Days", "Previous Year (by month)", and "Older (by year)".
+    - Used native JavaScript `Date` objects for date calculations and `i18next` for translating fixed group titles (e.g., "Previous 7 Days"). Month names in group titles are localized using `Date.toLocaleDateString()` or similar browser/JS capabilities.
+    - Added new CSS styles in `ChatPage.module.css` for the group titles.
+    - Added translation keys for group titles to `i18n.ts`.
+- **Chat History Dynamic Grouping Fix:**
+    - Updated `ChatSession` interface in `ChatPage.tsx` and `authStore.ts` to include `lastAccessedAt`.
+    - Modified `groupSessionsByDate` in `ChatPage.tsx` to use `lastAccessedAt` (instead of `createdAt`) for grouping and sorting sessions, ensuring recently interacted chats move to more recent date groups.
+    - Ensured `fetchSessions()` is called after selecting a session (in `fetchMessages`) to refresh `lastAccessedAt`.
+    - Updated `handleSendMessage` to use the full updated session object (including `lastAccessedAt`) from the backend response to update frontend state, with a fallback to optimistic update.
 
 ## Next Steps
 - Verify the latest chat input UI fixes (CSS padding, JS elevation logic, vertical spacing tweak) in the browser.
@@ -79,8 +89,9 @@ Implementation of the User Memory feature, enabling personalized chat responses 
     - Frontend session memory toggle on the Chat Page and its effect on context injection.
     - Automatic context extraction logic (verify its behavior and effectiveness).
     - Ensure context prioritization (recency) and uniqueness (exact match) are working as expected.
-- Update other Memory Bank files (`progress.md`, `systemPatterns.md`, `productContext.md`, and `techContext.md`) to document the User Memory feature and the chat input UI fixes.
-- Present the completed User Memory feature and UI fixes to the user.
+- Test the new Chat History Date Grouping feature across different languages and with various chat session dates.
+- Update other Memory Bank files (`progress.md`, `systemPatterns.md`, `productContext.md`, and `techContext.md`) to document the User Memory feature, chat input UI fixes, and the new Chat History Date Grouping.
+- Present all completed features (User Memory, UI fixes, Chat History Grouping) to the user.
 
 ## Active Decisions and Considerations
 - The current automatic context extraction in `chatMessages.js` is very basic (short, non-question user messages). This is an area for potential future enhancement with more sophisticated NLP techniques if desired.

@@ -102,6 +102,16 @@
 - **Reasoning Toggle Hidden & Always On (ChatPage.tsx):**
     - Removed the UI toggle for showing/hiding reasoning steps.
     - Reasoning steps display and message streaming are now always active by default, as the underlying `showReasoning` state is initialized to `true` and no longer user-modifiable through the UI.
+- **Chat History Date Grouping:**
+    - Chat sessions in the sidebar of `ChatPage.tsx` are now grouped by date categories: "Previous 7 Days", "Previous 30 Days", "Previous Year (by month)", and "Older (by year)".
+    - Group titles like "Previous 7 Days" are internationalized using `i18next` and translation keys added to `i18n.ts`.
+    - Month names for "Previous Year" groups are localized using JavaScript's date formatting capabilities.
+    - Styling for group titles added to `ChatPage.module.css`.
+    - Logic for grouping is handled client-side in `ChatPage.tsx`.
+    - **Fixed:** Chat history groups now update based on `lastAccessedAt` (recent interaction) instead of static `createdAt`. This involved:
+        - Adding `lastAccessedAt` to `ChatSession` interface in `ChatPage.tsx` and `authStore.ts`.
+        - Modifying `groupSessionsByDate` to use `lastAccessedAt`.
+        - Ensuring `fetchSessions()` is called after interactions like message sending or session selection to refresh `lastAccessedAt` in the frontend state.
 
 ## What's Left to Build
 - **Thoroughly test the new User Memory feature (Primary Next Step):**
@@ -111,6 +121,9 @@
     - Context injection logic and its impact on LLM responses.
     - Automatic context extraction behavior and accuracy.
     - Uniqueness and recency logic for context storage.
+- **Thoroughly test the new Chat History Date Grouping feature:**
+    - Verify correct grouping and dynamic updates based on `lastAccessedAt` across different date ranges and languages.
+    - Check UI rendering and styling of group titles.
 - Thoroughly test the S3 file deletion feature when deleting chat sessions.
 - Further testing and refinement of existing features, especially AI vision input and immediate image display.
 - Verify the `ChatPage.tsx` chat input UI fixes in a browser.
@@ -119,7 +132,7 @@
 - Potential new features based on user feedback.
 
 ## Current Status
-The project is actively being developed. The User Memory feature has been implemented. Iterative fixes have been applied to the chat input UI layout and elevation logic. The immediate next steps are to verify the UI changes in a browser and then proceed with comprehensive testing of the User Memory feature.
+The project is actively being developed. The User Memory feature and Chat History Date Grouping have been implemented. Iterative fixes have been applied to the chat input UI layout and elevation logic. The immediate next steps are to verify the UI changes in a browser and then proceed with comprehensive testing of these new features.
 
 ## Known Issues
 - A persistent TypeScript error ("Parameter 's' implicitly has an 'any' type") remains in `ChatPage.tsx` (around line 694-699) despite multiple attempts to resolve it. This is being monitored.

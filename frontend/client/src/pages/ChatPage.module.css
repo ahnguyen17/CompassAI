@@ -326,6 +326,38 @@
 .sessionListItemActive {
     background-color: #e9ecef; /* Light active */
 }
+
+.sessionGroup {
+  margin-bottom: 15px; /* Space between date groups */
+}
+
+.sessionGroupTitle {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-secondary-color); /* Use a secondary text color */
+  padding: 5px 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-color-subtle);
+  text-transform: uppercase; /* Optional: for a bit more emphasis */
+  letter-spacing: 0.5px; /* Optional: for a bit more emphasis */
+}
+
+body.dark .sessionGroupTitle {
+  color: #aaa; /* Lighter secondary color for dark mode */
+  border-bottom-color: #444;
+}
+
+.noSessionsInGroup {
+  font-style: italic;
+  color: var(--text-secondary-color);
+  padding: 5px 10px;
+  font-size: 0.9em;
+}
+
+body.dark .noSessionsInGroup {
+  color: #888;
+}
+
 .sessionTitle {
     flex-grow: 1;
     white-space: nowrap;

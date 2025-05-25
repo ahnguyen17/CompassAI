@@ -141,6 +141,9 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
       groupKey = groupTitles.previous7Days;
     } else if (sessionDate >= thirtyDaysAgo && sessionDate < sevenDaysAgo) {
       groupKey = groupTitles.previous30Days;
+    } else if (sessionDate >= startOfThisYear && sessionDate < thirtyDaysAgo) { 
+      // Current year, older than 30 days: Group by month of current year
+      groupKey = `${monthNames[sessionDate.getMonth()]} ${sessionDate.getFullYear()}`;
     } else if (sessionDate >= startOfPreviousYear && sessionDate < startOfThisYear) {
       // Previous year, by month
       groupKey = `${monthNames[sessionDate.getMonth()]} ${sessionDate.getFullYear()}`;

@@ -688,6 +688,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                       delete newState[optimisticAiMessageId];
                                       return newState;
                                   });
+                                  // ADDED: Re-fetch sessions after stream is done
+                                  try {
+                                      await fetchSessions();
+                                      console.log("Sessions re-fetched after streaming message send to update sidebar order.");
+                                  } catch (err) {
+                                      console.error("Error re-fetching sessions after streaming message send:", err);
+                                  }
                                   return;
                               } else if (jsonData.type === 'user_message_saved') { // Handle the saved user message
                                   const savedUserMsg = jsonData.message as ChatMessage;
@@ -747,6 +754,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                   delete newState[optimisticAiMessageId];
                   return newState;
               });
+              // ADDED: Re-fetch sessions if stream ends without 'done' but successfully
+              if (!signal.aborted && !error) { // Check if not aborted and no preceding error
+                try {
+                    await fetchSessions();
+                    console.log("Sessions re-fetched after stream ended (no done event) to update sidebar order.");
+                } catch (err) {
+                    console.error("Error re-fetching sessions after stream ended (no done event):", err);
+                }
+              }
 
 
           } catch (err: any) {
@@ -817,6 +833,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                         )
                       );
                   }
+                  // ADDED: Re-fetch sessions after non-streaming message send
+                  try {
+                      await fetchSessions();
+                      console.log("Sessions re-fetched after non-streaming message send to update sidebar order.");
+                  } catch (err) {
+                      console.error("Error re-fetching sessions after non-streaming message send:", err);
+                  }
+
               } else {
                   setError(response.data?.error || 'Failed to send message or get AI response.');
                   // Remove AI placeholder on failure

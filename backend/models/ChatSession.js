@@ -20,6 +20,9 @@ const ChatSessionSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  lastMessageTimestamp: { // Timestamp of the last message in the session
+    type: Date,
+  },
   isShared: {
     type: Boolean,
     default: false,

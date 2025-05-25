@@ -108,10 +108,12 @@
     - Month names for "Previous Year" groups are localized using JavaScript's date formatting capabilities.
     - Styling for group titles added to `ChatPage.module.css`.
     - Logic for grouping is handled client-side in `ChatPage.tsx`.
-    - **Fixed:** Chat history groups now update based on `lastAccessedAt` (recent interaction) instead of static `createdAt`. This involved:
-        - Adding `lastAccessedAt` to `ChatSession` interface in `ChatPage.tsx` and `authStore.ts`.
-        - Modifying `groupSessionsByDate` to use `lastAccessedAt`.
-        - Ensuring `fetchSessions()` is called after interactions like message sending or session selection to refresh `lastAccessedAt` in the frontend state.
+    - **Fixed & Refined:** Chat history groups now update based on `lastMessageTimestamp` (timestamp of the last message in the session) instead of `createdAt` or just `lastAccessedAt`. This ensures that only sessions with new message activity move to more recent groups. This involved:
+        - Adding `lastMessageTimestamp: Date` to the `ChatSession` Mongoose model.
+        - Updating the `addMessageToSession` controller in the backend to set this `lastMessageTimestamp` when a new message is saved.
+        - Modifying the `ChatSession` interface on the frontend (`ChatPage.tsx`, `authStore.ts`) to include `lastMessageTimestamp`.
+        - Updating the `groupSessionsByDate` function in `ChatPage.tsx` to prioritize `lastMessageTimestamp` for grouping and sorting.
+        - Ensuring the frontend correctly receives and updates this timestamp in its state after interactions.
 
 ## What's Left to Build
 - **Thoroughly test the new User Memory feature (Primary Next Step):**

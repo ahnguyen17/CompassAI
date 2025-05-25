@@ -79,6 +79,11 @@ Implementation of the User Memory feature, enabling personalized chat responses 
     - Modified `groupSessionsByDate` in `ChatPage.tsx` to use `lastAccessedAt` (instead of `createdAt`) for grouping and sorting sessions, ensuring recently interacted chats move to more recent date groups.
     - Ensured `fetchSessions()` is called after selecting a session (in `fetchMessages`) to refresh `lastAccessedAt`.
     - Updated `handleSendMessage` to use the full updated session object (including `lastAccessedAt`) from the backend response to update frontend state, with a fallback to optimistic update.
+- **Chat History Grouping by Last Message Timestamp:**
+    - Modified `ChatSession` Mongoose model (`backend/models/ChatSession.js`) to add `lastMessageTimestamp: Date`.
+    - Updated `addMessageToSession` in `backend/controllers/chatMessages.js` to set `lastMessageTimestamp` (and `lastAccessedAt`) on the parent `ChatSession` to the timestamp of the new user message.
+    - Ensured the API response for posting a message includes the full updated `ChatSession` object.
+    - Frontend `groupSessionsByDate` in `ChatPage.tsx` now prioritizes `lastMessageTimestamp`, then `lastAccessedAt`, then `createdAt` for grouping and sorting, ensuring chats with new messages correctly move to recent groups.
 
 ## Next Steps
 - Verify the latest chat input UI fixes (CSS padding, JS elevation logic, vertical spacing tweak) in the browser.

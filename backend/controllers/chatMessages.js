@@ -628,6 +628,13 @@ exports.addMessageToSession = async (req, res, next) => {
         const savedUserMessage = await ChatMessage.create(userMessageData);
         console.log("Saved user message to DB:", savedUserMessage._id);
 
+        // Update ChatSession's lastMessageTimestamp
+        session.lastMessageTimestamp = savedUserMessage.timestamp;
+        // Also update lastAccessedAt here to keep them in sync if a message is the latest interaction
+        session.lastAccessedAt = savedUserMessage.timestamp; 
+        await session.save();
+        console.log(`Updated lastMessageTimestamp and lastAccessedAt for session ${sessionId} to ${savedUserMessage.timestamp}`);
+
         // --- Determine Model Identifiers and System Prompt ---
         // This block MUST run before preparing content for AI
         let customModelData = null;
@@ -951,9 +958,16 @@ exports.addMessageToSession = async (req, res, next) => {
 
             // --- Send Saved User Message via SSE ---
             // Send the confirmed user message back immediately so frontend can update UI
+            // Also send the updated session data if it changed (e.g. title, lastMessageTimestamp)
             sendSse({ type: 'user_message_saved', message: savedUserMessage });
             console.log("Sent user_message_saved SSE event.");
             // --- End Send Saved User Message ---
+            
+            // If title was updated, send it via SSE as well
+            // The full updated session (including lastMessageTimestamp) will be part of the 'done' event or final non-streaming response
+            if (titleUpdated) {
+                sendSse({ type: 'title_update', title: generatedTitle, sessionId: sessionId, lastAccessedAt: session.lastAccessedAt, lastMessageTimestamp: session.lastMessageTimestamp });
+            }
 
             try {
                 // Use modelIdentifierForApi (base model) for finding provider and making calls
@@ -1049,9 +1063,10 @@ exports.addMessageToSession = async (req, res, next) => {
 
                 // 5. Send initial info and finalize SSE
                 // Send the model name/ID that should be displayed/saved (custom ID or base name)
-                if (finalModelNameToSave) sendSse({ type: 'model_info', modelUsed: finalModelNameToSave }); 
-                if (titleUpdated) sendSse({ type: 'title_update', title: generatedTitle });
-                sendSse({ type: 'done' });
+                if (finalModelNameToSave) sendSse({ type: 'model_info', modelUsed: finalModelNameToSave });
+                // Title update is now sent earlier if it happens
+                // Send the full updated session with the 'done' event
+                sendSse({ type: 'done', updatedSession: session.toObject() }); // Send updated session
 
             } catch (error) { // Catch errors during streaming setup/logic
                 console.error("Error during stream processing:", error); streamError = true;
@@ -1281,12 +1296,13 @@ exports.addMessageToSession = async (req, res, next) => {
             }
             // --- End Automatic Context Extraction (Non-Streaming) ---
 
-            // 6. Send back the single AI response AND the saved user message
+            // 6. Send back the single AI response AND the saved user message, AND the updated session
             res.status(201).json({
               success: true,
-              userMessage: savedUserMessage, // Include the saved user message
-              data: aiMessage, // Keep AI response as 'data'
-              ...(titleUpdated && { updatedSessionTitle: generatedTitle }) // Include title if updated
+              userMessage: savedUserMessage,
+              data: aiMessage, 
+              updatedSession: session.toObject() // Send the full updated session
+              // updatedSessionTitle is no longer needed separately if full session is sent
             });
         } // End of non-streaming block
 

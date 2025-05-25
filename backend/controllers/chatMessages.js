@@ -562,7 +562,7 @@ exports.addMessageToSession = async (req, res, next) => {
             error: 'Message content or a file upload is required.'
         });
 
-        const session = await ChatSession.findById(sessionId);
+        let session = await ChatSession.findById(sessionId); // Use 'let' to allow re-assignment
         if (!session) return res.status(404).json({
             success: false,
             error: `Chat session not found with id ${sessionId}`
@@ -574,9 +574,11 @@ exports.addMessageToSession = async (req, res, next) => {
         });
 
         // Update lastAccessedAt when a message is added (interacted)
-        session.lastAccessedAt = Date.now();
-        await session.save();
-        console.log(`Updated lastAccessedAt for session ${sessionId} on message add.`);
+        // This will be updated again later if an AI message is successfully generated
+        session.lastAccessedAt = Date.now(); 
+        // We will update lastMessageTimestamp after the user message is saved.
+        await session.save(); // Save initial lastAccessedAt update
+        console.log(`Updated lastAccessedAt for session ${sessionId} on message add (pre-user message save).`);
 
         // Prepare and save user message data
         let s3FileUrl = null;
@@ -602,8 +604,6 @@ exports.addMessageToSession = async (req, res, next) => {
                 console.log(`File successfully uploaded to S3. URL: ${s3FileUrl}`);
             } catch (s3UploadError) {
                 console.error("Error uploading file to S3:", s3UploadError);
-                // Decide if you want to stop or continue without the file
-                // For now, let's return an error
                 return res.status(500).json({ success: false, error: 'Failed to upload file to S3.' });
             }
         }
@@ -612,714 +612,359 @@ exports.addMessageToSession = async (req, res, next) => {
             session: sessionId,
             sender: 'user',
             content: content || '', // Save empty string if no text content
+            timestamp: new Date(), // Ensure timestamp is a Date object
             fileInfo: uploadedFile ? {
-                filename: s3ObjectKey, // Store S3 object key as filename
+                filename: s3ObjectKey, 
                 originalname: uploadedFile.originalname,
                 mimetype: uploadedFile.mimetype,
                 size: uploadedFile.size,
-                path: s3FileUrl // Store the full public S3 URL
+                path: s3FileUrl 
             } : undefined
         };
 
-        if (uploadedFile) {
-            console.log('S3 Object Key:', s3ObjectKey);
-            console.log('Stored file path (S3 URL):', userMessageData.fileInfo.path);
-        }
         const savedUserMessage = await ChatMessage.create(userMessageData);
         console.log("Saved user message to DB:", savedUserMessage._id);
 
-        // Update ChatSession's lastMessageTimestamp
+        // Update ChatSession's lastMessageTimestamp and lastAccessedAt to the user message's timestamp
         session.lastMessageTimestamp = savedUserMessage.timestamp;
-        // Also update lastAccessedAt here to keep them in sync if a message is the latest interaction
         session.lastAccessedAt = savedUserMessage.timestamp; 
         await session.save();
-        console.log(`Updated lastMessageTimestamp and lastAccessedAt for session ${sessionId} to ${savedUserMessage.timestamp}`);
+        console.log(`Updated session ${sessionId} lastMessageTimestamp & lastAccessedAt to user message time: ${savedUserMessage.timestamp}`);
 
         // --- Determine Model Identifiers and System Prompt ---
-        // This block MUST run before preparing content for AI
         let customModelData = null;
-        let modelIdentifierForApi = requestedModel; // Start with the requested model ID/name
+        let modelIdentifierForApi = requestedModel; 
         let systemPromptForApi = null;
-        let finalModelNameToSave = requestedModel; // What to save in DB (custom ID or base name)
+        let finalModelNameToSave = requestedModel; 
 
         if (requestedModel && mongoose.Types.ObjectId.isValid(requestedModel)) {
-            console.log(`Requested model '${requestedModel}' looks like an ObjectId. Checking for CustomModel...`);
             customModelData = await CustomModel.findById(requestedModel);
             if (customModelData) {
-                console.log(`Found CustomModel: ${customModelData.name}. Base Model: ${customModelData.baseModelIdentifier}`);
-                modelIdentifierForApi = customModelData.baseModelIdentifier; // Use the base model for API calls
-                systemPromptForApi = customModelData.systemPrompt; // Use the custom system prompt
-                finalModelNameToSave = requestedModel; // Keep the custom model ID for saving
+                modelIdentifierForApi = customModelData.baseModelIdentifier; 
+                systemPromptForApi = customModelData.systemPrompt; 
+                finalModelNameToSave = requestedModel; 
             } else {
-                console.warn(`Requested model ID '${requestedModel}' not found in CustomModels. Treating as base model name.`);
-                modelIdentifierForApi = requestedModel; // Fallback to treating it as a base model name
+                modelIdentifierForApi = requestedModel; 
                 finalModelNameToSave = requestedModel;
             }
         } else {
-             console.log(`Requested model '${requestedModel || 'None'}' is not an ObjectId. Treating as base model name.`);
-             modelIdentifierForApi = requestedModel; // Treat as base model name
+             modelIdentifierForApi = requestedModel; 
              finalModelNameToSave = requestedModel;
         }
-        // --- End Determine Model Identifiers ---
-
+        
         // --- Prepare User Memory Context ---
         let memoryContextForPrompt = "";
-        if (req.user && req.user.id) { // Ensure user is available
+        if (req.user && req.user.id) { 
             const userMemory = await UserMemory.findOne({ userId: req.user.id });
-            // Check global enable and session-specific toggle
             if (userMemory && userMemory.isGloballyEnabled && useSessionMemory) { 
                 if (userMemory.contexts && userMemory.contexts.length > 0) {
-                    // Sort by updatedAt or createdAt descending to get the most recent
                     const sortedContexts = [...userMemory.contexts].sort((a, b) => 
                         (b.updatedAt || b.createdAt).getTime() - (a.updatedAt || a.createdAt).getTime()
                     );
-                    
-                    // Take up to a certain number of contexts (e.g., 10, could be from userMemory.maxContexts or a fixed number for prompt injection)
                     const contextsToUse = sortedContexts.slice(0, Math.min(10, userMemory.maxContexts)); 
-                    
                     if (contextsToUse.length > 0) {
                         memoryContextForPrompt = "Relevant information about you based on past interactions:\n" +
                                                 contextsToUse.map(c => `- ${c.text}`).join("\n") +
-                                                "\n\n---\n\n"; // Separator
-                        console.log(`Injecting ${contextsToUse.length} memory contexts for user ${req.user.id}`);
+                                                "\n\n---\n\n"; 
                     }
                 }
             }
         }
-        // --- End Prepare User Memory Context ---
-
-        // Inject memory context into systemPromptForApi
         if (memoryContextForPrompt) {
-            if (systemPromptForApi) {
-                systemPromptForApi = memoryContextForPrompt + systemPromptForApi;
-            } else {
-                systemPromptForApi = memoryContextForPrompt;
-            }
+            systemPromptForApi = systemPromptForApi ? memoryContextForPrompt + systemPromptForApi : memoryContextForPrompt;
         }
 
         // --- Prepare Content for AI (Text + Optional Image) ---
-        let finalUserMessageContentForApi; // This will hold either string or multimodal array
-        const userTextContent = content || ''; // User's text input
-
-        // Check if a file was uploaded and if the determined model supports vision
-        // modelIdentifierForApi is now guaranteed to be initialized
-        const isVisionModel = modelSupportsVision(modelIdentifierForApi); // Check vision support for the *base* model
+        let finalUserMessageContentForApi; 
+        const userTextContent = content || ''; 
+        const isVisionModel = modelSupportsVision(modelIdentifierForApi); 
         const isImageFile = uploadedFile && uploadedFile.mimetype.startsWith('image/');
 
         if (isImageFile && isVisionModel) {
-            console.log(`Image uploaded (${uploadedFile.originalname}) and model ${modelIdentifierForApi} supports vision.`);
             try {
-                // Use the buffer directly from multer.memoryStorage()
                 const imageBuffer = uploadedFile.buffer; 
                 const base64Image = imageBuffer.toString('base64');
                 const mimeType = uploadedFile.mimetype;
-
-                const providerForVision = findProviderForModel(modelIdentifierForApi); // Find provider for the base model
+                const providerForVision = findProviderForModel(modelIdentifierForApi); 
 
                 if (providerForVision === 'OpenAI' || providerForVision === 'Perplexity') {
                     finalUserMessageContentForApi = [
-                        { type: "text", text: userTextContent || "Analyze this image." }, // Ensure text part exists
-                        // Corrected: image_url should be an object with a 'url' key
+                        { type: "text", text: userTextContent || "Analyze this image." }, 
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }
                     ];
-                    console.log(`Formatted for OpenAI/Perplexity vision.`);
                 } else if (providerForVision === 'Anthropic') {
                     finalUserMessageContentForApi = [
                         { type: "image", source: { type: "base64", media_type: mimeType, data: base64Image } },
-                        { type: "text", text: userTextContent || "Analyze this image." } // Ensure text part exists
+                        { type: "text", text: userTextContent || "Analyze this image." } 
                     ];
-                    console.log(`Formatted for Anthropic vision.`);
                 } else if (providerForVision === 'Gemini') {
-                    // Gemini needs raw base64, no prefix
                     finalUserMessageContentForApi = [
-                         // Text part first for Gemini based on examples? (Verify this)
-                        { text: userTextContent || "Analyze this image." }, // Ensure text part exists
+                        { text: userTextContent || "Analyze this image." }, 
                         { inlineData: { mimeType: mimeType, data: base64Image } }
                     ];
-                     console.log(`Formatted for Gemini vision (using inlineData).`);
                 } else {
-                    // Fallback if provider/model combo isn't handled (shouldn't happen if flagged correctly)
-                    console.warn(`Vision model ${modelIdentifierForApi} from provider ${providerForVision} detected, but no specific formatting logic found. Sending text only.`);
                     finalUserMessageContentForApi = userTextContent;
                 }
-
             } catch (imageError) {
-                console.error("Error reading or encoding image file:", imageError);
-                // Fallback to sending text only if image processing fails
                 finalUserMessageContentForApi = userTextContent + `\n\n[Error processing uploaded image: ${uploadedFile.originalname}]`;
             }
         } else {
-             // If no image, not an image file, or model doesn't support vision, prepare text-only content
              let combinedTextContent = userTextContent;
-             if (uploadedFile && !isImageFile) { // Handle non-image files (like PDF text extraction)
+             if (uploadedFile && !isImageFile) { 
                  let fileTextContent = `[File Uploaded: ${uploadedFile.originalname} (${(uploadedFile.size / 1024).toFixed(1)} KB)]`;
-                 // Use uploadedFile.buffer directly for text extraction
                  const dataBuffer = uploadedFile.buffer;
-
                  if (uploadedFile.mimetype === 'application/pdf') {
                      try {
-                         console.log(`Attempting to parse PDF from buffer...`);
-                         const pdfData = await pdf(dataBuffer); // pdf-parse can take a buffer
-                         console.log(`Parsed PDF successfully from buffer.`);
-                         const maxChars = 5000; // Limit extracted text length
+                         const pdfData = await pdf(dataBuffer); 
+                         const maxChars = 5000; 
                          const extractedText = pdfData.text.substring(0, maxChars);
                          fileTextContent = `\n\n--- Start of PDF Content (${uploadedFile.originalname}) ---\n${extractedText}${pdfData.text.length > maxChars ? '\n[...content truncated]' : ''}\n--- End of PDF Content ---`;
-                     } catch (pdfError) {
-                         console.error("Error processing PDF:", pdfError);
-                         fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing PDF content]`;
-                     }
+                     } catch (pdfError) { fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing PDF content]`; }
                  }
-                 // DOCX processing
                  else if (uploadedFile.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
                     try {
-                        // mammoth.extractRawText can take a buffer
                         const result = await mammoth.extractRawText({ buffer: dataBuffer });
                         const maxChars = 10000; 
                         const extractedText = result.value.substring(0, maxChars);
                         fileTextContent = `\n\n--- Start of DOCX Content (${uploadedFile.originalname}) ---\n${extractedText}${result.value.length > maxChars ? '\n[...content truncated]' : ''}\n--- End of DOCX Content ---`;
-                    } catch (docxError) {
-                        console.error("Error processing DOCX from buffer:", docxError);
-                        fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing DOCX content]`;
-                    }
+                    } catch (docxError) { fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing DOCX content]`; }
                  }
-                 // DOC processing - WordExtractor might need a filepath. If it doesn't support buffers, this part is tricky.
-                 // For now, let's assume it might not work directly with a buffer or requires temp file.
-                 // This part might need a temporary file write if WordExtractor strictly needs a path.
-                 // However, the goal is to avoid local saving.
-                 // Let's comment out direct DOC processing from buffer if WordExtractor doesn't support it.
-                 // else if (uploadedFile.mimetype === 'application/msword') {
-                 //    try {
-                 //        // const doc = await wordExtractor.extract(dataBuffer); // Check if this works
-                 //        // For now, we'll skip direct DOC buffer processing if it's problematic
-                 //        fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} (DOC - content extraction from buffer needs review)]`;
-                 //        console.warn("DOC processing from buffer needs verification for WordExtractor library.");
-                 //    } catch (docError) {
-                 //        console.error("Error processing DOC from buffer:", docError);
-                 //        fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing DOC content]`;
-                 //    }
-                 // }
-                 // XLSX and XLS processing
                  else if (uploadedFile.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || uploadedFile.mimetype === 'application/vnd.ms-excel') {
                     try {
-                        // XLSX.read can take a buffer
                         const workbook = XLSX.read(dataBuffer, { type: 'buffer' });
-                        let fullExtractedText = "";
-                        let totalChars = 0;
-                        const overallMaxChars = 15000; // Overall limit for Excel content
-
+                        let fullExtractedText = ""; let totalChars = 0; const overallMaxChars = 15000; 
                         for (const sheetName of workbook.SheetNames) {
                             if (totalChars >= overallMaxChars) break;
                             if (workbook.SheetNames.length > 1) {
                                 const sheetHeader = `\n--- Content from Sheet: ${sheetName} ---\n`;
-                                if (totalChars + sheetHeader.length > overallMaxChars) break; // Check before adding header
-                                fullExtractedText += sheetHeader;
-                                totalChars += sheetHeader.length;
+                                if (totalChars + sheetHeader.length > overallMaxChars) break; 
+                                fullExtractedText += sheetHeader; totalChars += sheetHeader.length;
                             }
-                            
                             const sheet = workbook.Sheets[sheetName];
                             const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
-                            
                             for (const row of sheetData) {
-                                if (totalChars >= overallMaxChars) break;
-                                let rowText = "";
+                                if (totalChars >= overallMaxChars) break; let rowText = "";
                                 for (const cell of row) {
-                                    if (totalChars >= overallMaxChars) break;
-                                    let cellText = "";
-                                    if (cell && typeof cell === 'string' && cell.trim() !== "") {
-                                        cellText = cell.trim() + " ";
-                                    } else if (cell && typeof cell === 'number') {
-                                        cellText = cell.toString() + " ";
-                                    }
-
-                                    if (totalChars + cellText.length > overallMaxChars) {
-                                        cellText = cellText.substring(0, overallMaxChars - totalChars);
-                                        rowText += cellText;
-                                        totalChars = overallMaxChars;
-                                        break; 
-                                    }
-                                    rowText += cellText;
-                                    totalChars += cellText.length;
+                                    if (totalChars >= overallMaxChars) break; let cellText = "";
+                                    if (cell && typeof cell === 'string' && cell.trim() !== "") cellText = cell.trim() + " ";
+                                    else if (cell && typeof cell === 'number') cellText = cell.toString() + " ";
+                                    if (totalChars + cellText.length > overallMaxChars) { cellText = cellText.substring(0, overallMaxChars - totalChars); rowText += cellText; totalChars = overallMaxChars; break; }
+                                    rowText += cellText; totalChars += cellText.length;
                                 }
-                                fullExtractedText += rowText.trimRight() + "\n"; // Add row text (trimmed) and a newline
+                                fullExtractedText += rowText.trimRight() + "\n"; 
                                 if (totalChars >= overallMaxChars) break;
                             }
-                            // No need for per-sheet truncation message if overall truncation is handled
                         }
-                        if (totalChars >= overallMaxChars) {
-                            fullExtractedText += "\n[...Excel content truncated due to overall size limit]";
-                        }
+                        if (totalChars >= overallMaxChars) fullExtractedText += "\n[...Excel content truncated due to overall size limit]";
                         fileTextContent = `\n\n--- Start of Excel Content (${uploadedFile.originalname}) ---\n${fullExtractedText.trim()}\n--- End of Excel Content ---`;
-                    } catch (excelError) {
-                        console.error("Error processing Excel file:", excelError);
-                        fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing Excel content]`;
-                    }
+                    } catch (excelError) { fileTextContent = `\n\n[File Uploaded: ${uploadedFile.originalname} - Error processing Excel content]`;}
                  }
-                 // Note: PowerPoint (.ppt, .pptx) extraction is deferred due to library vulnerabilities.
-                 // They will be treated as generic files if uploaded.
-
                  combinedTextContent = combinedTextContent ? `${combinedTextContent}\n${fileTextContent}` : fileTextContent;
              } else if (uploadedFile && isImageFile && !isVisionModel) {
-                 // If it's an image but model doesn't support vision, just add filename info
                  combinedTextContent += `\n\n[Image Uploaded: ${uploadedFile.originalname}]`;
-                 console.log(`Image uploaded but model ${modelIdentifierForApi} does not support vision. Sending text only.`);
              }
              finalUserMessageContentForApi = combinedTextContent;
         }
-        // --- End Prepare Content for AI ---
-
-
-        // --- Auto-generate Title (if needed) ---
-        // Use only the text part for title generation if multimodal
-        const textForTitleGen = typeof finalUserMessageContentForApi === 'string'
-            ? finalUserMessageContentForApi
-            : finalUserMessageContentForApi.find(part => part.type === 'text')?.text || '';
-
+        
         let generatedTitle = null;
         let titleUpdated = false;
         if (session.title === 'New Chat') {
-            // Find any enabled API key for title generation (prefer faster/cheaper models)
             const successfulApiKeyEntryForTitle =
                 await ApiKey.findOne({ providerName: 'Anthropic', isEnabled: true }) ||
                 await ApiKey.findOne({ providerName: 'OpenAI', isEnabled: true }) ||
                 await ApiKey.findOne({ providerName: 'DeepSeek', isEnabled: true }) ||
                 await ApiKey.findOne({ providerName: 'Gemini', isEnabled: true });
-
             if (successfulApiKeyEntryForTitle?.keyValue) {
                 const titleProvider = successfulApiKeyEntryForTitle.providerName;
-                const titleModel = DEFAULT_MODELS[titleProvider]; // Use default model for title
+                const titleModel = DEFAULT_MODELS[titleProvider]; 
                 try {
-                    // Refined Prompt 2: Explicitly request ONLY the title in English or Vietnamese
+                    const textForTitleGen = typeof finalUserMessageContentForApi === 'string' ? finalUserMessageContentForApi : (finalUserMessageContentForApi.find(part => part.type === 'text') || {text:''}).text;
                     const titlePrompt = `Analyze the language of the following message snippet. If the language is Vietnamese, respond ONLY with a concise title (3-5 words max) in Vietnamese. If the language is English or any other language, respond ONLY with a concise title (3-5 words max) in English. Your response must contain ONLY the title text and nothing else. Snippet: \"${textForTitleGen.substring(0, 150)}...\"`;
                     const titleApiKey = successfulApiKeyEntryForTitle.keyValue;
-                    // Use non-streaming callApi for title generation
-                    // Pass only the titlePrompt as the history/content for this specific call
                     const titleHistory = [{ _id: 'temp-title-user', session: sessionId, sender: 'user', content: titlePrompt, timestamp: new Date().toISOString() }];
-                    // Pass titlePrompt as the finalUserMessageContent argument for this specific call
                     const titleResult = await callApi(titleProvider, titleApiKey, titleModel, titleHistory, titlePrompt);
-                    generatedTitle = titleResult.content; // Extract content for title
-
+                    generatedTitle = titleResult.content; 
                     if (generatedTitle) {
-                        // More robust cleanup: trim, remove quotes/periods, take first line/part, truncate
                         let cleanedTitle = generatedTitle.trim().replace(/^"|"$/g, '').replace(/\.$/, '');
-                        // Split by newline or colon and take the first part
                         cleanedTitle = cleanedTitle.split(/[\n:]/)[0].trim();
-                        // Truncate to a max length (e.g., 50 chars) as a final safety measure
                         const maxLength = 50;
-                        if (cleanedTitle.length > maxLength) {
-                            cleanedTitle = cleanedTitle.substring(0, maxLength) + '...';
-                        }
-                        generatedTitle = cleanedTitle; // Use the cleaned title
-
-                        await ChatSession.findByIdAndUpdate(sessionId, { title: generatedTitle });
+                        if (cleanedTitle.length > maxLength) cleanedTitle = cleanedTitle.substring(0, maxLength) + '...';
+                        generatedTitle = cleanedTitle; 
+                        session.title = generatedTitle; // Update session object in memory
+                        await ChatSession.findByIdAndUpdate(sessionId, { title: generatedTitle }); // Update in DB
                         titleUpdated = true;
-                        console.log(`Generated title using ${titleProvider}: ${generatedTitle}`);
-                    } else {
-                        console.warn(`Could not generate title using ${titleProvider}.`);
                     }
-                } catch (titleError) {
-                    console.error(`Error generating chat title using ${titleProvider}:`, titleError);
-                }
-            } else {
-                console.warn('Could not generate title: No suitable API key found or enabled.');
+                } catch (titleError) { console.error(`Error generating chat title:`, titleError); }
             }
         }
 
-        // --- AI Response Generation ---
-        // Fetch history *including* the user message we just saved
         const history = await ChatMessage.find({ session: sessionId }).sort({ timestamp: 1 });
 
-        // --- Custom Model Handling Block Removed From Here ---
-
-
         if (shouldStream) {
-            // --- Streaming Logic ---
             console.log("Processing request with streaming enabled.");
-            let providerUsed = null;
-            let actualModelUsed = null;
-            let finalAiContent = null;
-            let finalReasoningContent = ''; // Declare here to keep in scope
-            let fullCitations = []; // Declare here to keep in scope
-            let streamError = false;
-
-            // --- SSE Setup ---
-            res.writeHead(200, {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-            });
-
-            const sendSse = (data) => {
-                if (!res.writableEnded) {
-                    res.write(`data: ${JSON.stringify(data)}\n\n`);
-                } else {
-                    console.warn("Attempted to write to closed SSE connection.");
-                }
-            };
-
-            // --- Send Saved User Message via SSE ---
-            // Send the confirmed user message back immediately so frontend can update UI
-            // Also send the updated session data if it changed (e.g. title, lastMessageTimestamp)
-            sendSse({ type: 'user_message_saved', message: savedUserMessage });
-            console.log("Sent user_message_saved SSE event.");
-            // --- End Send Saved User Message ---
+            let providerUsed = null; let actualModelUsed = null; let finalAiContent = null;
+            let finalReasoningContent = ''; let fullCitations = []; let streamError = false;
+            res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
+            const sendSse = (data) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`); };
             
-            // If title was updated, send it via SSE as well
-            // The full updated session (including lastMessageTimestamp) will be part of the 'done' event or final non-streaming response
-            if (titleUpdated) {
-                sendSse({ type: 'title_update', title: generatedTitle, sessionId: sessionId, lastAccessedAt: session.lastAccessedAt, lastMessageTimestamp: session.lastMessageTimestamp });
-            }
+            sendSse({ type: 'user_message_saved', message: savedUserMessage });
+            if (titleUpdated) sendSse({ type: 'title_update', title: generatedTitle, sessionId: sessionId, lastAccessedAt: session.lastAccessedAt, lastMessageTimestamp: session.lastMessageTimestamp });
+
+            let currentSessionForDoneEvent = session; // Use the session potentially updated with a new title
 
             try {
-                // Use modelIdentifierForApi (base model) for finding provider and making calls
-                console.log(`Attempting API call with base model: ${modelIdentifierForApi || 'None (use default)'}`);
-                let providerToTry = null;
-                let modelToTry = modelIdentifierForApi; // Use the base model identifier here
-                let apiKeyToUse = null;
-
-                // 1. Determine initial provider and model (using base model identifier)
+                let providerToTry = null; let modelToTry = modelIdentifierForApi; let apiKeyToUse = null;
                 if (modelToTry) {
-                    const targetProvider = findProviderForModel(modelToTry); // Find provider for the base model
+                    const targetProvider = findProviderForModel(modelToTry);
                     if (targetProvider) {
                         const apiKeyEntry = await ApiKey.findOne({ providerName: targetProvider, isEnabled: true });
-                        if (apiKeyEntry?.keyValue) {
-                            providerToTry = targetProvider; 
-                            // modelToTry is already set to baseModelIdentifier
-                            apiKeyToUse = apiKeyEntry.keyValue;
-                            console.log(`Streaming: Found key for provider ${providerToTry}. Will try base model ${modelToTry}. System Prompt: ${!!systemPromptForApi}`);
-                        } else { console.warn(`Streaming: API key for ${targetProvider} (provider for base model ${modelToTry}) disabled/missing. Falling back...`); }
-                    } else { console.warn(`Streaming: Provider for base model ${modelToTry} not found. Falling back...`); }
-                } else {
-                     console.log("Streaming: No specific model requested or derived. Will proceed to fallback.");
+                        if (apiKeyEntry?.keyValue) { providerToTry = targetProvider; apiKeyToUse = apiKeyEntry.keyValue; }
+                    }
                 }
-
-                // 2. Attempt API call (or fallback if needed) - Pass systemPromptForApi and finalUserMessageContentForApi
                 if (providerToTry && modelToTry && apiKeyToUse) {
-                    // Pass systemPromptForApi and the prepared finalUserMessageContentForApi
                     const result = await callApiStream(providerToTry, apiKeyToUse, modelToTry, history, finalUserMessageContentForApi, sendSse, systemPromptForApi);
                     if (!result.errorOccurred) {
-                        providerUsed = providerToTry;
-                        actualModelUsed = modelToTry; // Store the base model used for the API call
-                        finalAiContent = result.fullResponseContent;
-                        finalReasoningContent = result.fullReasoningContent;
-                        fullCitations = result.fullCitations; // Capture citations
-                        // If successful with custom model's base, keep finalModelNameToSave as the custom ID
+                        providerUsed = providerToTry; actualModelUsed = modelToTry; finalAiContent = result.fullResponseContent;
+                        finalReasoningContent = result.fullReasoningContent; fullCitations = result.fullCitations;
                     } else {
-                        console.warn(`Streaming: Initial attempt ${providerToTry}/${modelToTry} (Base Model) failed. Trying default for provider...`);
-                        finalModelNameToSave = null; // Reset as we are falling back
-                        const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
+                        finalModelNameToSave = null; const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
                         if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
-                             // Try default model for the *same provider*, still pass original system prompt if any
                             const defaultResult = await callApiStream(providerToTry, apiKeyToUse, defaultModelForProvider, history, finalUserMessageContentForApi, sendSse, systemPromptForApi);
                             if (!defaultResult.errorOccurred) {
-                                providerUsed = providerToTry;
-                                actualModelUsed = defaultModelForProvider; // Store the default base model used
-                                finalAiContent = defaultResult.fullResponseContent;
-                                finalReasoningContent = defaultResult.fullReasoningContent;
-                                fullCitations = defaultResult.fullCitations; // Capture citations
-                                finalModelNameToSave = actualModelUsed; // Save the default base model name
-                            } else { console.warn(`Streaming: Default model ${defaultModelForProvider} for ${providerToTry} also failed. Falling back further...`); }
-                        } else { console.warn(`Streaming: No different default model for ${providerToTry}. Falling back further...`); }
-                    }
-                }
-
-                // 3. Sequential Fallback (if initial attempts failed)
-                if (!providerUsed) {
-                    finalModelNameToSave = null; // Reset as we are falling back completely
-                    console.log("Streaming: Attempting sequential provider fallback...");
-                    const enabledKeysSorted = await ApiKey.find({ isEnabled: true }).sort({ priority: 1 });
-                    if (!enabledKeysSorted || enabledKeysSorted.length === 0) {
-                        console.error("Streaming: No enabled API keys for fallback."); streamError = true; sendSse({ type: 'error', message: 'No enabled API keys available.' });
-                    } else {
-                        for (const apiKeyEntry of enabledKeysSorted) {
-                            const fallbackProvider = apiKeyEntry.providerName;
-                            if (providerToTry === fallbackProvider) continue; // Skip if already tried
-                            console.log(`Streaming Fallback: Trying ${fallbackProvider} (Priority: ${apiKeyEntry.priority})`);
-                            const fallbackModel = DEFAULT_MODELS[fallbackProvider];
-                            if (!fallbackModel) continue;
-                            // Fallback uses default models, so no custom system prompt is passed
-                            // Also, fallback likely won't handle multimodal, so pass text only
-                            const fallbackTextContent = typeof finalUserMessageContentForApi === 'string'
-                                ? finalUserMessageContentForApi
-                                : finalUserMessageContentForApi.find(part => part.type === 'text')?.text || '';
-                            const fallbackResult = await callApiStream(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, fallbackTextContent, sendSse, null);
-                            if (!fallbackResult.errorOccurred) {
-                                providerUsed = fallbackProvider;
-                                actualModelUsed = fallbackModel; // Store the fallback base model used
-                                finalAiContent = fallbackResult.fullResponseContent;
-                                finalReasoningContent = fallbackResult.fullReasoningContent;
-                                fullCitations = fallbackResult.fullCitations; // Capture citations
-                                finalModelNameToSave = actualModelUsed; // Save the fallback base model name
-                                console.log(`Streaming Fallback successful: ${providerUsed}/${actualModelUsed}.`);
-                                break;
-                            } else { console.warn(`Streaming Fallback failed for ${fallbackProvider}.`); }
-                        }
-                    }
-                }
-
-                // 4. Handle final failure
-                if (!providerUsed && !streamError) {
-                    console.error("Streaming: Failed to get response from any provider."); streamError = true; sendSse({ type: 'error', message: 'Failed to get response from all providers.' });
-                }
-
-                // 5. Send initial info and finalize SSE
-                // Send the model name/ID that should be displayed/saved (custom ID or base name)
-                if (finalModelNameToSave) sendSse({ type: 'model_info', modelUsed: finalModelNameToSave });
-                // Title update is now sent earlier if it happens
-                // Send the full updated session with the 'done' event
-                sendSse({ type: 'done', updatedSession: session.toObject() }); // Send updated session
-
-            } catch (error) { // Catch errors during streaming setup/logic
-                console.error("Error during stream processing:", error); streamError = true;
-                if (!res.headersSent) { res.writeHead(500, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ success: false, error: 'Server Error before streaming' })); }
-                else if (!res.writableEnded) { sendSse({ type: 'error', message: 'Internal Server Error during stream' }); }
-            } finally {
-                if (!res.writableEnded) res.end(); // Ensure connection is closed
-            }
-
-            // 6. Save final AI message to DB *after* streaming
-            // Use finalModelNameToSave (custom ID or base name) for the modelUsed field
-            if (!streamError && finalAiContent !== null && finalModelNameToSave) { 
-                try {
-                    // Add more detailed logging for citations in streaming mode
-                    console.log(`Streaming citations before saving: Provider=${providerUsed}, Base Model Used=${actualModelUsed}, Saved Model ID/Name=${finalModelNameToSave}, Citations count=${fullCitations.length}`);
-                    if (fullCitations.length > 0) {
-                        console.log("Citations to save:", JSON.stringify(fullCitations, null, 2));
-                    }
-                    
-                    const messageToSave = {
-                        session: sessionId,
-                        sender: 'ai',
-                        content: finalAiContent,
-                        modelUsed: finalModelNameToSave, // Save custom ID or base name
-                        // Only add reasoningContent if it's not empty
-                        ...(finalReasoningContent && { reasoningContent: finalReasoningContent }),
-                        // Add citations if we have them (not just for Perplexity)
-                        ...(fullCitations.length > 0 && { citations: fullCitations })
-                    };
-                    console.log("Attempting to save AI message (streaming):", JSON.stringify({
-                        ...messageToSave,
-                        content: messageToSave.content.substring(0, 100) + '...' // Truncate content for log readability
-                    }, null, 2));
-                    const savedMessage = await ChatMessage.create(messageToSave);
-                    console.log("Successfully saved final AI message to DB (streaming). ID:", savedMessage._id); // Log success and ID
-
-                    // --- Automatic Context Extraction (Streaming) ---
-                    if (req.user && req.user.id && useSessionMemory && finalAiContent) {
-                        const userMemoryDocForAuto = await UserMemory.findOne({ userId: req.user.id });
-                        if (userMemoryDocForAuto && userMemoryDocForAuto.isGloballyEnabled) {
-                            const lastUserText = content || '';
-                            if (lastUserText.length > 0 && lastUserText.length <= 75 &&
-                                !lastUserText.includes('?') &&
-                                !['what', 'how', 'why', 'who', 'when', 'where', 'tell me'].some(q => lastUserText.toLowerCase().startsWith(q))) {
-                                const trimmedUserText = lastUserText.trim();
-                                const existingContextIndex = userMemoryDocForAuto.contexts.findIndex(c => c.text === trimmedUserText);
-                                const now = new Date();
-                                if (existingContextIndex > -1) {
-                                    userMemoryDocForAuto.contexts[existingContextIndex].updatedAt = now;
-                                    console.log(`Auto-context (stream): Updated timestamp for existing context: "${trimmedUserText}"`);
-                                } else {
-                                    userMemoryDocForAuto.contexts.push({ text: trimmedUserText, source: 'chat_auto_extracted', createdAt: now, updatedAt: now });
-                                    console.log(`Auto-context (stream): Adding new context: "${trimmedUserText}"`);
-                                }
-                                try {
-                                    await userMemoryDocForAuto.save();
-                                    console.log(`User memory (stream) updated with auto-extracted context for user ${req.user.id}.`);
-                                } catch (saveError) {
-                                    console.error(`Error saving user memory (stream) after auto-extraction: `, saveError);
-                                }
+                                providerUsed = providerToTry; actualModelUsed = defaultModelForProvider; finalAiContent = defaultResult.fullResponseContent;
+                                finalReasoningContent = defaultResult.fullReasoningContent; fullCitations = defaultResult.fullCitations; finalModelNameToSave = actualModelUsed;
                             }
                         }
                     }
-                    // --- End Automatic Context Extraction (Streaming) ---
-
-                } catch (dbError) {
-                    console.error("!!! Error saving final AI message to DB (streaming):", dbError); // Make error more prominent
                 }
-            } else if (!streamError && finalAiContent === null) {
-                console.warn("Streaming finished, but final AI content was null. Not saving to DB.");
-            } else if (streamError) {
-                 console.warn("Stream ended with error, not saving AI message to DB.");
+                if (!providerUsed) {
+                    finalModelNameToSave = null; 
+                    const enabledKeysSorted = await ApiKey.find({ isEnabled: true }).sort({ priority: 1 });
+                    if (!enabledKeysSorted || enabledKeysSorted.length === 0) { streamError = true; sendSse({ type: 'error', message: 'No enabled API keys available.' });
+                    } else {
+                        for (const apiKeyEntry of enabledKeysSorted) {
+                            const fallbackProvider = apiKeyEntry.providerName; if (providerToTry === fallbackProvider) continue;
+                            const fallbackModel = DEFAULT_MODELS[fallbackProvider]; if (!fallbackModel) continue;
+                            const fallbackTextContent = typeof finalUserMessageContentForApi === 'string' ? finalUserMessageContentForApi : (finalUserMessageContentForApi.find(part => part.type === 'text')||{text:''}).text;
+                            const fallbackResult = await callApiStream(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, fallbackTextContent, sendSse, null);
+                            if (!fallbackResult.errorOccurred) {
+                                providerUsed = fallbackProvider; actualModelUsed = fallbackModel; finalAiContent = fallbackResult.fullResponseContent;
+                                finalReasoningContent = fallbackResult.fullReasoningContent; fullCitations = fallbackResult.fullCitations; finalModelNameToSave = actualModelUsed;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (!providerUsed && !streamError) { streamError = true; sendSse({ type: 'error', message: 'Failed to get response from all providers.' }); }
+                
+                let savedAiMessageForStream = null;
+                if (!streamError && finalAiContent !== null && finalModelNameToSave) {
+                    const messageToSave = { session: sessionId, sender: 'ai', content: finalAiContent, modelUsed: finalModelNameToSave, ...(finalReasoningContent && { reasoningContent: finalReasoningContent }), ...(fullCitations.length > 0 && { citations: fullCitations }) };
+                    savedAiMessageForStream = await ChatMessage.create(messageToSave);
+                    if (savedAiMessageForStream) {
+                        const parentSession = await ChatSession.findById(sessionId);
+                        if (parentSession) {
+                            parentSession.lastMessageTimestamp = savedAiMessageForStream.timestamp;
+                            parentSession.lastAccessedAt = savedAiMessageForStream.timestamp;
+                            await parentSession.save();
+                            currentSessionForDoneEvent = parentSession; // Use this most up-to-date session for the 'done' event
+                            console.log(`Streaming: Updated session ${sessionId} lastMessageTimestamp to AI message time: ${savedAiMessageForStream.timestamp}`);
+                        }
+                    }
+                }
+
+                if (finalModelNameToSave) sendSse({ type: 'model_info', modelUsed: finalModelNameToSave });
+                sendSse({ type: 'done', updatedSession: currentSessionForDoneEvent.toObject() });
+
+            } catch (error) { 
+                streamError = true;
+                if (!res.headersSent) { res.writeHead(500, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ success: false, error: 'Server Error before streaming' })); }
+                else if (!res.writableEnded) { sendSse({ type: 'error', message: 'Internal Server Error during stream' }); }
+            } finally {
+                if (!res.writableEnded) res.end();
             }
+            // Save AI message logic moved inside the try block to access savedMessage for timestamp update
 
-        } else {
-            // --- Non-Streaming Logic ---
+        } else { // Non-Streaming Logic
             console.log("Processing request with streaming disabled.");
-            let apiResult = null; // Will hold { content, citations }
-            let providerUsed = null;
-            let actualModelUsed = null;
+            let apiResult = null; let providerUsed = null; let actualModelUsed = null;
+            let finalSessionDataForResponse = session.toObject(); // Initialize with current session state
 
-            // Use modelIdentifierForApi (base model) for finding provider and making calls
-            console.log(`Attempting API call with base model: ${modelIdentifierForApi || 'None (use default)'}`);
-            let providerToTry = null;
-            let modelToTry = modelIdentifierForApi; // Use the base model identifier here
-            let apiKeyToUse = null;
-
-            // 1. Determine initial provider and model (using base model identifier)
-             if (modelToTry) {
-                const targetProvider = findProviderForModel(modelToTry); // Find provider for the base model
+            let providerToTry = null; let modelToTry = modelIdentifierForApi; let apiKeyToUse = null;
+            if (modelToTry) {
+                const targetProvider = findProviderForModel(modelToTry);
                 if (targetProvider) {
                     const apiKeyEntry = await ApiKey.findOne({ providerName: targetProvider, isEnabled: true });
-                    if (apiKeyEntry?.keyValue) {
-                        providerToTry = targetProvider;
-                        // modelToTry is already set to baseModelIdentifier
-                        apiKeyToUse = apiKeyEntry.keyValue;
-                        console.log(`Non-Streaming: Found key for provider ${providerToTry}. Will try base model ${modelToTry}. System Prompt: ${!!systemPromptForApi}`);
-                    } else { console.warn(`Non-Streaming: API key for ${targetProvider} (provider for base model ${modelToTry}) disabled/missing. Falling back...`); }
-                } else { console.warn(`Non-Streaming: Provider for base model ${modelToTry} not found. Falling back...`); }
-            } else {
-                 console.log("Non-Streaming: No specific model requested or derived. Will proceed to fallback.");
-            }
-
-
-            // 2. Attempt API call (or fallback if needed) - Pass systemPromptForApi and finalUserMessageContentForApi
-            if (providerToTry && modelToTry && apiKeyToUse) {
-                // Pass systemPromptForApi and the prepared finalUserMessageContentForApi
-                apiResult = await callApi(providerToTry, apiKeyToUse, modelToTry, history, finalUserMessageContentForApi, systemPromptForApi);
-                if (apiResult && apiResult.content !== null) {
-                    providerUsed = providerToTry;
-                    actualModelUsed = modelToTry; // Store the base model used for the API call
-                    // If successful with custom model's base, keep finalModelNameToSave as the custom ID
-                    console.log(`Non-Streaming: Success ${providerUsed}/${actualModelUsed} (Base Model)`);
-                } else {
-                    console.warn(`Non-Streaming: Initial attempt ${providerToTry}/${modelToTry} (Base Model) failed. Trying default for provider...`);
-                    finalModelNameToSave = null; // Reset as we are falling back
-                    const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
-                    if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
-                        // Try default model for the *same provider*, still pass original system prompt if any
-                        apiResult = await callApi(providerToTry, apiKeyToUse, defaultModelForProvider, history, finalUserMessageContentForApi, systemPromptForApi);
-                        if (apiResult && apiResult.content !== null) {
-                            providerUsed = providerToTry;
-                            actualModelUsed = defaultModelForProvider; // Store the default base model used
-                            finalModelNameToSave = actualModelUsed; // Save the default base model name
-                            console.log(`Non-Streaming: Success ${providerUsed}/DEFAULT ${actualModelUsed}`);
-                        } else { console.warn(`Non-Streaming: Default model ${defaultModelForProvider} for ${providerToTry} also failed. Falling back further...`); }
-                    } else { console.warn(`Non-Streaming: No different default model for ${providerToTry}. Falling back further...`); }
+                    if (apiKeyEntry?.keyValue) { providerToTry = targetProvider; apiKeyToUse = apiKeyEntry.keyValue; }
                 }
             }
-
-            // 3. Sequential Fallback
-            if (!providerUsed) {
-                console.log("Non-Streaming: Attempting sequential provider fallback...");
-                const enabledKeysSorted = await ApiKey.find({ isEnabled: true }).sort({ priority: 1 });
-                if (!enabledKeysSorted || enabledKeysSorted.length === 0) {
-                    console.error("Non-Streaming: No enabled API keys for fallback.");
-                    apiResult = { content: 'Sorry, no API providers are available.', citations: null }; // Provide default error content
+            if (providerToTry && modelToTry && apiKeyToUse) {
+                apiResult = await callApi(providerToTry, apiKeyToUse, modelToTry, history, finalUserMessageContentForApi, systemPromptForApi);
+                if (apiResult && apiResult.content !== null) {
+                    providerUsed = providerToTry; actualModelUsed = modelToTry;
                 } else {
-                    for (const apiKeyEntry of enabledKeysSorted) {
-                        const fallbackProvider = apiKeyEntry.providerName;
-                        if (providerToTry === fallbackProvider) continue;
-                        console.log(`Non-Streaming Fallback: Trying ${fallbackProvider} (Priority: ${apiKeyEntry.priority})`);
-                        const fallbackModel = DEFAULT_MODELS[fallbackProvider];
-                        if (!fallbackModel) continue;
-                        // Fallback uses default models, so no custom system prompt is passed
-                        // Also, fallback likely won't handle multimodal, so pass text only
-                        const fallbackTextContent = typeof finalUserMessageContentForApi === 'string'
-                            ? finalUserMessageContentForApi
-                            : finalUserMessageContentForApi.find(part => part.type === 'text')?.text || '';
-                        apiResult = await callApi(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, fallbackTextContent);
+                    finalModelNameToSave = null; const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
+                    if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
+                        apiResult = await callApi(providerToTry, apiKeyToUse, defaultModelForProvider, history, finalUserMessageContentForApi, systemPromptForApi);
                         if (apiResult && apiResult.content !== null) {
-                            providerUsed = fallbackProvider; actualModelUsed = fallbackModel;
-                            console.log(`Non-Streaming Fallback successful: ${providerUsed}/${actualModelUsed}.`);
-                            break;
-                        } else { console.warn(`Non-Streaming Fallback failed for ${fallbackProvider}.`); }
+                            providerUsed = providerToTry; actualModelUsed = defaultModelForProvider; finalModelNameToSave = actualModelUsed;
+                        }
                     }
                 }
             }
-
-            // 4. Handle final failure
             if (!providerUsed) {
-                console.error("Non-Streaming: Failed to get response from any provider.");
-                // Ensure apiResult has a default error content if it's still null
-                if (!apiResult || apiResult.content === null) {
-                    apiResult = { content: 'Sorry, I could not process that request.', citations: null };
+                finalModelNameToSave = null;
+                const enabledKeysSorted = await ApiKey.find({ isEnabled: true }).sort({ priority: 1 });
+                if (!enabledKeysSorted || enabledKeysSorted.length === 0) apiResult = { content: 'Sorry, no API providers are available.', citations: null };
+                else {
+                    for (const apiKeyEntry of enabledKeysSorted) {
+                        const fallbackProvider = apiKeyEntry.providerName; if (providerToTry === fallbackProvider) continue;
+                        const fallbackModel = DEFAULT_MODELS[fallbackProvider]; if (!fallbackModel) continue;
+                        const fallbackTextContent = typeof finalUserMessageContentForApi === 'string' ? finalUserMessageContentForApi : (finalUserMessageContentForApi.find(part => part.type === 'text')||{text:''}).text;
+                        apiResult = await callApi(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, fallbackTextContent);
+                        if (apiResult && apiResult.content !== null) { providerUsed = fallbackProvider; actualModelUsed = fallbackModel; finalModelNameToSave = actualModelUsed; break; }
+                    }
                 }
             }
-
-            // Check if we got a valid response content
-            if (!apiResult || apiResult.content === null) {
-                 console.error("Non-Streaming: Final AI response content is null. Sending error response.");
-                 return res.status(500).json({ success: false, error: 'Failed to get AI response' });
+            if (!providerUsed || !apiResult || apiResult.content === null) {
+                apiResult = { content: 'Sorry, I could not process that request.', citations: null };
             }
-
-            // 5. Save the AI's response message
-            const aiMessageData = {
-                session: sessionId,
-                sender: 'ai',
-                content: apiResult.content, // Use content from the result object
-                modelUsed: actualModelUsed,
-                // Add citations if they exist in the result object
-                ...(apiResult.citations && apiResult.citations.length > 0 && { citations: apiResult.citations })
-            };
             
-            // Debug log the message data before saving
-            console.log('Saving AI message with data:', JSON.stringify({
-                content: apiResult.content?.substring(0, 100) + '...',
-                modelUsed: actualModelUsed,
-                hasCitations: apiResult.citations && apiResult.citations.length > 0,
-                citationsCount: apiResult.citations?.length || 0
-            }, null, 2));
-
+            const aiMessageData = { session: sessionId, sender: 'ai', content: apiResult.content, modelUsed: finalModelNameToSave, ...(apiResult.citations && apiResult.citations.length > 0 && { citations: apiResult.citations }) };
             const aiMessage = await ChatMessage.create(aiMessageData);
-            console.log("Successfully saved final AI message to DB (non-streaming).");
-            
-            // Debug log the saved message to verify citations were saved
-            console.log('Saved message ID:', aiMessage._id);
-            console.log('Saved message has citations:', !!aiMessage.citations);
-            console.log('Saved citations count:', aiMessage.citations?.length || 0);
 
-            // --- Automatic Context Extraction (Non-Streaming) ---
+            if (aiMessage) {
+                const parentSession = await ChatSession.findById(sessionId);
+                if (parentSession) {
+                    parentSession.lastMessageTimestamp = aiMessage.timestamp;
+                    parentSession.lastAccessedAt = aiMessage.timestamp;
+                    await parentSession.save();
+                    finalSessionDataForResponse = parentSession.toObject();
+                    console.log(`Non-Streaming: Updated session ${sessionId} lastMessageTimestamp to AI message time: ${aiMessage.timestamp}`);
+                }
+            }
+            
             if (req.user && req.user.id && useSessionMemory && apiResult && apiResult.content) {
                 const userMemoryDocForAuto = await UserMemory.findOne({ userId: req.user.id });
                 if (userMemoryDocForAuto && userMemoryDocForAuto.isGloballyEnabled) {
                     const lastUserText = content || '';
-                    if (lastUserText.length > 0 && lastUserText.length <= 75 &&
-                        !lastUserText.includes('?') &&
-                        !['what', 'how', 'why', 'who', 'when', 'where', 'tell me'].some(q => lastUserText.toLowerCase().startsWith(q))) {
+                    if (lastUserText.length > 0 && lastUserText.length <= 75 && !lastUserText.includes('?') && !['what', 'how', 'why', 'who', 'when', 'where', 'tell me'].some(q => lastUserText.toLowerCase().startsWith(q))) {
                         const trimmedUserText = lastUserText.trim();
                         const existingContextIndex = userMemoryDocForAuto.contexts.findIndex(c => c.text === trimmedUserText);
                         const now = new Date();
-                        if (existingContextIndex > -1) {
-                            userMemoryDocForAuto.contexts[existingContextIndex].updatedAt = now;
-                             console.log(`Auto-context (non-stream): Updated timestamp for existing context: "${trimmedUserText}"`);
-                        } else {
-                            userMemoryDocForAuto.contexts.push({ text: trimmedUserText, source: 'chat_auto_extracted', createdAt: now, updatedAt: now });
-                            console.log(`Auto-context (non-stream): Adding new context: "${trimmedUserText}"`);
-                        }
-                        try {
-                            await userMemoryDocForAuto.save();
-                            console.log(`User memory (non-stream) updated with auto-extracted context for user ${req.user.id}.`);
-                        } catch (saveError) {
-                            console.error(`Error saving user memory (non-stream) after auto-extraction: `, saveError);
-                        }
+                        if (existingContextIndex > -1) userMemoryDocForAuto.contexts[existingContextIndex].updatedAt = now;
+                        else userMemoryDocForAuto.contexts.push({ text: trimmedUserText, source: 'chat_auto_extracted', createdAt: now, updatedAt: now });
+                        try { await userMemoryDocForAuto.save(); } catch (saveError) { console.error(`Error saving user memory (non-stream) after auto-extraction: `, saveError); }
                     }
                 }
             }
-            // --- End Automatic Context Extraction (Non-Streaming) ---
-
-            // 6. Send back the single AI response AND the saved user message, AND the updated session
-            res.status(201).json({
-              success: true,
-              userMessage: savedUserMessage,
-              data: aiMessage, 
-              updatedSession: session.toObject() // Send the full updated session
-              // updatedSessionTitle is no longer needed separately if full session is sent
-            });
-        } // End of non-streaming block
-
-    } catch (error) { // Catch errors common to both streaming/non-streaming setup
+            res.status(201).json({ success: true, userMessage: savedUserMessage, data: aiMessage, updatedSession: finalSessionDataForResponse });
+        } 
+    } catch (error) { 
         console.error("Add Message Error (Outer Catch):", error);
         if (error.name === 'CastError') return res.status(404).json({ success: false, error: `Chat session not found with id ${req.params.sessionId}` });
-        if (error.name === 'ValidationError') {
-            const messages = Object.values(error.errors).map(val => val.message);
-            return res.status(400).json({ success: false, error: messages });
-        }
-        // Log the detailed error before sending the generic 500 response
-        console.error("Unhandled Add Message Error:", error);
-        // Avoid sending response if headers already sent (e.g., during streaming)
-        if (!res.headersSent) {
-            res.status(500).json({ success: false, error: 'Server Error adding message' });
-        } else {
-            console.error("Headers already sent, cannot send 500 error response.");
-        }
+        if (error.name === 'ValidationError') { const messages = Object.values(error.errors).map(val => val.message); return res.status(400).json({ success: false, error: messages }); }
+        if (!res.headersSent) res.status(500).json({ success: false, error: 'Server Error adding message' });
+        else console.error("Headers already sent, cannot send 500 error response.");
     }
 };

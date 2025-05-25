@@ -120,19 +120,20 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
   };
 
   sessions.forEach((session, index) => {
-    // Prioritize lastMessageTimestamp, then lastAccessedAt, then createdAt for grouping
-    const dateToUse = session.lastMessageTimestamp || session.lastAccessedAt || session.createdAt;
+    // Prioritize lastMessageTimestamp, then createdAt for grouping
+    const dateToUse = session.lastMessageTimestamp || session.createdAt; // MODIFIED LINE
     const sessionDate = new Date(dateToUse);
     sessionDate.setHours(0, 0, 0, 0); // Normalize session date to start of day for comparison
 
     console.log(`Session ${index + 1} (${session._id}):`, {
       title: session.title,
       lastMessageTimestamp: session.lastMessageTimestamp,
-      lastAccessedAt: session.lastAccessedAt,
+      lastAccessedAt: session.lastAccessedAt, // Still log for context
       createdAt: session.createdAt,
       dateToUse: dateToUse,
       sessionDate: sessionDate,
-      isLastMessageTimestampUsed: !!session.lastMessageTimestamp
+      isLastMessageTimestampUsed: !!session.lastMessageTimestamp,
+      isCreatedAtUsedAsFallback: !session.lastMessageTimestamp && !!session.createdAt // New debug field
     });
 
     let groupKey: string | null = null;
@@ -183,11 +184,11 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
     }
   });
 
-  // Sort sessions within each group by the chosen timestamp (lastMessageTimestamp prioritized) descending
+  // Sort sessions within each group by the chosen timestamp (lastMessageTimestamp prioritized, then createdAt) descending
   for (const key in groups) {
     groups[key].sort((a, b) => {
-      const dateA = new Date(a.lastMessageTimestamp || a.lastAccessedAt || a.createdAt);
-      const dateB = new Date(b.lastMessageTimestamp || b.lastAccessedAt || b.createdAt);
+      const dateA = new Date(a.lastMessageTimestamp || a.createdAt); // MODIFIED LINE
+      const dateB = new Date(b.lastMessageTimestamp || b.createdAt); // MODIFIED LINE
       return dateB.getTime() - dateA.getTime();
     });
   }
@@ -250,7 +251,8 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
       id: s._id, 
       title: s.title, 
       lastMessageTimestamp: s.lastMessageTimestamp, 
-      lastAccessedAt: s.lastAccessedAt 
+      lastAccessedAt: s.lastAccessedAt,
+      createdAt: s.createdAt // Log createdAt for better debugging of fallback
     }))
   })));
 

@@ -80,10 +80,6 @@ interface DateGroup {
 
 // Helper function to group sessions by date
 const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): DateGroup[] => {
-  console.log('=== GROUPING SESSIONS DEBUG ===');
-  console.log('Total sessions to group:', sessions.length);
-  console.log('Current date/time:', currentDateTime);
-  
   const groups: { [key: string]: ChatSession[] } = {};
   const outputOrder: string[] = [];
 
@@ -112,21 +108,11 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
     // Dynamic titles for months and years will be generated
   };
 
-  sessions.forEach((session, index) => {
+  sessions.forEach(session => {
     // Prioritize lastMessageTimestamp, then lastAccessedAt, then createdAt for grouping
     const dateToUse = session.lastMessageTimestamp || session.lastAccessedAt || session.createdAt;
     const sessionDate = new Date(dateToUse);
     sessionDate.setHours(0, 0, 0, 0); // Normalize session date to start of day for comparison
-
-    console.log(`Session ${index + 1} (${session._id}):`, {
-      title: session.title,
-      lastMessageTimestamp: session.lastMessageTimestamp,
-      lastAccessedAt: session.lastAccessedAt,
-      createdAt: session.createdAt,
-      dateToUse: dateToUse,
-      sessionDate: sessionDate,
-      isLastMessageTimestampUsed: !!session.lastMessageTimestamp
-    });
 
     let groupKey: string | null = null;
 
@@ -141,8 +127,6 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
       // Older years
       groupKey = `${sessionDate.getFullYear()}`;
     }
-
-    console.log(`  -> Assigned to group: ${groupKey}`);
 
     if (groupKey) {
       if (!groups[groupKey]) {
@@ -175,11 +159,9 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
 
   // Sort sessions within each group by the chosen timestamp (lastMessageTimestamp prioritized) descending
   for (const key in groups) {
-    console.log(`Sorting sessions in group "${key}"`);
     groups[key].sort((a, b) => {
       const dateA = new Date(a.lastMessageTimestamp || a.lastAccessedAt || a.createdAt);
       const dateB = new Date(b.lastMessageTimestamp || b.lastAccessedAt || b.createdAt);
-      console.log(`  Comparing: ${a.title} (${dateA}) vs ${b.title} (${dateB})`);
       return dateB.getTime() - dateA.getTime();
     });
   }
@@ -228,21 +210,12 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
 
   const finalOutputOrder = [...fixedOrder, ...dynamicGroups];
 
-  const result = finalOutputOrder
+  return finalOutputOrder
     .filter(key => groups[key] && groups[key].length > 0) // Only include keys that have sessions
     .map(key => ({
       title: key,
       sessions: groups[key]
     }));
-
-  console.log('Final grouped result:', result.map(group => ({
-    title: group.title,
-    sessionCount: group.sessions.length,
-    sessions: group.sessions.map(s => ({ id: s._id, title: s.title, lastMessageTimestamp: s.lastMessageTimestamp, lastAccessedAt: s.lastAccessedAt }))
-  })));
-  console.log('=== END GROUPING DEBUG ===');
-
-  return result;
 };
 
 
@@ -603,4 +576,783 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                           console.log('All messages after citation update:',
                                               updatedMessages.map((m: ChatMessage) => ({
                                                   id: m._id,
-                                                  sender:
+                                                  sender: m.sender,
+                                                  hasCitations: !!m.citations,
+                                                  citationsCount: m.citations?.length || 0
+                                              }))
+                                          );
+
+                                          return updatedMessages;
+                                      });
+                                  } else {
+                                      console.warn('Received empty citations array in streaming mode');
+                                  }
+                              } else if (jsonData.type === 'reasoning_chunk') { // Handle reasoning chunks
+                                  console.log('Received reasoning chunk:', jsonData.content);
+                                  // Accumulate reasoning content as a string locally
+                                  accumulatedReasoning += jsonData.content;
+                                  // Update the temporary state for immediate display
+                                  setReasoningSteps((prev: { [messageId: string]: string }) => ({
+                                      ...prev,
+                                      [optimisticAiMessageId]: accumulatedReasoning
+                                  }));
+                              } else if (jsonData.type === 'title_update' && currentSession) {
+                                  // Assuming backend sends the full updated session object in jsonData.updatedSession
+                                  if (jsonData.updatedSession) {
+                                    const updatedSessionFromServer = jsonData.updatedSession as ChatSession;
+                                    setCurrentSession(updatedSessionFromServer);
+                                    setSessions(sessions.map((s: ChatSession): ChatSession => s._id === updatedSessionFromServer._id ? updatedSessionFromServer : s ));
+                                  } else if (jsonData.title && currentSession) { // Fallback to title only if full session not sent
+                                    setCurrentSession((prev: ChatSession | null) => prev ? { ...prev, title: jsonData.title } : null);
+                                    setSessions(sessions.map((s: ChatSession): ChatSession => s._id === currentSession._id ? { ...s, title: jsonData.title } : s ));
+                                  }
+                              } else if (jsonData.type === 'error') {
+                                  setError(`AI Error: ${jsonData.message}`); console.error('SSE Error Event:', jsonData.message); setStreamingMessageId(null); setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) => msg._id === optimisticAiMessageId ? { ...msg, content: `[Error: ${jsonData.message}]`, modelUsed: 'error' } : msg)); reader.cancel(); return;
+                              } else if (jsonData.type === 'done') {
+                                  console.log('Stream finished.');
+                                  // Get accumulated reasoning for this message from the local variable
+                                  const finalReasoning = accumulatedReasoning || null;
+                                  setMessages((prev: ChatMessage[]) => {
+                                      // Find the current message to preserve its citations
+                                      const currentMsg = prev.find((m: ChatMessage) => m._id === optimisticAiMessageId);
+                                      const currentCitations = currentMsg?.citations;
+
+                                      console.log('Updating message at stream end:', {
+                                          messageId: optimisticAiMessageId,
+                                          hasCitations: !!currentCitations,
+                                          citationsCount: currentCitations?.length || 0
+                                      });
+
+                                      return prev.map((msg: ChatMessage) =>
+                                          msg._id === optimisticAiMessageId
+                                              ? {
+                                                  ...msg,
+                                                  content: finalContent,
+                                                  reasoningContent: finalReasoning,
+                                                  // Explicitly preserve citations
+                                                  citations: currentCitations
+                                                }
+                                              : msg
+                                      );
+                                  });
+                                  setStreamingMessageId(null);
+                                  setStreamingMessageContent('');
+                                  // Clean up reasoningSteps state for the temp ID
+                                  setReasoningSteps((prev: { [messageId: string]: string }) => {
+                                      const newState = {...prev};
+                                      delete newState[optimisticAiMessageId];
+                                      return newState;
+                                  });
+                                  return;
+                              } else if (jsonData.type === 'user_message_saved') { // Handle the saved user message
+                                  const savedUserMsg = jsonData.message as ChatMessage;
+                                  console.log("Received saved user message:", savedUserMsg);
+                                  // Replace the optimistic message with the confirmed one from backend
+                                  setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) =>
+                                      msg._id === optimisticUserMessageId ? savedUserMsg : msg
+                                  ));
+                              } else if (jsonData.type === 'done' && jsonData.updatedSession) { // Handle 'done' event with session update
+                                  console.log('Stream finished with done event, updating session.');
+                                  const updatedSessionFromServer = jsonData.updatedSession as ChatSession;
+                                  setCurrentSession(updatedSessionFromServer); // Update local currentSession
+                                  
+                                  // Correctly update global sessions list using the store's current sessions
+                                  const currentGlobalSessions = useAuthStore.getState().sessions;
+                                  const newGlobalSessions = currentGlobalSessions.map((s: ChatSession) => 
+                                    s._id === updatedSessionFromServer._id ? updatedSessionFromServer : s
+                                  );
+                                  setSessions(newGlobalSessions); 
+                                  
+                                  // The rest of the 'done' logic (clearing streaming state) is handled by the existing 'done' block below
+                              }
+                          } catch (e: any) { console.error('Failed to parse SSE data:', e, 'Line:', line); }
+                      }
+                  }
+              }
+              // Handle stream ending without 'done' event (might happen on error/abort)
+              console.log('Stream ended without done event.');
+              const finalReasoningOnEnd = accumulatedReasoning || null;
+              setMessages((prev: ChatMessage[]) => {
+                  // Find the current message to preserve its citations
+                  const currentMsg = prev.find((m: ChatMessage) => m._id === optimisticAiMessageId);
+                  const currentCitations = currentMsg?.citations;
+
+                  console.log('Updating message at stream end (no done event):', {
+                      messageId: optimisticAiMessageId,
+                      hasCitations: !!currentCitations,
+                      citationsCount: currentCitations?.length || 0
+                  });
+
+                  return prev.map((msg: ChatMessage) =>
+                      msg._id === optimisticAiMessageId
+                          ? {
+                              ...msg,
+                              content: finalContent,
+                              reasoningContent: finalReasoningOnEnd,
+                              // Explicitly preserve citations
+                              citations: currentCitations
+                            }
+                          : msg
+                  );
+              });
+              setStreamingMessageId(null);
+              setStreamingMessageContent('');
+              setReasoningSteps((prev: { [key: string]: string }) => {
+                  const newState = {...prev};
+                  delete newState[optimisticAiMessageId];
+                  return newState;
+              });
+
+
+          } catch (err: any) {
+              if (err.name === 'AbortError') { console.log('Fetch aborted'); setError('Message sending cancelled.'); } else { console.error('Fetch error:', err); setError(err.message || 'Error sending message or processing stream.'); }
+              // Remove only the AI placeholder on error, keep the user message
+              setMessages((prev: ChatMessage[]) => prev.filter((m: ChatMessage) => m._id !== optimisticAiMessageId));
+              setStreamingMessageId(null); setStreamingMessageContent(''); if (err.response?.status === 401) navigate('/login');
+          } finally {
+              // Ensure sendingMessage is set to false even if streaming continues in background
+              setSendingMessage(false);
+              // Don't clear abortControllerRef here if you want to allow cancellation during streaming
+              // abortControllerRef.current = null;
+          }
+
+      } else {
+          // --- Non-Streaming Logic ---
+          // Add AI placeholder for non-streaming as well, to show loading
+          const optimisticAiMessageId = `temp-ai-${Date.now()}`;
+          const optimisticAiMessage: ChatMessage = {
+              _id: optimisticAiMessageId,
+              sender: 'ai',
+              content: '...', // Loading indicator
+              timestamp: new Date().toISOString(),
+              modelUsed: '...'
+          };
+          setMessages((prev: ChatMessage[]) => [...prev, optimisticAiMessage]); // Add AI placeholder
+
+          try {
+              // Use apiClient.post (expects single JSON response with AI message)
+              // Add stream=false parameter for non-streaming requests
+              formData.append('stream', 'false');
+              formData.append('useSessionMemory', isSessionMemoryActive.toString()); // Add session memory flag
+
+              const response = await apiClient.post(`/chatsessions/${sessionId}/messages`, formData, {
+                  headers: {
+                      // Axios handles FormData Content-Type automatically
+                      'Content-Type': 'multipart/form-data',
+                  }
+              });
+
+              if (response.data?.success) {
+                  const aiMessageResponse = response.data.data; // AI response
+                  const savedUserMsg = response.data.userMessage; // Saved user message
+                  const updatedSessionData = response.data.updatedSession as ChatSession; // Expect full session
+
+                  // Replace optimistic user message and AI placeholder
+                  setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) => {
+                      if (msg._id === optimisticUserMessageId) return savedUserMsg; // Replace user msg
+                      if (msg._id === optimisticAiMessageId) return aiMessageResponse; // Replace AI placeholder
+                      return msg;
+                  }));
+
+                  if (aiMessageResponse.modelUsed) setSelectedModel(aiMessageResponse.modelUsed);
+                  
+                  if (updatedSessionData && currentSession) {
+                      setCurrentSession(updatedSessionData);
+                      setSessions(
+                        sessions.map((s: ChatSession): ChatSession =>
+                          s._id === updatedSessionData._id ? updatedSessionData : s
+                        )
+                      );
+                  } else if (response.data.updatedSessionTitle && currentSession) { // Fallback if only title is sent
+                      const newTitle = response.data.updatedSessionTitle;
+                      setCurrentSession((prev: ChatSession | null) => prev ? { ...prev, title: newTitle, lastAccessedAt: new Date().toISOString() } : null); // Optimistically update lastAccessedAt
+                      setSessions(
+                        sessions.map((s: ChatSession): ChatSession =>
+                          s._id === currentSession._id ? { ...s, title: newTitle, lastAccessedAt: new Date().toISOString() } : s // Optimistically update lastAccessedAt
+                        )
+                      );
+                  }
+              } else {
+                  setError(response.data?.error || 'Failed to send message or get AI response.');
+                  // Remove AI placeholder on failure
+                  setMessages((prev: ChatMessage[]) => prev.filter((m: ChatMessage) => m._id !== optimisticAiMessageId));
+              }
+          } catch (err: any) {
+              console.error("Send Message Error (apiClient):", err);
+              setError(err.response?.data?.error || 'Error sending message.');
+              // Remove AI placeholder on failure
+              setMessages((prev: ChatMessage[]) => prev.filter((m: ChatMessage) => m._id !== optimisticAiMessageId));
+              if (err.response?.status === 401) navigate('/login');
+          } finally {
+              setSendingMessage(false);
+          }
+      }
+  };
+
+  // --- Effects ---
+  useEffect(() => {
+    // Fetch initial data using global store action
+    const fetchInitialData = async () => {
+        await fetchAvailableModels(); // Fetch models first
+        await fetchSessions(); // Use global fetch action
+    };
+     fetchInitialData();
+
+     // --- Speech Recognition Setup ---
+     // Check for browser support and initialize
+     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+     if (SpeechRecognition) {
+         recognitionRef.current = new SpeechRecognition();
+         recognitionRef.current.continuous = false; // Process speech after user stops talking
+         recognitionRef.current.lang = 'en-US'; // Set language (adjust if needed)
+         recognitionRef.current.interimResults = false; // We only want final results
+
+         recognitionRef.current.onstart = () => {
+             console.log('Speech recognition started');
+             setIsListening(true);
+         };
+
+         recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
+             const transcript = event.results[event.results.length - 1][0].transcript.trim();
+             console.log('Speech recognized:', transcript);
+             setNewMessage((prev: string) => prev ? prev + ' ' + transcript : transcript); // Append transcript
+         };
+
+         recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
+             console.error('Speech recognition error:', event.error);
+             // Handle specific errors like 'not-allowed' or 'no-speech' if needed
+             setIsListening(false); // Ensure listening state is reset on error
+         };
+
+         recognitionRef.current.onend = () => {
+             console.log('Speech recognition ended');
+             setIsListening(false);
+         };
+     } else {
+         console.warn('Speech Recognition API not supported in this browser.');
+     }
+     // --- End Speech Recognition Setup ---
+
+   }, [fetchSessions]); // Depend on fetchSessions from store
+
+   // Effect to update speech recognition language when app language changes
+   useEffect(() => {
+       if (recognitionRef.current) {
+           const currentLang = i18n.language;
+           const recognitionLang = currentLang === 'vi' ? 'vi-VN' : 'en-US';
+           console.log(`Setting speech recognition language to: ${recognitionLang} based on app language: ${currentLang}`);
+           recognitionRef.current.lang = recognitionLang;
+       }
+   }, [i18n.language]); // Re-run when language changes
+
+   // --- Speech Recognition Toggle Function ---
+   const handleToggleListening = () => {
+       if (!recognitionRef.current) {
+           alert('Speech Recognition is not supported by your browser.');
+           return;
+       }
+
+       if (isListening) {
+           recognitionRef.current.stop();
+       } else {
+           try {
+               recognitionRef.current.start();
+           } catch (err) {
+               // Handle potential errors if start() is called while already active (though onend should prevent this)
+               console.error("Error starting speech recognition:", err);
+               setIsListening(false); // Reset state if start fails
+           }
+       }
+   };
+   // --- End Speech Recognition Toggle Function ---
+
+
+   // Effect to handle selecting session based on URL or loading the latest
+  useEffect(() => {
+    // Don't run if sessions haven't loaded yet from the store
+    if (sessionsLoading) return;
+
+    if (routeSessionId) {
+        // If there's a session ID in the URL, try to load it
+        if (routeSessionId !== currentSession?._id) {
+            const sessionFromRoute = sessions.find((s: ChatSession) => s._id === routeSessionId);
+            if (sessionFromRoute) {
+                console.log("Loading session from URL:", routeSessionId);
+                setCurrentSession(sessionFromRoute);
+                fetchMessages(sessionFromRoute._id);
+            } else {
+                console.warn(`Session ID ${routeSessionId} from URL not found in fetched sessions.`);
+                // Optional: Navigate to base chat page or show error?
+                // navigate('/chat');
+            }
+        }
+    } else if (!currentSession && sessions.length > 0) {
+        // If no session ID in URL and no session currently selected, load the most recent one
+        const mostRecentSession = sessions[0]; // Assuming the first one is the most recent (sorted by lastAccessedAt)
+        console.log("No session in URL, loading most recent by lastAccessedAt:", mostRecentSession._id);
+        handleSelectSession(mostRecentSession); // This will navigate and fetch messages
+    }
+
+    // Group sessions when sessions data changes
+    if (sessions.length > 0) {
+      const now = new Date(); // Use current time for grouping
+      setGroupedSessions(groupSessionsByDate(sessions, now));
+    } else {
+      setGroupedSessions([]); // Clear grouped sessions if no sessions
+    }
+  }, [routeSessionId, sessions, currentSession, sessionsLoading, navigate]); // Dependencies updated
+
+
+  // Effect to scroll to bottom when messages change or loading finishes
+  useEffect(() => {
+    // Scroll to bottom smoothly after messages load or a new message is added
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loadingMessages]); // Trigger on message array change or when loading finishes
+
+  // Effect for auto-expanding textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+        // Always reset height to auto first to allow the textarea to naturally size to its content
+        textareaRef.current.style.height = 'auto';
+        const scrollHeight = textareaRef.current.scrollHeight;
+
+        // Now, set the actual height to this scrollHeight to show all content
+        textareaRef.current.style.height = `${scrollHeight}px`;
+
+        // isTextareaElevated logic removed as it's always "elevated" now
+    }
+  }, [newMessage]); // Trigger when newMessage changes
+
+  // REMOVED: Effect to open sidebar when no chat is selected (Keep default collapsed)
+  // useEffect(() => {
+  //   if (!currentSession && !isSidebarVisible) {
+  //     setIsSidebarVisible(true);
+  //   }
+   // }, [currentSession, isSidebarVisible]); // Keep comment or remove if no longer relevant
+
+   // Removed local toggleSidebarVisibility function
+
+   // --- Render ---
+  return (
+    <div className={styles.chatPageContainer} style={{ backgroundColor: isDarkMode ? '#1a1a1a' : '#f8f9fa' }}> {/* Apply container background */}
+      {/* Sidebar */}
+      <div
+        className={`${styles.chatSidebar} ${isSidebarVisible ? styles.chatSidebarVisible : styles.chatSidebarHidden}`}
+        style={{ backgroundColor: isDarkMode ? '#2a2a2a' : '#ffffff' }} // Apply opaque background directly
+      >
+         {isSidebarVisible && (
+             <>
+                 {/* Chat History Title and Close/New Chat Buttons */}
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                     <h4>{t('chat_history_title')}</h4>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <button
+                            onClick={() => startNewChat(navigate)}
+                            className={styles.sidebarHeaderCloseButton} // Re-use style for consistency
+                            title={t('chat_new_button')}
+                            aria-label={t('chat_new_button')}
+                        >
+                            <MdAddCircleOutline size="1.3em" />
+                        </button>
+                        <button
+                            onClick={toggleSidebarVisibility}
+                            className={styles.sidebarHeaderCloseButton} // Use new specific class
+                            title={t('chat_sidebar_hide_tooltip')}
+                            aria-label={t('chat_sidebar_hide_tooltip')}
+                        >
+                            <MdChevronLeft size="1.5em" /> {/* Replaced &laquo; with icon */}
+                        </button>
+                     </div>
+                 </div>
+                 {/* Use global sessionsLoading and sessionsError */}
+                 {sessionsLoading ? <p>{t('chat_loading')}</p> : sessionsError ? <p style={{ color: 'red' }}>{sessionsError}</p> : groupedSessions.length > 0 ? (
+                  <div style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {groupedSessions.map((group: DateGroup) => (
+                      <div key={group.title} className={styles.sessionGroup}>
+                        <h5 className={styles.sessionGroupTitle}>
+                          {group.title === "date_group_previous_7_days" || group.title === "date_group_previous_30_days"
+                            ? t(group.title)
+                            : group.title}
+                        </h5>
+                        {group.sessions.length > 0 ? (
+                          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                            {group.sessions.map((session: ChatSession) => (
+                              <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}>
+                                <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}>
+                                  {session.title || 'Untitled Chat'}
+                                </span>
+                                <button
+                                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); deleteSession(session._id, currentSession?._id ?? null, navigate); }}
+                                  disabled={deleteLoading === session._id}
+                                  className={styles.deleteSessionButton}
+                                  aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}
+                                >
+                                  {deleteLoading === session._id ? '...' : <MdClose size="0.9em" />}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className={styles.noSessionsInGroup}>{t('chat_no_sessions_in_group')}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : <p>{t('chat_no_history')}</p>}
+             </>
+         )}
+      </div>
+
+       {/* Main Chat Area */}
+       <div className={styles.mainChatArea}>
+          {/* Removed floating hamburger button */}
+          {/* Hamburger button removed from Navbar, will be added below - This comment seems misplaced now */}
+
+          {currentSession ? (
+           <>
+             {/* Header */}
+             <div style={{
+                 display: 'flex',
+                 justifyContent: 'space-between',
+                 alignItems: 'center',
+                 marginBottom: '15px',
+                 paddingBottom: '15px',
+                 borderBottom: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
+                 marginLeft: '40px', // This might need adjustment if sidebar toggle is here
+                 color: isDarkMode ? '#e0e0e0' : 'inherit',
+                  gap: '10px' // Add gap between header items
+              }}>
+                  {/* Hamburger Button Removed From Here */}
+                  <h3 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit', flexGrow: 1, margin: 0 }}>{currentSession.title || 'Untitled Chat'}</h3> {/* Allow title to grow */}
+                  {/* Ensure New Chat Button is removed from here */}
+                  <button
+                      onClick={handleToggleShare}
+                      disabled={shareLoading}
+                      className={`${styles.fileUploadButton} ${styles.reasoningToggle}`} // Use common icon button styles
+                      title={currentSession.isShared ? t('chat_unshare_button') : t('chat_share_button')}
+                      aria-label={currentSession.isShared ? t('chat_unshare_button') : t('chat_share_button')}
+                  >
+                      {shareLoading ? '...' : (currentSession.isShared ? <MdLinkOff /> : <MdShare />)}
+                  </button>
+             </div>
+             {currentSession.isShared && currentSession.shareId && (
+                <div style={{
+                    marginBottom: '10px',
+                    padding: '5px',
+                    background: isDarkMode ? '#3a3d41' : '#f0f0f0',
+                    color: isDarkMode ? '#e0e0e0' : 'inherit',
+                    borderRadius: '4px',
+                    marginLeft: '40px', // This might need adjustment
+                    display: 'flex', // Use flexbox for alignment
+                    alignItems: 'center', // Align items vertically
+                    gap: '10px' // Add space between link and button
+                }}>
+                    <a href={`/share/${currentSession.shareId}`} target="_blank" rel="noopener noreferrer" style={{ color: isDarkMode ? '#64b5f6' : '#007bff' }}>
+                        {t('chat_share_link')} {/* Display translated text as link */}
+                    </a>
+                    <CopyButton
+                        textToCopy={`${window.location.origin}/share/${currentSession.shareId}`}
+                    />
+                </div>
+             )}
+
+             {/* Messages */}
+             <div className={styles.messageList}> {/* Keep ref removed from here */}
+               {loadingMessages ? <p>{t('chat_loading_messages')}</p> : messages.length > 0 ? (
+                 messages.map((msg: ChatMessage) => (
+                   <div key={msg._id} className={`${styles.messageRow} ${msg.sender === 'user' ? styles.messageRowUser : styles.messageRowAi}`}>
+
+                        {/* --- AI MESSAGE --- */}
+                        {msg.sender === 'ai' && (
+                            <>
+                                {/* --- Reasoning Section --- */}
+                                {/* Render if showReasoning is true AND reasoning is available */}
+                                {showReasoning && (msg.reasoningContent || reasoningSteps[msg._id] || (THINK_TAG_MODELS.includes(msg.modelUsed || '') && parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).reasoning)) && (
+                                    <details open={streamingMessageId === msg._id} style={{ marginBottom: '10px', marginLeft: '10px', marginRight: '10px', fontSize: '0.85em', opacity: 0.8 }}>
+                                        <summary style={{ cursor: 'pointer', color: isDarkMode ? '#ccc' : '#555' }}>Reasoning Steps</summary>
+                                        <pre style={{
+                                            background: isDarkMode ? '#2a2a2a' : '#f0f0f0',
+                                            padding: '8px',
+                                            borderRadius: '4px',
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-all',
+                                            maxHeight: '200px', // Limit height
+                                            overflowY: 'auto' // Allow scrolling
+                                        }}>
+                                            {/* Display reasoning: Check final msg.reasoningContent, then temp state, then parse <think> tags */}
+                                            {msg.reasoningContent
+                                                ? msg.reasoningContent
+                                                : reasoningSteps[msg._id] // Check temp state during streaming
+                                                    ? reasoningSteps[msg._id]
+                                                    : THINK_TAG_MODELS.includes(msg.modelUsed || '') // Then check for <think> tags
+                                                        ? parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).reasoning
+                                                        : null // No reasoning available/expected otherwise
+                                            }
+                                        </pre>
+                                    </details>
+                                )}
+
+                                    {/* --- AI Bubble (Copy Button moved inside) --- */}
+                                    {/* Removed outer flex wrapper */}
+                                    <div
+                                        className={`${styles.messageBubble}`}
+                                        style={{
+                                            background: isDarkMode ? '#3a3d41' : '#e9ecef', // AI Background
+                                            color: isDarkMode ? '#e0e0e0' : '#343a40', // AI Text Color
+                                        }}
+                                    >
+                                        {/* Copy Button moved inside */}
+                                        <CopyButton
+                                            textToCopy={streamingMessageId === msg._id ? streamingMessageContent : msg.content}
+                                            className={styles.copyButtonInside} // Apply new class
+                                        />
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                            code({ className, children, ...props }: { className?: string; children?: React.ReactNode }) {
+                                                const match = /language-(\w+)/.exec(className || '');
+                                                const baseTheme = isDarkMode ? okaidia : prism;
+                                                const customSyntaxTheme = {
+                                                    ...baseTheme,
+                                                    'pre[class*="language-"]': {
+                                                        ...(baseTheme['pre[class*="language-"]'] || {}),
+                                                        background: 'transparent',
+                                                        backgroundColor: 'transparent',
+                                                    },
+                                                    'code[class*="language-"]': {
+                                                        ...(baseTheme['code[class*="language-"]'] || {}),
+                                                        background: 'transparent',
+                                                        backgroundColor: 'transparent',
+                                                    }
+                                                };
+                                                return match ? (
+                                                    <SyntaxHighlighter style={customSyntaxTheme as any} language={match[1]} useInlineStyles={true}>
+                                                        {String(children).replace(/\n$/, '')}
+                                                    </SyntaxHighlighter>
+                                                ) : (
+                                                    <code className={className} {...props}>{children}</code>
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        {/* Render parsed main content only for THINK_TAG_MODELS, otherwise full content */}
+                                        {THINK_TAG_MODELS.includes(msg.modelUsed || '')
+                                            ? parsePerplexityContent(streamingMessageId === msg._id ? streamingMessageContent : msg.content).mainContent
+                                            : (streamingMessageId === msg._id ? streamingMessageContent : msg.content)
+                                        }
+                                        </ReactMarkdown>
+                                        {/* Display file if present */}
+                                        {msg.fileInfo && (
+                                            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${isDarkMode ? '#555' : '#ddd'}` }}>
+                                                {msg.fileInfo.mimetype.startsWith('image/') ? (
+                                                    <img
+                                                        // Use fileInfo.path directly as it's now a full S3 URL
+                                                        src={msg.fileInfo.path}
+                                                        alt={msg.fileInfo.originalname}
+                                                        style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '4px', marginTop: '5px' }}
+                                                    />
+                                                ) : (
+                                                    <a
+                                                        // Use fileInfo.path directly as it's now a full S3 URL
+                                                        href={msg.fileInfo.path}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        download={msg.fileInfo.originalname}
+                                                        className={styles.fileLink} // Add a class for styling if needed
+                                                        style={{ color: isDarkMode ? '#8ab4f8' : '#007bff' }}
+                                                    >
+                                                        📄 {msg.fileInfo.originalname} ({(msg.fileInfo.size / 1024).toFixed(1)} KB)
+                                                    </a>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* End AI Bubble */}
+
+                            {/* Add citations to the main bubble if available */}
+                            {/* Force citations to be displayed regardless of streaming state */}
+                            {(() => {
+                                // Debug log for citations rendering
+                                console.log(`Rendering message ${msg._id}:`, {
+                                    hasCitations: !!msg.citations,
+                                    citationsLength: msg.citations?.length || 0,
+                                    isStreaming: streamingMessageId === msg._id,
+                                    citations: msg.citations
+                                });
+
+                                // Check if citations exist and are not empty
+                                if (msg.citations && msg.citations.length > 0) {
+                                    console.log(`Rendering citations for message ${msg._id}`);
+                                    return (
+                                        <div style={{
+                                            marginTop: '15px',
+                                            borderTop: `1px solid ${isDarkMode ? '#444' : '#dee2e6'}`,
+                                            paddingTop: '10px'
+                                        }}>
+                                    <div style={{ marginBottom: '5px', fontWeight: 'bold' }}>Sources:</div>
+                                    {msg.citations.map((citation: any, index: number) => (
+                                        <div key={index} style={{ marginBottom: '8px' }}>
+                                            <a
+                                                href={citation.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ color: isDarkMode ? '#64b5f6' : '#007bff', wordBreak: 'break-all' }}
+                                            >
+                                                {index + 1}. {citation.url}
+                                            </a>
+                                            {citation.snippet && (
+                                                <div style={{ marginTop: '4px', fontStyle: 'italic', opacity: 0.8 }}>
+                                                    "{citation.snippet}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+                        </>
+                    )}
+
+                    {/* --- USER MESSAGE --- */}
+                    {msg.sender === 'user' && (
+                        <>
+                            {/* User Bubble */}
+                            <div
+                                className={`${styles.messageBubble} ${styles.messageBubbleUser}`}
+                                style={isDarkMode ? { backgroundColor: '#10402c' } : undefined}
+                            >
+                                {/* Copy Button moved inside */}
+                                <CopyButton
+                                    textToCopy={msg.content}
+                                    className={styles.copyButtonInside} // Apply new class
+                                />
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                                {/* Display file if present for user messages too */}
+                                {msg.fileInfo && (
+                                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${isDarkMode ? '#3a87fd' : '#3390ff'}` }}>
+                                        {msg.fileInfo.mimetype.startsWith('image/') ? (
+                                            <img
+                                                // Use fileInfo.path directly as it's now a full S3 URL
+                                                src={msg.fileInfo.path}
+                                                alt={msg.fileInfo.originalname}
+                                                style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '4px', marginTop: '5px' }}
+                                            />
+                                        ) : (
+                                            <a
+                                                // Use fileInfo.path directly as it's now a full S3 URL
+                                                href={msg.fileInfo.path}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                download={msg.fileInfo.originalname}
+                                                className={styles.fileLink}
+                                                style={{ color: isDarkMode ? '#cce0ff' : '#e6f2ff' }} // Lighter color for user bubble
+                                            >
+                                                📄 {msg.fileInfo.originalname} ({(msg.fileInfo.size / 1024).toFixed(1)} KB)
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {/* User Button Removed from outside */}
+                        </>
+                    )}
+                     </div>
+                 ))
+               ) : <p>{t('chat_start_message')}</p>}
+                {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+                {/* Add empty div at the end for scrolling ref */}
+                <div ref={messagesEndRef} />
+             </div>
+
+              {/* Input Area */}
+              <form onSubmit={handleSendMessage} className={styles.inputForm}>
+                 {/* Preview Area - Remains above the input bar */}
+                 {previewUrl && selectedFile && selectedFile.type.startsWith('image/') && (
+                    <div style={{ marginBottom: '10px', position: 'relative', maxWidth: '150px' }}>
+                        <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '4px' }} />
+                        <button onClick={clearSelectedFile} className={styles.clearPreviewButton} title="Remove image"><MdClose /></button>
+                    </div>
+                 )}
+                 {selectedFile && !selectedFile.type.startsWith('image/') && (
+                    <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span className={styles.fileNamePreview}>
+                            <MdAttachFile style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {selectedFile.name}
+                        </span>
+                        <button onClick={clearSelectedFile} className={styles.clearPreviewButtonSmall} title="Remove file"><MdClose size="0.8em" /></button>
+                    </div>
+                 )}
+
+                 {/* Input Controls Container - isTextareaElevated class removed */}
+                 <div className={styles.inputControls}>
+                    {/* Textarea is now always rendered first (visually above icons due to CSS flex-direction: column) */}
+                    <textarea
+                        ref={textareaRef}
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={t('chat_input_placeholder')}
+                        disabled={sendingMessage || loadingMessages || !currentSession}
+                        className={styles.messageInput} // Use general messageInput style, .elevatedTextarea class might be merged or removed from CSS
+                        onPaste={handlePaste}
+                        rows={1} // Add rows={1}
+                    />
+                    {/* Icon Row */}
+                    <div className={styles.iconRow}>
+                        {/* Left Icon Group */}
+                        <div className={styles.iconGroupLeft}>
+                            {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) ? (
+                                <ModelSelectorDropdown
+                                    availableModels={availableModels}
+                                    selectedModel={selectedModel}
+                                    onModelChange={(newModel: string) => {
+                                        setSelectedModel(newModel);
+                                        // REASONING_MODELS check and setShowReasoning(true) removed as reasoning is always on
+                                    }}
+                                    disabled={sendingMessage || loadingMessages}
+                                />
+                            ) : null}
+
+                            {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) && (
+                                <button type="button" onClick={() => setIsSessionMemoryActive(!isSessionMemoryActive)} title={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"} aria-label={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"} aria-pressed={isSessionMemoryActive} className={styles.reasoningToggle} style={{ opacity: isSessionMemoryActive ? 1 : 0.6 }}>
+                                    <MdAutoAwesome />
+                                </button>
+                            )}
+
+                            {/* Reasoning toggle button removed */}
+                        </div>
+
+                        {/* Right Icon Group */}
+                        <div className={styles.iconGroupRight}>
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} id="file-upload" accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" />
+                            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={sendingMessage || loadingMessages || !currentSession} className={styles.fileUploadButton} title={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')} aria-label={selectedFile ? t('chat_attach_file_selected', { filename: selectedFile.name }) : t('chat_attach_file')}>
+                                <MdAttachFile />
+                            </button>
+
+                            {recognitionRef.current && (
+                                <button type="button" onClick={handleToggleListening} disabled={sendingMessage || loadingMessages || !currentSession} className={`${styles.micButton} ${isListening ? styles.micButtonListening : ''}`} title={isListening ? t('chat_stop_listening') : t('chat_start_listening')} aria-label={isListening ? t('chat_stop_listening') : t('chat_start_listening')}>
+                                    {isListening ? <MdMicOff /> : <MdMic />}
+                                </button>
+                            )}
+
+                            <button type="submit" disabled={sendingMessage || loadingMessages || (!newMessage.trim() && !selectedFile)} className={styles.sendButton} title={t('chat_send_button')} aria-label={t('chat_send_button')}>
+                                <MdSend />
+                            </button>
+                        </div>
+                    </div>
+                 </div>
+             </form>
+           </>
+         ) : (
+             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}> {/* Use flex column and center */}
+                 <p>{t('chat_select_prompt')}</p>
+                 {/* Removed local handleNewChat button */}
+             </div>
+         )}
+       </div>
+     </div>
+   );
+ };
+
+export default ChatPage;

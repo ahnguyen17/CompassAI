@@ -84,8 +84,12 @@ Implementation of the User Memory feature, enabling personalized chat responses 
     - Updated `addMessageToSession` in `backend/controllers/chatMessages.js` to set `lastMessageTimestamp` (and `lastAccessedAt`) on the parent `ChatSession` to the timestamp of the new user message.
     - Ensured the API response for posting a message includes the full updated `ChatSession` object.
     - Frontend `groupSessionsByDate` in `ChatPage.tsx` now prioritizes `lastMessageTimestamp`, then `lastAccessedAt`, then `createdAt` for grouping and sorting, ensuring chats with new messages correctly move to recent groups.
+- **Chat History Grouping Backend Fix:**
+    - Updated `getChatSessions` in `backend/controllers/chatSessions.js` to sort sessions primarily by `lastMessageTimestamp` descending, then by `lastAccessedAt` descending.
+    - Updated `createChatSession` in `backend/controllers/chatSessions.js` to explicitly initialize `lastMessageTimestamp` (and `lastAccessedAt`) for new sessions, ensuring they have a valid timestamp for sorting from creation.
 
 ## Next Steps
+- Thoroughly test the chat history grouping to ensure it now correctly uses `lastMessageTimestamp`.
 - Verify the latest chat input UI fixes (CSS padding, JS elevation logic, vertical spacing tweak) in the browser.
 - Verify the user chat bubble color fix in dark mode (now using inline style with color `#10402c` directly in the React component).
 - Thoroughly test the new User Memory feature:

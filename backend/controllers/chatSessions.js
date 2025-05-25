@@ -10,8 +10,8 @@ const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3'); // Impo
 exports.getChatSessions = async (req, res, next) => {
   try {
     // Find sessions belonging to the logged-in user (req.user set by protect middleware)
-    // Sort by last accessed date, newest first
-    const sessions = await ChatSession.find({ user: req.user.id }).sort({ lastAccessedAt: -1 });
+    // Sort by last message timestamp first, then last accessed date, newest first
+    const sessions = await ChatSession.find({ user: req.user.id }).sort({ lastMessageTimestamp: -1, lastAccessedAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -132,6 +132,9 @@ exports.createChatSession = async (req, res, next) => {
     if (!sessionData.title) {
         sessionData.title = "New Chat"; // Default title
     }
+    // Ensure lastMessageTimestamp is initialized for new sessions
+    sessionData.lastMessageTimestamp = sessionData.createdAt || Date.now();
+    sessionData.lastAccessedAt = sessionData.lastMessageTimestamp; // Align lastAccessedAt initially
 
     const session = await ChatSession.create(sessionData);
 

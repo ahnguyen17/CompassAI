@@ -63,7 +63,7 @@ The project follows a client-server architecture. The backend is built using Nod
 - `/auth`: User registration, login, password updates.
 - `/apikeys`: CRUD operations for provider API keys (Admin).
 - `/users`: User management (Admin).
-- `/chatsessions`: CRUD for chat sessions. Sorted by `lastAccessedAt` descending.
+- `/chatsessions`: CRUD for chat sessions. Sorted by `lastMessageTimestamp` descending (then `lastAccessedAt` descending). `lastMessageTimestamp` is initialized on session creation.
 - `/chatsessions/:sessionId/messages`:
     - `GET`: Retrieve messages for a session. Updates session `lastAccessedAt`.
     - `POST`: Add message (text and/or file) to session, triggers AI response. Updates session `lastAccessedAt` and `lastMessageTimestamp`. Handles `multipart/form-data` for file uploads. Now supports sending image data to vision-capable AI models.

@@ -114,9 +114,13 @@
         - Modifying the `ChatSession` interface on the frontend (`ChatPage.tsx`, `authStore.ts`) to include `lastMessageTimestamp`.
         - Updating the `groupSessionsByDate` function in `ChatPage.tsx` to prioritize `lastMessageTimestamp` for grouping and sorting.
         - Ensuring the frontend correctly receives and updates this timestamp in its state after interactions.
+    - **Backend Fix for Grouping:**
+        - Corrected sorting in `getChatSessions` (in `backend/controllers/chatSessions.js`) to use `lastMessageTimestamp` descending as the primary sort key, falling back to `lastAccessedAt`.
+        - Ensured `createChatSession` (in `backend/controllers/chatSessions.js`) initializes `lastMessageTimestamp` for new sessions.
 
 ## What's Left to Build
-- **Thoroughly test the new User Memory feature (Primary Next Step):**
+- **Thoroughly test the chat history grouping to ensure it now correctly uses `lastMessageTimestamp` (Primary Next Step).**
+- **Thoroughly test the new User Memory feature:**
     - Backend API functionality (CRUD for settings and contexts).
     - Frontend "Personalized Memory" panel in Settings.
     - Frontend session memory toggle on Chat Page.

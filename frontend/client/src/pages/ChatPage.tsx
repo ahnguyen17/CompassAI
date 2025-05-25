@@ -651,6 +651,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                   setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) =>
                                       msg._id === optimisticUserMessageId ? savedUserMsg : msg
                                   ));
+                              } else if (jsonData.type === 'done' && jsonData.updatedSession) { // Handle 'done' event with session update
+                                  console.log('Stream finished with done event, updating session.');
+                                  const updatedSessionFromServer = jsonData.updatedSession as ChatSession;
+                                  setCurrentSession(updatedSessionFromServer); // Update local currentSession
+                                  setSessions((prevSessions: ChatSession[]) => // Update global sessions list
+                                    prevSessions.map((s: ChatSession) => 
+                                      s._id === updatedSessionFromServer._id ? updatedSessionFromServer : s
+                                    )
+                                  );
+                                  // The rest of the 'done' logic (clearing streaming state) is handled by the existing 'done' block below
                               }
                           } catch (e: any) { console.error('Failed to parse SSE data:', e, 'Line:', line); }
                       }

@@ -80,6 +80,10 @@ interface DateGroup {
 
 // Helper function to group sessions by date
 const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): DateGroup[] => {
+  console.log('=== GROUPING SESSIONS DEBUG ===');
+  console.log('Total sessions to group:', sessions.length);
+  console.log('Current date/time:', currentDateTime);
+
   const groups: { [key: string]: ChatSession[] } = {};
   const outputOrder: string[] = [];
 
@@ -96,6 +100,13 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
   const startOfPreviousYear = new Date(today.getFullYear() - 1, 0, 1);
   const startOfTwoYearsAgo = new Date(today.getFullYear() - 2, 0, 1); // For "Older" category
 
+  console.log('Date boundaries:');
+  console.log('  Today:', today);
+  console.log('  Seven days ago:', sevenDaysAgo);
+  console.log('  Thirty days ago:', thirtyDaysAgo);
+  console.log('  Start of this year:', startOfThisYear);
+  console.log('  Start of previous year:', startOfPreviousYear);
+
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
@@ -108,11 +119,21 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
     // Dynamic titles for months and years will be generated
   };
 
-  sessions.forEach(session => {
+  sessions.forEach((session, index) => {
     // Prioritize lastMessageTimestamp, then lastAccessedAt, then createdAt for grouping
     const dateToUse = session.lastMessageTimestamp || session.lastAccessedAt || session.createdAt;
     const sessionDate = new Date(dateToUse);
     sessionDate.setHours(0, 0, 0, 0); // Normalize session date to start of day for comparison
+
+    console.log(`Session ${index + 1} (${session._id}):`, {
+      title: session.title,
+      lastMessageTimestamp: session.lastMessageTimestamp,
+      lastAccessedAt: session.lastAccessedAt,
+      createdAt: session.createdAt,
+      dateToUse: dateToUse,
+      sessionDate: sessionDate,
+      isLastMessageTimestampUsed: !!session.lastMessageTimestamp
+    });
 
     let groupKey: string | null = null;
 
@@ -127,6 +148,8 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
       // Older years
       groupKey = `${sessionDate.getFullYear()}`;
     }
+
+    console.log(`  -> Assigned to group: ${groupKey}`);
 
     if (groupKey) {
       if (!groups[groupKey]) {
@@ -210,12 +233,27 @@ const groupSessionsByDate = (sessions: ChatSession[], currentDateTime: Date): Da
 
   const finalOutputOrder = [...fixedOrder, ...dynamicGroups];
 
-  return finalOutputOrder
+  const result = finalOutputOrder
     .filter(key => groups[key] && groups[key].length > 0) // Only include keys that have sessions
     .map(key => ({
       title: key,
       sessions: groups[key]
     }));
+
+  console.log('Final grouped result:', result.map(group => ({
+    title: group.title,
+    sessionCount: group.sessions.length,
+    sessions: group.sessions.map(s => ({ 
+      id: s._id, 
+      title: s.title, 
+      lastMessageTimestamp: s.lastMessageTimestamp, 
+      lastAccessedAt: s.lastAccessedAt 
+    }))
+  })));
+
+  console.log('=== END GROUPING SESSIONS DEBUG ===');
+
+  return result;
 };
 
 
@@ -580,7 +618,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                                   hasCitations: !!m.citations,
                                                   citationsCount: m.citations?.length || 0
                                               }))
-                                          );
+                                          ); // Corrected: Added closing parenthesis for console.log
 
                                           return updatedMessages;
                                       });
@@ -607,7 +645,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                     setSessions(sessions.map((s: ChatSession): ChatSession => s._id === currentSession._id ? { ...s, title: jsonData.title } : s ));
                                   }
                               } else if (jsonData.type === 'error') {
-                                  setError(`AI Error: ${jsonData.message}`); console.error('SSE Error Event:', jsonData.message); setStreamingMessageId(null); setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) => msg._id === optimisticAiMessageId ? { ...msg, content: `[Error: ${jsonData.message}]`, modelUsed: 'error' } : msg)); reader.cancel(); return;
+                                  setError(`AI Error: ${jsonData.message}`); console.error('SSE Error Event:', jsonData.message); setStreamingMessageId(null); 
+                                  setMessages((prev: ChatMessage[]) => prev.map((msg: ChatMessage) => msg._id === optimisticAiMessageId ? { ...msg, content: `[Error: ${jsonData.message}]`, modelUsed: 'error' } : msg)); 
+                                  reader.cancel(); return; // Added return here
                               } else if (jsonData.type === 'done') {
                                   console.log('Stream finished.');
                                   // Get accumulated reasoning for this message from the local variable
@@ -707,7 +747,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
           } catch (err: any) {
               if (err.name === 'AbortError') { console.log('Fetch aborted'); setError('Message sending cancelled.'); } else { console.error('Fetch error:', err); setError(err.message || 'Error sending message or processing stream.'); }
               // Remove only the AI placeholder on error, keep the user message
-              setMessages((prev: ChatMessage[]) => prev.filter((m: ChatMessage) => m._id !== optimisticAiMessageId));
+              setMessages((prev: ChatMessage[]) => prev.filter((m: ChatMessage) => m._id !== optimisticAiMessageId)); // This should return the filtered array
               setStreamingMessageId(null); setStreamingMessageContent(''); if (err.response?.status === 401) navigate('/login');
           } finally {
               // Ensure sendingMessage is set to false even if streaming continues in background

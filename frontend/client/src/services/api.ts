@@ -55,7 +55,7 @@ const getBaseUrl = () => {
 
     // 2. Handle local development access (localhost vs. network IP)
     const hostname = window.location.hostname;
-    const backendPort = 5001; // Make sure this matches your backend server port
+    const backendPort = 5000; // Make sure this matches your backend server port
 
     // If accessing via IP address (likely from mobile on local network)
     if (hostname !== 'localhost' && hostname !== '127.0.0.1') {

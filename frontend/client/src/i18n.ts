@@ -14,6 +14,7 @@ const resources = {
       "nav_register": "Register",
       "nav_settings": "Settings",
       "nav_logout": "Logout",
+      "nav_new_chat": "New Chat", // Added this key to EN for consistency, though it might be mainly used by VI
       // Login Page
       "login_title": "Login",
       "login_identifier_label": "Email or Username:",
@@ -83,6 +84,7 @@ const resources = {
       "nav_register": "Đăng ký",
       "nav_settings": "Cài đặt",
       "nav_logout": "Đăng xuất",
+      "nav_new_chat": "Trò chuyện mới", // Added
       // Login Page
       "login_title": "Đăng nhập",
       "login_identifier_label": "Email hoặc Tên đăng nhập:",

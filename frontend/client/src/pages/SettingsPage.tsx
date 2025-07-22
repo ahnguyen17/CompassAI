@@ -1046,12 +1046,20 @@ const SettingsPage: React.FC = () => { // Removed props
           return;
       }
 
-      const payload = {
+      const payload: {
+          name: string;
+          provider?: string; // Make provider optional
+          baseModelIdentifier: string;
+          systemPrompt: string;
+      } = {
           name: modelFormName,
-          provider: selectedCustomProviderId, // Required for create, ignored by update but good practice
           baseModelIdentifier: modelFormBaseIdentifier,
           systemPrompt: modelFormSystemPrompt
       };
+
+      if (!editingCustomModel) {
+        payload.provider = selectedCustomProviderId;
+      }
 
       try {
           let response;

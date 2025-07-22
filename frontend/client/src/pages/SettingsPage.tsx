@@ -1046,29 +1046,25 @@ const SettingsPage: React.FC = () => { // Removed props
           return;
       }
 
-      const payload: {
-          name: string;
-          provider?: string; // Make provider optional
-          baseModelIdentifier: string;
-          systemPrompt: string;
-      } = {
-          name: modelFormName,
-          baseModelIdentifier: modelFormBaseIdentifier,
-          systemPrompt: modelFormSystemPrompt
-      };
-
-      if (!editingCustomModel) {
-        payload.provider = selectedCustomProviderId;
-      }
-
       try {
           let response;
           if (editingCustomModel) {
-              // Update existing model
-              response = await apiClient.put(`/custommodels/${editingCustomModel._id}`, payload);
+              // For updates, send only the fields that can be changed.
+              const updatePayload = {
+                  name: modelFormName,
+                  baseModelIdentifier: modelFormBaseIdentifier,
+                  systemPrompt: modelFormSystemPrompt
+              };
+              response = await apiClient.put(`/custommodels/${editingCustomModel._id}`, updatePayload);
           } else {
-              // Create new model
-              response = await apiClient.post('/custommodels', payload);
+              // For creates, send all fields including the provider.
+              const createPayload = {
+                  name: modelFormName,
+                  provider: selectedCustomProviderId,
+                  baseModelIdentifier: modelFormBaseIdentifier,
+                  systemPrompt: modelFormSystemPrompt
+              };
+              response = await apiClient.post('/custommodels', createPayload);
           }
 
           if (response.data?.success) {

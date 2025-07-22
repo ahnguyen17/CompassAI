@@ -80,7 +80,7 @@ interface CustomModel {
 
 // Interface for the base models dropdown structure
 interface BaseModelsForDropdown {
-    [provider: string]: string[];
+    [provider: string]: Array<{name: string, supportsVision: boolean}>;
 }
 // --- End NEW Interfaces ---
 
@@ -2094,9 +2094,9 @@ const SettingsPage: React.FC = () => { // Removed props
                                         .map(([provider, models]) => (
                                             <optgroup label={provider} key={provider}>
                                                 {models
-                                                    .sort() // Sort models within provider
-                                                    .map(modelName => (
-                                                        <option key={modelName} value={modelName}>{modelName}</option>
+                                                    .sort((a, b) => a.name.localeCompare(b.name)) // Sort models within provider
+                                                    .map(model => (
+                                                        <option key={model.name} value={model.name}>{model.name}</option>
                                                 ))}
                                             </optgroup>
                                     ))}

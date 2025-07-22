@@ -7,7 +7,8 @@ const { AVAILABLE_MODELS } = require('./providers'); // Import the hardcoded bas
 // Helper function to validate baseModelIdentifier
 const isValidBaseModel = (identifier) => {
     for (const provider in AVAILABLE_MODELS) {
-        if (AVAILABLE_MODELS[provider].includes(identifier)) {
+        // Check if any model in the provider array has a matching name
+        if (AVAILABLE_MODELS[provider].some(model => model.name === identifier)) {
             return true;
         }
     }

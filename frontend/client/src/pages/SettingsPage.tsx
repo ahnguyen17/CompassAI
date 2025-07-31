@@ -212,6 +212,10 @@ const SettingsPage: React.FC = () => { // Removed props
   const [fetchCustomModelsError, setFetchCustomModelsError] = useState('');
   const [selectedCustomProviderId, setSelectedCustomProviderId] = useState<string>(''); // ID of provider whose models are shown
 
+  // All custom models for admin settings (across all providers)
+  const [allCustomModels, setAllCustomModels] = useState<CustomModel[]>([]);
+  const [loadingAllCustomModels, setLoadingAllCustomModels] = useState(true);
+
   const [baseModelsForDropdown, setBaseModelsForDropdown] = useState<BaseModelsForDropdown>({});
   const [loadingBaseModels, setLoadingBaseModels] = useState(true);
   const [fetchBaseModelsError, setFetchBaseModelsError] = useState('');
@@ -367,6 +371,30 @@ const SettingsPage: React.FC = () => { // Removed props
       }
   };
 
+  // --- Fetch All Custom Models (Admin) --- NEW ---
+  const fetchAllCustomModels = async () => {
+      if (currentUser?.role !== 'admin') {
+          setLoadingAllCustomModels(false);
+          return;
+      }
+      setLoadingAllCustomModels(true);
+      try {
+          // Fetch all custom models without provider filter
+          const response = await apiClient.get('/custommodels');
+          if (response.data?.success) {
+              setAllCustomModels(response.data.data);
+          } else {
+              console.error('Failed to load all custom models.');
+              setAllCustomModels([]);
+          }
+      } catch (err: any) {
+          console.error('Error loading all custom models:', err);
+          setAllCustomModels([]);
+      } finally {
+          setLoadingAllCustomModels(false);
+      }
+  };
+
   // --- Fetch Base Models for Dropdown (All Users) --- NEW ---
    const fetchBaseModelsForDropdown = async () => {
         setLoadingBaseModels(true); setFetchBaseModelsError('');
@@ -447,11 +475,13 @@ const SettingsPage: React.FC = () => { // Removed props
          fetchModelStatuses(); // Fetch model statuses for admin
          fetchGlobalSettings(); // Fetch global settings for admin
          fetchCustomProviders(); // Fetch custom providers for admin
+         fetchAllCustomModels(); // Fetch all custom models for admin settings
          // Initial fetch for stats is handled by the stats useEffect below
      } else {
         // Ensure loading states are false if not admin
         setLoadingUsers(false);
         setLoadingCustomProviders(false); // NEW
+        setLoadingAllCustomModels(false); // NEW
         setLoadingReferralCodes(false);
          setLoadingModelStatuses(false); // Also set model status loading to false
          setLoadingStats(false); // Also set stats loading to false if not admin
@@ -2097,6 +2127,23 @@ const SettingsPage: React.FC = () => { // Removed props
                    </div>
                )}
 
+               {/* Debug Info - Remove this after testing */}
+               {currentUser?.role === 'admin' && (
+                   <div style={{
+                       marginTop: '20px',
+                       padding: '10px',
+                       background: isDarkMode ? '#2a2a2a' : '#f0f0f0',
+                       borderRadius: '4px',
+                       fontSize: '0.8em'
+                   }}>
+                       <strong>Debug Info:</strong><br/>
+                       loadingGlobalSettings: {loadingGlobalSettings.toString()}<br/>
+                       fetchGlobalSettingsError: {fetchGlobalSettingsError || 'none'}<br/>
+                       globalSettings: {globalSettings ? 'loaded' : 'null'}<br/>
+                       allowedCustomAIModels: {globalSettings?.allowedCustomAIModels?.length || 0} items
+                   </div>
+               )}
+
                {/* Custom AI Model Restrictions */}
                {!loadingGlobalSettings && !fetchGlobalSettingsError && globalSettings && (
                    <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: `1px solid ${isDarkMode ? '#444' : '#eee'}` }}>
@@ -2131,7 +2178,10 @@ const SettingsPage: React.FC = () => { // Removed props
 
                                <div style={{ marginBottom: '20px' }}>
                                    <h5 style={{ marginBottom: '10px' }}>Base Models:</h5>
-                                   {baseModelsForDropdown && Object.keys(baseModelsForDropdown).map(provider => (
+                                   {loadingBaseModels ? (
+                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>Loading models...</p>
+                                   ) : baseModelsForDropdown && Object.keys(baseModelsForDropdown).length > 0 ? (
+                                       Object.keys(baseModelsForDropdown).map(provider => (
                                        <div key={provider} style={{ marginBottom: '15px' }}>
                                            <h6 style={{ marginBottom: '8px', color: isDarkMode ? '#aaa' : '#666' }}>{provider}:</h6>
                                            {baseModelsForDropdown[provider].map(model => (
@@ -2157,13 +2207,17 @@ const SettingsPage: React.FC = () => { // Removed props
                                                </label>
                                            ))}
                                        </div>
-                                   ))}
+                                   ))) : (
+                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>No base models available.</p>
+                                   )}
                                </div>
 
-                               {customModels && customModels.length > 0 && (
-                                   <div style={{ marginBottom: '20px' }}>
-                                       <h5 style={{ marginBottom: '10px' }}>Custom Models:</h5>
-                                       {customModels.map(model => (
+                               <div style={{ marginBottom: '20px' }}>
+                                   <h5 style={{ marginBottom: '10px' }}>Custom Models:</h5>
+                                   {loadingAllCustomModels ? (
+                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>Loading custom models...</p>
+                                   ) : allCustomModels && allCustomModels.length > 0 ? (
+                                       allCustomModels.map(model => (
                                            <label key={model._id} style={{
                                                display: 'block',
                                                marginBottom: '5px',
@@ -2184,9 +2238,10 @@ const SettingsPage: React.FC = () => { // Removed props
                                                />
                                                {model.providerName}: {model.name} (Custom)
                                            </label>
-                                       ))}
-                                   </div>
-                               )}
+                                       ))) : (
+                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>No custom models available.</p>
+                                   )}
+                               </div>
 
                                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                    <button

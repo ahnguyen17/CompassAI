@@ -90,8 +90,8 @@ CustomAISchema.index({ userId: 1, name: 1 }, { unique: true });
 
 // Pre-save hook to validate knowledge base files limit
 CustomAISchema.pre('save', function (next) {
-  if (this.knowledgeBaseFiles && this.knowledgeBaseFiles.length > 10) {
-    const error = new Error('Cannot have more than 10 knowledge base files.');
+  if (this.knowledgeBaseFiles && this.knowledgeBaseFiles.length > 20) {
+    const error = new Error('Cannot have more than 20 knowledge base files.');
     error.name = 'ValidationError';
     return next(error);
   }

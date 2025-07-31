@@ -122,8 +122,8 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
 
   // Handle file upload
   const handleFileUpload = async (file: File) => {
-    if (customAI.knowledgeBaseFiles.length >= 10) {
-      setUploadError('Maximum of 10 files allowed per custom AI.');
+    if (customAI.knowledgeBaseFiles.length >= 20) {
+      setUploadError('Maximum of 20 files allowed per custom AI.');
       return;
     }
 
@@ -265,7 +265,7 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
                 Supported: {supportedTypes}
               </p>
               <p style={{ margin: '5px 0 0 0', fontSize: '0.8em', opacity: 0.6 }}>
-                Max 10 files, 10MB per file
+                Max 20 files, 10MB per file
               </p>
             </>
           )}
@@ -274,7 +274,7 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
         {/* Files List */}
         <div>
           <h5 style={{ marginBottom: '15px' }}>
-            Uploaded Files ({customAI.knowledgeBaseFiles.length}/10)
+            Uploaded Files ({customAI.knowledgeBaseFiles.length}/20)
           </h5>
           
           {customAI.knowledgeBaseFiles.length === 0 ? (

@@ -334,7 +334,7 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
                     }
                   </p>
                   <p style={{ margin: '5px 0', fontSize: '0.8em', opacity: 0.7 }}>
-                    Files: {ai.knowledgeBaseFiles.length}/10 | 
+                    Files: {ai.knowledgeBaseFiles.length}/20 |
                     Created: {new Date(ai.createdAt).toLocaleDateString()}
                   </p>
                 </div>

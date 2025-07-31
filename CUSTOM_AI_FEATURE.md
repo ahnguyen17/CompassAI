@@ -8,7 +8,7 @@ The Custom AI feature allows users to create personalized AI assistants with cus
 
 ### Core Functionality
 - **Custom AI Creation**: Users can create multiple personalized AI assistants
-- **Knowledge Base**: Upload up to 10 files per custom AI to create a knowledge base
+- **Knowledge Base**: Upload up to 20 files per custom AI to create a knowledge base
 - **Custom Instructions**: Define AI behavior and personality with up to 2000 characters
 - **Model Selection**: Choose from available AI models for each custom AI
 - **Chat Integration**: Use custom AIs directly in chat conversations
@@ -19,7 +19,7 @@ The Custom AI feature allows users to create personalized AI assistants with cus
 - **Images**: PNG, JPG, JPEG (placeholder for future OCR integration)
 
 ### File Limits
-- Maximum 10 files per custom AI
+- Maximum 20 files per custom AI
 - Maximum 10MB per file
 - Automatic text extraction and processing
 
@@ -117,7 +117,7 @@ GET    /api/v1/customai/:id/chat-context    # Get custom AI context for chat
 ### Adding Knowledge Base Files
 
 1. **Open File Manager**: Click "Files" button on a custom AI
-2. **Upload Files**: Drag and drop or click to browse files
+2. **Upload Files**: Drag and drop or click to browse files (up to 20 files)
 3. **Monitor Processing**: Wait for files to process and extract text
 4. **Manage Files**: View, delete files as needed
 

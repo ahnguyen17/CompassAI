@@ -230,8 +230,8 @@ exports.uploadKnowledgeBaseFile = asyncHandler(async (req, res, next) => {
   }
   
   // Check file limit
-  if (customAI.knowledgeBaseFiles.length >= 10) {
-    return next(new ErrorResponse('Maximum of 10 files allowed per custom AI', 400));
+  if (customAI.knowledgeBaseFiles.length >= 20) {
+    return next(new ErrorResponse('Maximum of 20 files allowed per custom AI', 400));
   }
   
   // Upload file to S3

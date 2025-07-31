@@ -504,7 +504,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
 
       // Prepare form data with custom AI context if needed
       const formData = new FormData();
-      let finalContent = userMessageContent;
+      let contentForAPI = userMessageContent; // Content sent to API (may include custom AI context)
+      let contentForDisplay = userMessageContent; // Content displayed in chat (original user message)
       let finalModel = selectedModel;
 
       // Handle custom AI selection
@@ -513,8 +514,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
           const customAIContext = await prepareCustomAIContext(customAIId);
 
           if (customAIContext) {
-              // Prepend custom AI context to user message
-              finalContent = customAIContext + ' ' + userMessageContent;
+              // Prepend custom AI context to content sent to API, but keep original for display
+              contentForAPI = customAIContext + ' ' + userMessageContent;
+              // contentForDisplay remains as userMessageContent (original user input)
 
               // Get the actual model to use from the custom AI
               try {
@@ -530,7 +532,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
           }
       }
 
-      formData.append('content', finalContent);
+      formData.append('content', contentForAPI);
+      formData.append('originalContent', contentForDisplay); // Send original user content separately
       if (fileToSend) formData.append('file', fileToSend);
       if (finalModel) formData.append('model', finalModel);
 
@@ -538,7 +541,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
       const optimisticUserMessage: ChatMessage = {
           _id: `temp-user-${Date.now()}`,
           sender: 'user',
-          content: userMessageContent + (fileToSend ? `\n\n[Uploading: ${fileToSend.name}]` : ''),
+          content: contentForDisplay + (fileToSend ? `\n\n[Uploading: ${fileToSend.name}]` : ''),
           timestamp: new Date().toISOString()
       };
       // Store the temp ID to find and replace later

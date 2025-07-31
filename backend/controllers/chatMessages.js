@@ -535,11 +535,12 @@ exports.addMessageToSession = async (req, res, next) => {
     try {
         const sessionId = req.params.sessionId;
         // Add useSessionMemory, default to true if not provided
-        const { content, model: requestedModel, useSessionMemory = true } = req.body; 
+        // Extract both content (for AI) and originalContent (for display/storage)
+        const { content, originalContent, model: requestedModel, useSessionMemory = true } = req.body;
         const uploadedFile = req.file;
         const shouldStream = req.body.stream !== 'false'; // Default to streaming unless explicitly disabled
 
-        console.log(`Received request: content='${content}', file=${uploadedFile?.originalname}, model='${requestedModel}', stream=${shouldStream}`);
+        console.log(`Received request: content='${content}', originalContent='${originalContent}', file=${uploadedFile?.originalname}, model='${requestedModel}', stream=${shouldStream}`);
 
         // Initialize S3 client
         let s3Client;
@@ -611,14 +612,14 @@ exports.addMessageToSession = async (req, res, next) => {
         const userMessageData = {
             session: sessionId,
             sender: 'user',
-            content: content || '', // Save empty string if no text content
+            content: originalContent || content || '', // Use originalContent if available, fallback to content
             timestamp: new Date(), // Ensure timestamp is a Date object
             fileInfo: uploadedFile ? {
-                filename: s3ObjectKey, 
+                filename: s3ObjectKey,
                 originalname: uploadedFile.originalname,
                 mimetype: uploadedFile.mimetype,
                 size: uploadedFile.size,
-                path: s3FileUrl 
+                path: s3FileUrl
             } : undefined
         };
 

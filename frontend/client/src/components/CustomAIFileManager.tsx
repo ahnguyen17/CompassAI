@@ -19,8 +19,14 @@ interface KnowledgeBaseFile {
 
 interface CustomAI {
   _id: string;
+  userId: string;
   name: string;
+  model: string;
+  instructions: string;
   knowledgeBaseFiles: KnowledgeBaseFile[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface CustomAIFileManagerProps {

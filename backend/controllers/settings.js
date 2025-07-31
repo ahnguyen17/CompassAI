@@ -23,7 +23,7 @@ exports.updateSettings = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Not authorized to update settings', 403));
   }
 
-  const { globalStreamingEnabled } = req.body;
+  const { globalStreamingEnabled, allowedCustomAIModels } = req.body;
 
   // Find the settings document (should always exist due to getSettings logic)
   let settings = await Setting.findOne({ key: 'globalSettings' });
@@ -31,11 +31,17 @@ exports.updateSettings = asyncHandler(async (req, res, next) => {
   if (!settings) {
     // This case should ideally not happen if getSettings is called elsewhere or upon startup
     console.error('CRITICAL: Global settings document not found during update attempt.');
-    settings = await Setting.create({ key: 'globalSettings', globalStreamingEnabled });
+    const createData = { key: 'globalSettings' };
+    if (typeof globalStreamingEnabled === 'boolean') createData.globalStreamingEnabled = globalStreamingEnabled;
+    if (Array.isArray(allowedCustomAIModels)) createData.allowedCustomAIModels = allowedCustomAIModels;
+    settings = await Setting.create(createData);
   } else {
     // Update the specific setting if provided in the request body
     if (typeof globalStreamingEnabled === 'boolean') {
       settings.globalStreamingEnabled = globalStreamingEnabled;
+    }
+    if (Array.isArray(allowedCustomAIModels)) {
+      settings.allowedCustomAIModels = allowedCustomAIModels;
     }
     // Add updates for other settings here in the future
     // e.g., if (req.body.someOtherSetting !== undefined) settings.someOtherSetting = req.body.someOtherSetting;

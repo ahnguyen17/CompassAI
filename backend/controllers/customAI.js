@@ -1,4 +1,5 @@
 const CustomAI = require('../models/CustomAI');
+const Setting = require('../models/Setting');
 const asyncHandler = require('../middleware/async');
 const ErrorResponse = require('../utils/errorResponse');
 const { extractTextFromFile, validateKnowledgeBaseFile, getFileTypeFromExtension } = require('../utils/fileProcessor');
@@ -22,11 +23,26 @@ const getS3Client = () => {
 // @access  Private
 exports.getCustomAIs = asyncHandler(async (req, res, next) => {
   const customAIs = await CustomAI.findByUserId(req.user.id);
-  
+
   res.status(200).json({
     success: true,
     count: customAIs.length,
     data: customAIs
+  });
+});
+
+// @desc    Get allowed models for custom AI creation
+// @route   GET /api/v1/customai/allowed-models
+// @access  Private
+exports.getAllowedModels = asyncHandler(async (req, res, next) => {
+  const settings = await Setting.getSettings();
+
+  res.status(200).json({
+    success: true,
+    data: {
+      allowedModels: settings.allowedCustomAIModels || [],
+      isRestricted: settings.allowedCustomAIModels && settings.allowedCustomAIModels.length > 0
+    }
   });
 });
 
@@ -56,18 +72,26 @@ exports.getCustomAI = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.createCustomAI = asyncHandler(async (req, res, next) => {
   const { name, model, instructions } = req.body;
-  
+
   // Validate required fields
   if (!name || !model || !instructions) {
     return next(new ErrorResponse('Name, model, and instructions are required', 400));
   }
-  
+
+  // Check admin restrictions on allowed models
+  const settings = await Setting.getSettings();
+  if (settings.allowedCustomAIModels && settings.allowedCustomAIModels.length > 0) {
+    if (!settings.allowedCustomAIModels.includes(model)) {
+      return next(new ErrorResponse('The selected model is not allowed for custom AI creation', 403));
+    }
+  }
+
   // Check if user already has a custom AI with this name
   const existingAI = await CustomAI.findOne({ userId: req.user.id, name, isActive: true });
   if (existingAI) {
     return next(new ErrorResponse('You already have a custom AI with this name', 400));
   }
-  
+
   // Create custom AI
   const customAI = await CustomAI.create({
     userId: req.user.id,
@@ -76,7 +100,7 @@ exports.createCustomAI = asyncHandler(async (req, res, next) => {
     instructions,
     knowledgeBaseFiles: []
   });
-  
+
   res.status(201).json({
     success: true,
     data: customAI
@@ -99,12 +123,22 @@ exports.updateCustomAI = asyncHandler(async (req, res, next) => {
   }
   
   const { name, model, instructions } = req.body;
-  
+
+  // Check admin restrictions on allowed models if model is being changed
+  if (model && model !== customAI.model) {
+    const settings = await Setting.getSettings();
+    if (settings.allowedCustomAIModels && settings.allowedCustomAIModels.length > 0) {
+      if (!settings.allowedCustomAIModels.includes(model)) {
+        return next(new ErrorResponse('The selected model is not allowed for custom AI creation', 403));
+      }
+    }
+  }
+
   // If name is being changed, check for duplicates
   if (name && name !== customAI.name) {
-    const existingAI = await CustomAI.findOne({ 
-      userId: req.user.id, 
-      name, 
+    const existingAI = await CustomAI.findOne({
+      userId: req.user.id,
+      name,
       isActive: true,
       _id: { $ne: req.params.id }
     });
@@ -112,7 +146,7 @@ exports.updateCustomAI = asyncHandler(async (req, res, next) => {
       return next(new ErrorResponse('You already have a custom AI with this name', 400));
     }
   }
-  
+
   // Update fields
   if (name) customAI.name = name;
   if (model) customAI.model = model;

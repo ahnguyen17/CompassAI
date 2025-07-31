@@ -50,6 +50,11 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
   const [showFilesModal, setShowFilesModal] = useState(false);
   const [selectedAI, setSelectedAI] = useState<CustomAI | null>(null);
 
+  // Allowed models state
+  const [allowedModels, setAllowedModels] = useState<string[]>([]);
+  const [isModelRestricted, setIsModelRestricted] = useState(false);
+  const [loadingAllowedModels, setLoadingAllowedModels] = useState(true);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -132,6 +137,25 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
     marginBottom: '15px',
     background: isDarkMode ? '#333' : 'white',
     color: isDarkMode ? '#e0e0e0' : 'inherit'
+  };
+
+  // Fetch allowed models for custom AI creation
+  const fetchAllowedModels = async () => {
+    setLoadingAllowedModels(true);
+    try {
+      const response = await apiClient.get('/customai/allowed-models');
+      if (response.data?.success) {
+        setAllowedModels(response.data.data.allowedModels);
+        setIsModelRestricted(response.data.data.isRestricted);
+      }
+    } catch (err: any) {
+      console.error('Error fetching allowed models:', err);
+      // If there's an error, assume no restrictions
+      setAllowedModels([]);
+      setIsModelRestricted(false);
+    } finally {
+      setLoadingAllowedModels(false);
+    }
   };
 
   // Fetch custom AIs
@@ -263,39 +287,50 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
     setUploadError('');
   };
 
-  // Get available models for dropdown
+  // Get available models for dropdown (filtered by admin restrictions)
   const getModelOptions = () => {
     const options: JSX.Element[] = [];
-    
+
+    // Helper function to check if a model is allowed
+    const isModelAllowed = (modelId: string) => {
+      if (!isModelRestricted) return true; // No restrictions
+      return allowedModels.includes(modelId);
+    };
+
     // Add base models
     if (availableModels?.baseModels) {
       Object.keys(availableModels.baseModels).forEach(provider => {
         availableModels.baseModels[provider].forEach((model: any) => {
-          options.push(
-            <option key={model.name} value={model.name}>
-              {provider}: {model.name}
-            </option>
-          );
+          if (isModelAllowed(model.name)) {
+            options.push(
+              <option key={model.name} value={model.name}>
+                {provider}: {model.name}
+              </option>
+            );
+          }
         });
       });
     }
-    
+
     // Add custom models
     if (availableModels?.customModels) {
       availableModels.customModels.forEach((model: any) => {
-        options.push(
-          <option key={model._id} value={model._id}>
-            {model.providerName}: {model.name} (Custom)
-          </option>
-        );
+        if (isModelAllowed(model._id)) {
+          options.push(
+            <option key={model._id} value={model._id}>
+              {model.providerName}: {model.name} (Custom)
+            </option>
+          );
+        }
       });
     }
-    
+
     return options;
   };
 
   useEffect(() => {
     fetchCustomAIs();
+    fetchAllowedModels();
   }, []);
 
   return (
@@ -403,15 +438,23 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
 
               <div style={{ marginBottom: '20px' }}>
                 <label htmlFor="aiModel" style={labelStyle}>AI Model:</label>
+                {isModelRestricted && (
+                  <p style={{ fontSize: '0.8em', color: isDarkMode ? '#ffc107' : '#856404', marginBottom: '5px' }}>
+                    ⚠️ Model selection is restricted by administrator
+                  </p>
+                )}
                 <select
                   id="aiModel"
                   value={formData.model}
                   onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                   required
                   style={inputStyle}
+                  disabled={loadingAllowedModels}
                 >
-                  <option value="">Select a model...</option>
-                  {getModelOptions()}
+                  <option value="">
+                    {loadingAllowedModels ? 'Loading models...' : 'Select a model...'}
+                  </option>
+                  {!loadingAllowedModels && getModelOptions()}
                 </select>
               </div>
 
@@ -485,15 +528,23 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
 
               <div style={{ marginBottom: '20px' }}>
                 <label htmlFor="editAiModel" style={labelStyle}>AI Model:</label>
+                {isModelRestricted && (
+                  <p style={{ fontSize: '0.8em', color: isDarkMode ? '#ffc107' : '#856404', marginBottom: '5px' }}>
+                    ⚠️ Model selection is restricted by administrator
+                  </p>
+                )}
                 <select
                   id="editAiModel"
                   value={formData.model}
                   onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                   required
                   style={inputStyle}
+                  disabled={loadingAllowedModels}
                 >
-                  <option value="">Select a model...</option>
-                  {getModelOptions()}
+                  <option value="">
+                    {loadingAllowedModels ? 'Loading models...' : 'Select a model...'}
+                  </option>
+                  {!loadingAllowedModels && getModelOptions()}
                 </select>
               </div>
 

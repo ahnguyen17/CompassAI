@@ -276,4 +276,15 @@ export const getCustomAIForChat = async (id: string): Promise<ApiResponse<Custom
   return response.data;
 };
 
+export const getAllowedCustomAIModels = async (): Promise<ApiResponse<{
+  allowedModels: string[];
+  isRestricted: boolean;
+}>> => {
+  const response = await apiClient.get<ApiResponse<{
+    allowedModels: string[];
+    isRestricted: boolean;
+  }>>('/customai/allowed-models');
+  return response.data;
+};
+
 export default apiClient;

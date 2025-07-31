@@ -57,6 +57,7 @@ interface GlobalSettings {
     _id?: string; // Optional, might not be needed on frontend always
     key?: string; // Optional
     globalStreamingEnabled: boolean;
+    allowedCustomAIModels?: string[]; // Optional array of allowed model IDs
     lastUpdatedAt?: string; // Optional
 }
 
@@ -194,6 +195,10 @@ const SettingsPage: React.FC = () => { // Removed props
   const [updateGlobalSettingsLoading, setUpdateGlobalSettingsLoading] = useState(false);
   const [updateGlobalSettingsError, setUpdateGlobalSettingsError] = useState('');
 
+  // --- Custom AI Model Restrictions State (Admin) ---
+  const [selectedAllowedModels, setSelectedAllowedModels] = useState<string[]>([]);
+  const [showCustomAIModelSettings, setShowCustomAIModelSettings] = useState(false);
+
   // --- Custom Provider/Model State (Admin) --- NEW ---
   const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
   const [loadingCustomProviders, setLoadingCustomProviders] = useState(true);
@@ -304,6 +309,8 @@ const SettingsPage: React.FC = () => { // Removed props
           const response = await apiClient.get('/settings'); // Use the new settings endpoint
           if (response.data?.success) {
               setGlobalSettings(response.data.data);
+              // Initialize selected allowed models
+              setSelectedAllowedModels(response.data.data.allowedCustomAIModels || []);
           } else {
               setFetchGlobalSettingsError('Failed to load global settings.');
           }
@@ -811,6 +818,35 @@ const SettingsPage: React.FC = () => { // Removed props
           setGlobalSettings(prev => prev ? { ...prev, globalStreamingEnabled: !checked } : null); // Revert
           setUpdateGlobalSettingsError(err.response?.data?.error || 'Error updating setting.');
           // Optionally refetch to be absolutely sure: fetchGlobalSettings();
+      } finally {
+          setUpdateGlobalSettingsLoading(false);
+      }
+  };
+
+  // --- Custom AI Model Restrictions Handler (Admin) ---
+  const handleUpdateCustomAIModelRestrictions = async () => {
+      if (!globalSettings || currentUser?.role !== 'admin') return;
+
+      setUpdateGlobalSettingsLoading(true);
+      setUpdateGlobalSettingsError('');
+
+      try {
+          const response = await apiClient.put('/settings', {
+              allowedCustomAIModels: selectedAllowedModels
+          });
+
+          if (response.data?.success) {
+              setGlobalSettings(prev => prev ? {
+                  ...prev,
+                  allowedCustomAIModels: selectedAllowedModels
+              } : null);
+              setShowCustomAIModelSettings(false);
+          } else {
+              setUpdateGlobalSettingsError(response.data?.error || 'Failed to update custom AI model restrictions.');
+          }
+      } catch (err: any) {
+          console.error('Error updating custom AI model restrictions:', err);
+          setUpdateGlobalSettingsError(err.response?.data?.error || 'Error updating custom AI model restrictions.');
       } finally {
           setUpdateGlobalSettingsLoading(false);
       }
@@ -2058,6 +2094,124 @@ const SettingsPage: React.FC = () => { // Removed props
                            className="react-switch"
                        />
                        {updateGlobalSettingsLoading && <span style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#555' }}>Updating...</span>}
+                   </div>
+               )}
+
+               {/* Custom AI Model Restrictions */}
+               {!loadingGlobalSettings && !fetchGlobalSettingsError && globalSettings && (
+                   <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: `1px solid ${isDarkMode ? '#444' : '#eee'}` }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                           <h4 style={{ margin: 0 }}>Custom AI Model Restrictions</h4>
+                           <button
+                               onClick={() => setShowCustomAIModelSettings(!showCustomAIModelSettings)}
+                               style={smallButtonStyle}
+                           >
+                               {showCustomAIModelSettings ? 'Cancel' : 'Configure'}
+                           </button>
+                       </div>
+
+                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666', marginBottom: '15px' }}>
+                           {globalSettings.allowedCustomAIModels && globalSettings.allowedCustomAIModels.length > 0
+                               ? `Currently restricting to ${globalSettings.allowedCustomAIModels.length} selected models`
+                               : 'All models are currently allowed for custom AI creation'
+                           }
+                       </p>
+
+                       {showCustomAIModelSettings && (
+                           <div style={{
+                               background: isDarkMode ? '#2a2a2a' : '#f9f9f9',
+                               padding: '20px',
+                               borderRadius: '8px',
+                               border: `1px solid ${isDarkMode ? '#444' : '#ddd'}`
+                           }}>
+                               <p style={{ marginBottom: '15px', fontSize: '0.9em' }}>
+                                   Select which models users can choose when creating custom AIs.
+                                   Leave empty to allow all models.
+                               </p>
+
+                               <div style={{ marginBottom: '20px' }}>
+                                   <h5 style={{ marginBottom: '10px' }}>Base Models:</h5>
+                                   {baseModelsForDropdown && Object.keys(baseModelsForDropdown).map(provider => (
+                                       <div key={provider} style={{ marginBottom: '15px' }}>
+                                           <h6 style={{ marginBottom: '8px', color: isDarkMode ? '#aaa' : '#666' }}>{provider}:</h6>
+                                           {baseModelsForDropdown[provider].map(model => (
+                                               <label key={model.name} style={{
+                                                   display: 'block',
+                                                   marginBottom: '5px',
+                                                   fontSize: '0.9em',
+                                                   cursor: 'pointer'
+                                               }}>
+                                                   <input
+                                                       type="checkbox"
+                                                       checked={selectedAllowedModels.includes(model.name)}
+                                                       onChange={(e) => {
+                                                           if (e.target.checked) {
+                                                               setSelectedAllowedModels([...selectedAllowedModels, model.name]);
+                                                           } else {
+                                                               setSelectedAllowedModels(selectedAllowedModels.filter(m => m !== model.name));
+                                                           }
+                                                       }}
+                                                       style={{ marginRight: '8px' }}
+                                                   />
+                                                   {model.name}
+                                               </label>
+                                           ))}
+                                       </div>
+                                   ))}
+                               </div>
+
+                               {customModels && customModels.length > 0 && (
+                                   <div style={{ marginBottom: '20px' }}>
+                                       <h5 style={{ marginBottom: '10px' }}>Custom Models:</h5>
+                                       {customModels.map(model => (
+                                           <label key={model._id} style={{
+                                               display: 'block',
+                                               marginBottom: '5px',
+                                               fontSize: '0.9em',
+                                               cursor: 'pointer'
+                                           }}>
+                                               <input
+                                                   type="checkbox"
+                                                   checked={selectedAllowedModels.includes(model._id)}
+                                                   onChange={(e) => {
+                                                       if (e.target.checked) {
+                                                           setSelectedAllowedModels([...selectedAllowedModels, model._id]);
+                                                       } else {
+                                                           setSelectedAllowedModels(selectedAllowedModels.filter(m => m !== model._id));
+                                                       }
+                                                   }}
+                                                   style={{ marginRight: '8px' }}
+                                               />
+                                               {model.providerName}: {model.name} (Custom)
+                                           </label>
+                                       ))}
+                                   </div>
+                               )}
+
+                               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                   <button
+                                       type="button"
+                                       onClick={() => {
+                                           setSelectedAllowedModels([]);
+                                       }}
+                                       style={{...smallButtonStyle, background: isDarkMode ? '#555' : '#ccc'}}
+                                   >
+                                       Clear All
+                                   </button>
+                                   <button
+                                       type="button"
+                                       onClick={handleUpdateCustomAIModelRestrictions}
+                                       disabled={updateGlobalSettingsLoading}
+                                       style={updateGlobalSettingsLoading ?
+                                           {...buttonStyle, opacity: 0.6, cursor: 'not-allowed'} :
+                                           buttonStyle
+                                       }
+                                   >
+                                       {updateGlobalSettingsLoading ? 'Saving...' : 'Save Restrictions'}
+                                   </button>
+                               </div>
+                           </div>
+                       )}
                    </div>
                )}
            </section>

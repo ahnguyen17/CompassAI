@@ -12,6 +12,7 @@ The Custom AI feature allows users to create personalized AI assistants with cus
 - **Custom Instructions**: Define AI behavior and personality with up to 2000 characters
 - **Model Selection**: Choose from available AI models for each custom AI
 - **Chat Integration**: Use custom AIs directly in chat conversations
+- **Admin Controls**: Administrators can restrict which models are available for custom AI creation
 
 ### Supported File Types
 - **Documents**: PDF, DOC, DOCX, TXT, MD
@@ -75,7 +76,23 @@ DELETE /api/v1/customai/:id/files/:fileId   # Delete knowledge base file
 GET    /api/v1/customai/:id/chat-context    # Get custom AI context for chat
 ```
 
+### Admin Controls
+```
+GET    /api/v1/customai/allowed-models      # Get allowed models for custom AI creation
+PUT    /api/v1/settings                     # Update global settings (including allowedCustomAIModels)
+```
+
 ## Database Schema
+
+### Setting Collection (Updated)
+```javascript
+{
+  key: String,                    // 'globalSettings'
+  globalStreamingEnabled: Boolean, // Existing setting
+  allowedCustomAIModels: [String], // NEW: Array of allowed model IDs
+  lastUpdatedAt: Date
+}
+```
 
 ### CustomAI Collection
 ```javascript
@@ -126,6 +143,20 @@ GET    /api/v1/customai/:id/chat-context    # Get custom AI context for chat
 1. **Select Custom AI**: Use the model selector dropdown in chat
 2. **Visual Indicators**: Look for 🤖 Custom AI indicators
 3. **Chat Normally**: The AI will use your custom instructions and knowledge base
+
+### Admin Controls (Admin Users Only)
+
+#### Restricting Available Models
+1. **Navigate to Settings**: Go to Settings > Global Settings (admin only)
+2. **Configure Restrictions**: Click "Configure" in the Custom AI Model Restrictions section
+3. **Select Models**: Check/uncheck models that users can use for custom AIs
+4. **Save Changes**: Click "Save Restrictions" to apply the settings
+
+#### How Restrictions Work
+- **Empty List**: All models are available to users (default behavior)
+- **Selected Models**: Only checked models can be used for custom AI creation
+- **User Experience**: Users see a warning when restrictions are active
+- **Existing Custom AIs**: Restrictions don't affect already created custom AIs
 
 ## Security Features
 

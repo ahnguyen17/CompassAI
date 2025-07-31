@@ -96,7 +96,20 @@ const CUSTOM_AI_TEST_PLAN = {
     ]
   },
 
-  // 6. Security Tests
+  // 6. Admin Controls Tests
+  adminControlsTests: {
+    description: "Test admin model restriction functionality",
+    tests: [
+      "Admin can set allowed models for custom AI creation",
+      "Users cannot create custom AIs with restricted models",
+      "Users can still edit existing custom AIs with restricted models",
+      "Empty allowed models list allows all models",
+      "Non-admin users cannot access admin settings",
+      "Model restrictions are enforced in real-time"
+    ]
+  },
+
+  // 7. Security Tests
   securityTests: {
     description: "Ensure proper security measures",
     tests: [
@@ -276,6 +289,21 @@ const MANUAL_TEST_SCENARIOS = [
       "4. Verify access is denied"
     ],
     expectedResult: "Users cannot access other users' custom AIs"
+  },
+
+  {
+    name: "Admin Model Restrictions",
+    steps: [
+      "1. Login as admin user",
+      "2. Go to Settings > Global Settings",
+      "3. Configure Custom AI Model Restrictions",
+      "4. Select only specific models (e.g., gpt-3.5-turbo)",
+      "5. Save restrictions",
+      "6. Login as regular user",
+      "7. Try to create custom AI with restricted model",
+      "8. Try to create custom AI with allowed model"
+    ],
+    expectedResult: "Users can only create custom AIs with admin-approved models"
   }
 ];
 

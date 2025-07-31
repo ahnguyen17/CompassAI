@@ -9,7 +9,8 @@ const {
   duplicateCustomAI,
   uploadKnowledgeBaseFile,
   deleteKnowledgeBaseFile,
-  getCustomAIForChat
+  getCustomAIForChat,
+  getAllowedModels
 } = require('../controllers/customAI');
 
 const { protect } = require('../middleware/auth');
@@ -45,6 +46,10 @@ const handleMulterError = (err, req, res, next) => {
 
 // Apply protection middleware to all routes
 router.use(protect);
+
+// Allowed models route (must come before /:id routes)
+router.route('/allowed-models')
+  .get(getAllowedModels);
 
 // Main custom AI routes
 router.route('/')

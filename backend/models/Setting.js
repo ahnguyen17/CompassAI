@@ -12,6 +12,10 @@ const SettingSchema = new mongoose.Schema({
     type: Boolean,
     default: true, // Default global setting for streaming
   },
+  allowedCustomAIModels: {
+    type: [String], // Array of model identifiers that can be used for custom AIs
+    default: [], // Empty array means all models are allowed
+  },
   // Add other global settings here as needed in the future
   lastUpdatedAt: {
     type: Date,

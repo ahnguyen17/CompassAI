@@ -19,10 +19,23 @@ interface BaseModelData {
     supportsVision: boolean;
 }
 
+// Interface for Custom AI data
+interface CustomAIData {
+  _id: string;
+  name: string;
+  model: string;
+  instructions: string;
+  knowledgeBaseFiles: any[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Interface for the combined data structure from the backend
 interface CombinedAvailableModels {
   baseModels: { [provider: string]: BaseModelData[] }; // Updated: Array of objects
   customModels: CustomModelData[];
+  customAIs?: CustomAIData[]; // Optional custom AIs
 }
 
 interface ModelSelectorDropdownProps {
@@ -112,7 +125,29 @@ const ModelSelectorDropdown: React.FC<ModelSelectorDropdownProps> = ({
             {t('chat_model_default')}
           </div>
 
-          {/* --- Render Custom Models First --- */}
+          {/* --- Render Custom AIs First --- */}
+          {availableModels.customAIs && availableModels.customAIs.length > 0 && (
+            <Fragment key="custom-ais">
+              <div className={styles.providerGroup}>🤖 My Custom AIs</div>
+              {availableModels.customAIs
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(customAI => (
+                  <div
+                    key={`ai-${customAI._id}`}
+                    className={`${styles.modelItem} ${selectedModel === `ai-${customAI._id}` ? styles.modelItemSelected : ''}`}
+                    onClick={() => handleSelect(`ai-${customAI._id}`)}
+                    role="option"
+                    aria-selected={selectedModel === `ai-${customAI._id}`}
+                    title={`Custom AI: ${customAI.name}\nInstructions: ${customAI.instructions.substring(0, 100)}${customAI.instructions.length > 100 ? '...' : ''}`}
+                  >
+                    {customAI.name}
+                    <span className={styles.visionIcon} title="Custom AI Assistant">🤖</span>
+                  </div>
+                ))}
+            </Fragment>
+          )}
+
+          {/* --- Render Custom Models --- */}
           {Object.keys(groupedCustomModels)
             .sort() // Sort custom provider names
             .map(customProviderName => (

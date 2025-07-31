@@ -47,10 +47,23 @@ interface BaseModelData {
     supportsVision: boolean;
 }
 
+// Interface for Custom AI data
+interface CustomAIData {
+  _id: string;
+  name: string;
+  model: string;
+  instructions: string;
+  knowledgeBaseFiles: any[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // UPDATE THIS: Interface for the combined data structure from the backend
 interface CombinedAvailableModels {
   baseModels: { [provider: string]: BaseModelData[] }; // Changed string[] to BaseModelData[]
   customModels: CustomModelData[];
+  customAIs?: CustomAIData[]; // Optional custom AIs
 }
 // Re-define ChatSession locally as it's used extensively here
 interface ChatSession { _id: string; title: string; createdAt: string; lastAccessedAt: string; lastMessageTimestamp?: string; isShared?: boolean; shareId?: string; }
@@ -264,44 +277,58 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
 
   // --- Fetch Functions ---
   // Removed local fetchSessions function - will use global store's fetchSessions
-  // Update fetchAvailableModels to handle the new combined structure
+  // Update fetchAvailableModels to handle the new combined structure including custom AIs
   const fetchAvailableModels = async () => {
       setLoadingModels(true);
       try {
-          const response = await apiClient.get('/providers/models'); // Endpoint now returns combined data
-          if (response.data?.success) {
-              // Ensure the data structure matches CombinedAvailableModels
-              const data = response.data.data;
-              // Perform more robust checking
+          // Fetch both models and custom AIs in parallel
+          const [modelsResponse, customAIsResponse] = await Promise.all([
+              apiClient.get('/providers/models'),
+              apiClient.get('/customai')
+          ]);
+
+          let combinedData = { baseModels: {}, customModels: [], customAIs: [] };
+
+          // Process models response
+          if (modelsResponse.data?.success) {
+              const data = modelsResponse.data.data;
               if (data &&
                   typeof data.baseModels === 'object' &&
-                  data.baseModels !== null && // Check not null
-                  !Array.isArray(data.baseModels) && // Check not an array
+                  data.baseModels !== null &&
+                  !Array.isArray(data.baseModels) &&
                   Array.isArray(data.customModels))
               {
-                   // Validate customModels structure minimally
                    const isValidCustomModels = data.customModels.every((item: any) =>
                        typeof item === 'object' && item !== null && '_id' in item && 'name' in item && 'providerName' in item && 'baseModelIdentifier' in item && 'baseModelSupportsVision' in item
                    );
 
                    if (isValidCustomModels) {
-                       setAvailableModels(data as CombinedAvailableModels);
-                       console.log("Successfully fetched and set combined models:", data);
+                       combinedData.baseModels = data.baseModels;
+                       combinedData.customModels = data.customModels;
                    } else {
                        console.error("Fetched custom models data structure is incorrect:", data.customModels);
-                       setAvailableModels({ baseModels: data.baseModels, customModels: [] }); // Keep base models if custom are bad
+                       combinedData.baseModels = data.baseModels;
                    }
               } else {
                   console.error("Fetched available models data structure is incorrect:", data);
-                  setAvailableModels({ baseModels: {}, customModels: [] }); // Set to default empty state
               }
           } else {
-              console.error("Failed to fetch available models (API error):", response.data?.error);
-              setAvailableModels({ baseModels: {}, customModels: [] }); // Set to default empty state on failure
+              console.error("Failed to fetch available models (API error):", modelsResponse.data?.error);
           }
+
+          // Process custom AIs response
+          if (customAIsResponse.data?.success) {
+              combinedData.customAIs = customAIsResponse.data.data || [];
+          } else {
+              console.error("Failed to fetch custom AIs (API error):", customAIsResponse.data?.error);
+          }
+
+          setAvailableModels(combinedData as CombinedAvailableModels);
+          console.log("Successfully fetched and set combined models and custom AIs:", combinedData);
+
       } catch (err: any) {
-          console.error("Error fetching available models (Network/Server error):", err);
-          setAvailableModels({ baseModels: {}, customModels: [] }); // Set to default empty state on error
+          console.error("Error fetching available models/custom AIs (Network/Server error):", err);
+          setAvailableModels({ baseModels: {}, customModels: [], customAIs: [] });
           if (err.response?.status === 401) navigate('/login');
       } finally {
           setLoadingModels(false);
@@ -426,6 +453,37 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
         }
     };
 
+   // Helper function to check if selected model is a custom AI
+   const isCustomAI = (modelId: string): boolean => {
+       return modelId.startsWith('ai-');
+   };
+
+   // Helper function to get custom AI ID from model selection
+   const getCustomAIId = (modelId: string): string => {
+       return modelId.replace('ai-', '');
+   };
+
+   // Helper function to prepare custom AI context
+   const prepareCustomAIContext = async (customAIId: string): Promise<string | null> => {
+       try {
+           const response = await apiClient.get(`/customai/${customAIId}/chat-context`);
+           if (response.data?.success) {
+               const aiContext = response.data.data;
+               let contextString = `[CUSTOM AI INSTRUCTIONS]\n${aiContext.instructions}\n\n`;
+
+               if (aiContext.knowledgeBaseText && aiContext.knowledgeBaseText.trim()) {
+                   contextString += `[KNOWLEDGE BASE]\n${aiContext.knowledgeBaseText}\n\n`;
+               }
+
+               contextString += `[END CUSTOM AI CONTEXT]\n\nUser message:`;
+               return contextString;
+           }
+       } catch (error) {
+           console.error('Error fetching custom AI context:', error);
+       }
+       return null;
+   };
+
    // Combined Send Message Logic
    const handleSendMessage = async (e?: React.FormEvent) => {
       if (e) e.preventDefault();
@@ -444,10 +502,37 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
       setPreviewUrl(null); // Clear preview after sending
       if (fileInputRef.current) fileInputRef.current.value = '';
 
+      // Prepare form data with custom AI context if needed
       const formData = new FormData();
-      formData.append('content', userMessageContent);
+      let finalContent = userMessageContent;
+      let finalModel = selectedModel;
+
+      // Handle custom AI selection
+      if (selectedModel && isCustomAI(selectedModel)) {
+          const customAIId = getCustomAIId(selectedModel);
+          const customAIContext = await prepareCustomAIContext(customAIId);
+
+          if (customAIContext) {
+              // Prepend custom AI context to user message
+              finalContent = customAIContext + ' ' + userMessageContent;
+
+              // Get the actual model to use from the custom AI
+              try {
+                  const response = await apiClient.get(`/customai/${customAIId}/chat-context`);
+                  if (response.data?.success) {
+                      finalModel = response.data.data.model;
+                  }
+              } catch (error) {
+                  console.error('Error getting custom AI model:', error);
+                  // Fallback to default model if custom AI model fetch fails
+                  finalModel = '';
+              }
+          }
+      }
+
+      formData.append('content', finalContent);
       if (fileToSend) formData.append('file', fileToSend);
-      if (selectedModel) formData.append('model', selectedModel);
+      if (finalModel) formData.append('model', finalModel);
 
       // Optimistic user message
       const optimisticUserMessage: ChatMessage = {
@@ -1034,7 +1119,28 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                   gap: '10px' // Add gap between header items
               }}>
                   {/* Hamburger Button Removed From Here */}
-                  <h3 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit', flexGrow: 1, margin: 0 }}>{currentSession.title || 'Untitled Chat'}</h3> {/* Allow title to grow */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexGrow: 1 }}>
+                      <h3 style={{ color: isDarkMode ? '#e0e0e0' : 'inherit', margin: 0 }}>{currentSession.title || 'Untitled Chat'}</h3>
+                      {/* Custom AI Header Indicator */}
+                      {selectedModel && isCustomAI(selectedModel) && (
+                          <div
+                              style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '2px 6px',
+                                  backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                                  border: '1px solid rgba(13, 110, 253, 0.3)',
+                                  borderRadius: '8px',
+                                  fontSize: '0.7em',
+                                  color: '#0d6efd'
+                              }}
+                              title="Using Custom AI Assistant"
+                          >
+                              🤖 Custom AI
+                          </div>
+                      )}
+                  </div>
                   {/* Ensure New Chat Button is removed from here */}
                   <button
                       onClick={handleToggleShare}
@@ -1324,6 +1430,28 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                                     disabled={sendingMessage || loadingMessages}
                                 />
                             ) : null}
+
+                            {/* Custom AI Indicator */}
+                            {selectedModel && isCustomAI(selectedModel) && (
+                                <div
+                                    className={styles.customAIIndicator}
+                                    title="Custom AI Active"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '4px 8px',
+                                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                                        border: '1px solid rgba(13, 110, 253, 0.3)',
+                                        borderRadius: '12px',
+                                        fontSize: '0.8em',
+                                        color: '#0d6efd'
+                                    }}
+                                >
+                                    🤖
+                                    <span>Custom AI</span>
+                                </div>
+                            )}
 
                             {!loadingModels && (Object.keys(availableModels.baseModels).length > 0 || availableModels.customModels.length > 0) && (
                                 <button type="button" onClick={() => setIsSessionMemoryActive(!isSessionMemoryActive)} title={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"} aria-label={isSessionMemoryActive ? "Disable session memory" : "Enable session memory"} aria-pressed={isSessionMemoryActive} className={styles.reasoningToggle} style={{ opacity: isSessionMemoryActive ? 1 : 0.6 }}>

@@ -42,6 +42,43 @@ export interface AllTimeModelStat {
     count: number;
 }
 
+// --- Custom AI Interfaces ---
+export interface KnowledgeBaseFile {
+    _id: string;
+    originalName: string;
+    fileName: string;
+    filePath: string;
+    fileType: string;
+    fileSize: number;
+    extractedText: string;
+    processingStatus: 'pending' | 'processing' | 'completed' | 'failed';
+    processingError: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CustomAIData {
+    _id: string;
+    userId: string;
+    name: string;
+    model: string;
+    instructions: string;
+    knowledgeBaseFiles: KnowledgeBaseFile[];
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CustomAIChatContext {
+    _id: string;
+    name: string;
+    model: string;
+    instructions: string;
+    knowledgeBaseText: string;
+    fileCount: number;
+    totalSize: number;
+}
+
 // --- Dynamic Backend URL ---
 
 // Determine backend URL dynamically
@@ -192,6 +229,50 @@ export const clearAllMemoryContexts = async (): Promise<ApiResponse<UserMemoryDa
   const response = await apiClient.post<ApiResponse<UserMemoryData>>(
     '/usermemory/contexts/clear'
   );
+  return response.data;
+};
+
+// --- Custom AI API Functions ---
+
+export const getCustomAIs = async (): Promise<ApiResponse<CustomAIData[]>> => {
+  const response = await apiClient.get<ApiResponse<CustomAIData[]>>('/customai');
+  return response.data;
+};
+
+export const getCustomAI = async (id: string): Promise<ApiResponse<CustomAIData>> => {
+  const response = await apiClient.get<ApiResponse<CustomAIData>>(`/customai/${id}`);
+  return response.data;
+};
+
+export const createCustomAI = async (data: {
+  name: string;
+  model: string;
+  instructions: string;
+}): Promise<ApiResponse<CustomAIData>> => {
+  const response = await apiClient.post<ApiResponse<CustomAIData>>('/customai', data);
+  return response.data;
+};
+
+export const updateCustomAI = async (
+  id: string,
+  data: { name?: string; model?: string; instructions?: string }
+): Promise<ApiResponse<CustomAIData>> => {
+  const response = await apiClient.put<ApiResponse<CustomAIData>>(`/customai/${id}`, data);
+  return response.data;
+};
+
+export const deleteCustomAI = async (id: string): Promise<ApiResponse<{}>> => {
+  const response = await apiClient.delete<ApiResponse<{}>>(`/customai/${id}`);
+  return response.data;
+};
+
+export const duplicateCustomAI = async (id: string): Promise<ApiResponse<CustomAIData>> => {
+  const response = await apiClient.post<ApiResponse<CustomAIData>>(`/customai/${id}/duplicate`);
+  return response.data;
+};
+
+export const getCustomAIForChat = async (id: string): Promise<ApiResponse<CustomAIChatContext>> => {
+  const response = await apiClient.get<ApiResponse<CustomAIChatContext>>(`/customai/${id}/chat-context`);
   return response.data;
 };
 

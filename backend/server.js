@@ -17,6 +17,7 @@ const disabledModelRoutes = require('./routes/disabledModels'); // Import disabl
 const statsRoutes = require('./routes/stats'); // Import stats routes
 const settingsRoutes = require('./routes/settings'); // Import settings routes
 const customProviderRoutes = require('./routes/customProviders'); // Import custom provider routes
+const customAIRoutes = require('./routes/customAI'); // Import custom AI routes
 const customModelRoutes = require('./routes/customModels'); // Import custom model routes
 const userMemoryRoutes = require('./routes/userMemoryRoutes'); // Import user memory routes
 
@@ -82,6 +83,7 @@ app.use('/api/v1/stats', statsRoutes); // Mount stats routes
 app.use('/api/v1/settings', settingsRoutes); // Mount settings routes
 app.use('/api/v1/customproviders', customProviderRoutes); // Mount custom provider routes
 app.use('/api/v1/custommodels', customModelRoutes); // Mount custom model routes (handles nested too)
+app.use('/api/v1/customai', customAIRoutes); // Mount custom AI routes
 app.use('/api/v1/usermemory', userMemoryRoutes); // Mount user memory routes
 
 // Define the port

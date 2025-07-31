@@ -18,6 +18,7 @@ import apiClient, {
 } from '../services/api';
 import useAuthStore from '../store/authStore'; // Import the store
 import Switch from 'react-switch'; // Import a toggle switch component
+import CustomAIManager from '../components/CustomAIManager';
 
 // Interfaces (Keep existing local interfaces)
 interface ApiKey {
@@ -359,9 +360,8 @@ const SettingsPage: React.FC = () => { // Removed props
       }
   };
 
-  // --- Fetch Base Models for Dropdown (Admin) --- NEW ---
+  // --- Fetch Base Models for Dropdown (All Users) --- NEW ---
    const fetchBaseModelsForDropdown = async () => {
-        if (currentUser?.role !== 'admin') return;
         setLoadingBaseModels(true); setFetchBaseModelsError('');
         try {
             const response = await apiClient.get('/providers/all-models');
@@ -432,6 +432,7 @@ const SettingsPage: React.FC = () => { // Removed props
   useEffect(() => {
     fetchApiKeys(); // All users need API keys
     fetchUserMemoryDetails(); // Fetch user memory for all logged-in users
+    fetchBaseModelsForDropdown(); // All users need base models for custom AI creation
 
     if (currentUser?.role === 'admin') {
          fetchUsers();
@@ -439,13 +440,11 @@ const SettingsPage: React.FC = () => { // Removed props
          fetchModelStatuses(); // Fetch model statuses for admin
          fetchGlobalSettings(); // Fetch global settings for admin
          fetchCustomProviders(); // Fetch custom providers for admin
-         fetchBaseModelsForDropdown(); // Fetch base models for admin dropdown
          // Initial fetch for stats is handled by the stats useEffect below
      } else {
         // Ensure loading states are false if not admin
         setLoadingUsers(false);
         setLoadingCustomProviders(false); // NEW
-        setLoadingBaseModels(false); // NEW
         setLoadingReferralCodes(false);
          setLoadingModelStatuses(false); // Also set model status loading to false
          setLoadingStats(false); // Also set stats loading to false if not admin
@@ -1474,6 +1473,16 @@ const SettingsPage: React.FC = () => { // Removed props
       )}
       {/* --- End Personalized Memory Section --- */}
 
+      {/* Custom AI Management - Available to all users */}
+      {currentUser && (
+        <CustomAIManager
+          isDarkMode={isDarkMode}
+          availableModels={{
+            baseModels: baseModelsForDropdown,
+            customModels: customModels
+          }}
+        />
+      )}
 
       {/* API Key Management - Only show if user is admin */}
       {currentUser?.role === 'admin' && (

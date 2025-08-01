@@ -8,9 +8,6 @@ const ErrorResponse = require('./../utils/errorResponse'); // Corrected path
 exports.getSettings = asyncHandler(async (req, res, next) => {
   const settings = await Setting.getSettings(); // Use the static method to ensure defaults exist
 
-  // Debug logging
-  console.log('Settings retrieved:', JSON.stringify(settings, null, 2));
-
   res.status(200).json({
     success: true,
     data: settings,

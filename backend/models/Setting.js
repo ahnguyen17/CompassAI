@@ -36,6 +36,17 @@ SettingSchema.statics.getSettings = async function () {
     // If no settings document exists, create one with defaults
     console.log('No global settings found, creating default settings document.');
     settings = await this.create({ key: 'globalSettings' });
+  } else {
+    // Migration: Ensure new fields exist in existing documents
+    let needsUpdate = false;
+    if (settings.allowedCustomAIModels === undefined) {
+      settings.allowedCustomAIModels = [];
+      needsUpdate = true;
+    }
+    if (needsUpdate) {
+      console.log('Updating existing settings document with new fields.');
+      await settings.save();
+    }
   }
   return settings;
 };

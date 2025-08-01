@@ -2127,8 +2127,24 @@ const SettingsPage: React.FC = () => { // Removed props
                    </div>
                )}
 
+               {/* Debug Info - Temporary */}
+               <div style={{
+                   marginTop: '20px',
+                   padding: '10px',
+                   background: isDarkMode ? '#2a2a2a' : '#f0f0f0',
+                   borderRadius: '4px',
+                   fontSize: '0.8em'
+               }}>
+                   <strong>Debug Info:</strong><br/>
+                   loadingGlobalSettings: {String(loadingGlobalSettings)}<br/>
+                   fetchGlobalSettingsError: {fetchGlobalSettingsError || 'none'}<br/>
+                   globalSettings: {globalSettings ? 'loaded' : 'null'}<br/>
+                   allowedCustomAIModels: {globalSettings?.allowedCustomAIModels ? String(globalSettings.allowedCustomAIModels.length) : 'undefined'}<br/>
+                   Should show section: {String(!loadingGlobalSettings && !fetchGlobalSettingsError && globalSettings)}
+               </div>
+
                {/* Custom AI Model Restrictions */}
-               {!loadingGlobalSettings && !fetchGlobalSettingsError && globalSettings && (
+               {currentUser?.role === 'admin' && !loadingGlobalSettings && !fetchGlobalSettingsError && globalSettings && (
                    <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: `1px solid ${isDarkMode ? '#444' : '#eee'}` }}>
                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                            <h4 style={{ margin: 0 }}>{t('settings_custom_ai_restrictions_title')}</h4>

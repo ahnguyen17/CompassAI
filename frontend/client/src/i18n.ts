@@ -71,6 +71,31 @@ const resources = {
       "settings_api_keys_title": "API Key Management",
       "settings_users_title": "User Management",
       "settings_referral_title": "Referral Code Management",
+      // Model Visibility Settings
+      "settings_model_visibility_title": "Model Visibility",
+      "settings_model_enabled": "Enabled",
+      "settings_model_disabled": "Disabled",
+      "settings_model_enable_button": "Enable",
+      "settings_model_disable_button": "Disable",
+      // Custom AI Model Restrictions
+      "settings_custom_ai_restrictions_title": "Custom AI Model Restrictions",
+      "settings_custom_ai_restrictions_configure": "Configure",
+      "settings_custom_ai_restrictions_cancel": "Cancel",
+      "settings_custom_ai_restrictions_description": "Select which models users can choose when creating custom AIs. Leave empty to allow all models.",
+      "settings_custom_ai_restrictions_all_allowed": "All models are currently allowed for custom AI creation",
+      "settings_custom_ai_restrictions_restricted": "Currently restricting to {{count}} selected models",
+      "settings_custom_ai_restrictions_base_models": "Base Models:",
+      "settings_custom_ai_restrictions_custom_models": "Custom Models:",
+      "settings_custom_ai_restrictions_loading": "Loading models...",
+      "settings_custom_ai_restrictions_no_base": "No base models available.",
+      "settings_custom_ai_restrictions_no_custom": "No custom models available.",
+      "settings_custom_ai_restrictions_clear_all": "Clear All",
+      "settings_custom_ai_restrictions_save": "Save Restrictions",
+      "settings_custom_ai_restrictions_saving": "Saving...",
+      // Custom AI Manager
+      "custom_ai_model_restricted_warning": "⚠️ Model selection is restricted by administrator",
+      "custom_ai_loading_models": "Loading models...",
+      "custom_ai_select_model": "Select a model...",
       // General terms
       "optional": "required", // Changed from Optional to required
       // Add more keys as needed
@@ -141,6 +166,31 @@ const resources = {
       "settings_api_keys_title": "Quản lý Khóa API",
       "settings_users_title": "Quản lý Người dùng",
       "settings_referral_title": "Quản lý Mã giới thiệu",
+      // Model Visibility Settings
+      "settings_model_visibility_title": "Hiển thị Mô hình",
+      "settings_model_enabled": "Đã bật",
+      "settings_model_disabled": "Đã tắt",
+      "settings_model_enable_button": "Bật",
+      "settings_model_disable_button": "Tắt",
+      // Custom AI Model Restrictions
+      "settings_custom_ai_restrictions_title": "Hạn chế Mô hình AI Tùy chỉnh",
+      "settings_custom_ai_restrictions_configure": "Cấu hình",
+      "settings_custom_ai_restrictions_cancel": "Hủy",
+      "settings_custom_ai_restrictions_description": "Chọn các mô hình mà người dùng có thể chọn khi tạo AI tùy chỉnh. Để trống để cho phép tất cả mô hình.",
+      "settings_custom_ai_restrictions_all_allowed": "Tất cả mô hình hiện được phép tạo AI tùy chỉnh",
+      "settings_custom_ai_restrictions_restricted": "Hiện đang hạn chế {{count}} mô hình đã chọn",
+      "settings_custom_ai_restrictions_base_models": "Mô hình Cơ bản:",
+      "settings_custom_ai_restrictions_custom_models": "Mô hình Tùy chỉnh:",
+      "settings_custom_ai_restrictions_loading": "Đang tải mô hình...",
+      "settings_custom_ai_restrictions_no_base": "Không có mô hình cơ bản nào.",
+      "settings_custom_ai_restrictions_no_custom": "Không có mô hình tùy chỉnh nào.",
+      "settings_custom_ai_restrictions_clear_all": "Xóa Tất cả",
+      "settings_custom_ai_restrictions_save": "Lưu Hạn chế",
+      "settings_custom_ai_restrictions_saving": "Đang lưu...",
+      // Custom AI Manager
+      "custom_ai_model_restricted_warning": "⚠️ Lựa chọn mô hình bị hạn chế bởi quản trị viên",
+      "custom_ai_loading_models": "Đang tải mô hình...",
+      "custom_ai_select_model": "Chọn một mô hình...",
       // General terms
       "optional": "bắt buộc", // Changed from Tùy chọn to bắt buộc
       // Add more keys as needed
@@ -157,7 +207,7 @@ i18n
   .init({
     resources,
     fallbackLng: 'en', // Use English if detected language is not available
-    debug: true, // Set to false in production
+    debug: false, // Set to false in production
     interpolation: {
       escapeValue: false, // React already safes from xss
     },

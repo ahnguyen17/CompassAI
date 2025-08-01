@@ -2127,40 +2127,23 @@ const SettingsPage: React.FC = () => { // Removed props
                    </div>
                )}
 
-               {/* Debug Info - Remove this after testing */}
-               {currentUser?.role === 'admin' && (
-                   <div style={{
-                       marginTop: '20px',
-                       padding: '10px',
-                       background: isDarkMode ? '#2a2a2a' : '#f0f0f0',
-                       borderRadius: '4px',
-                       fontSize: '0.8em'
-                   }}>
-                       <strong>Debug Info:</strong><br/>
-                       loadingGlobalSettings: {loadingGlobalSettings.toString()}<br/>
-                       fetchGlobalSettingsError: {fetchGlobalSettingsError || 'none'}<br/>
-                       globalSettings: {globalSettings ? 'loaded' : 'null'}<br/>
-                       allowedCustomAIModels: {globalSettings?.allowedCustomAIModels?.length || 0} items
-                   </div>
-               )}
-
                {/* Custom AI Model Restrictions */}
                {!loadingGlobalSettings && !fetchGlobalSettingsError && globalSettings && (
                    <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: `1px solid ${isDarkMode ? '#444' : '#eee'}` }}>
                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                           <h4 style={{ margin: 0 }}>Custom AI Model Restrictions</h4>
+                           <h4 style={{ margin: 0 }}>{t('settings_custom_ai_restrictions_title')}</h4>
                            <button
                                onClick={() => setShowCustomAIModelSettings(!showCustomAIModelSettings)}
                                style={smallButtonStyle}
                            >
-                               {showCustomAIModelSettings ? 'Cancel' : 'Configure'}
+                               {showCustomAIModelSettings ? t('settings_custom_ai_restrictions_cancel') : t('settings_custom_ai_restrictions_configure')}
                            </button>
                        </div>
 
                        <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666', marginBottom: '15px' }}>
                            {globalSettings.allowedCustomAIModels && globalSettings.allowedCustomAIModels.length > 0
-                               ? `Currently restricting to ${globalSettings.allowedCustomAIModels.length} selected models`
-                               : 'All models are currently allowed for custom AI creation'
+                               ? t('settings_custom_ai_restrictions_restricted', { count: globalSettings.allowedCustomAIModels.length })
+                               : t('settings_custom_ai_restrictions_all_allowed')
                            }
                        </p>
 
@@ -2172,14 +2155,13 @@ const SettingsPage: React.FC = () => { // Removed props
                                border: `1px solid ${isDarkMode ? '#444' : '#ddd'}`
                            }}>
                                <p style={{ marginBottom: '15px', fontSize: '0.9em' }}>
-                                   Select which models users can choose when creating custom AIs.
-                                   Leave empty to allow all models.
+                                   {t('settings_custom_ai_restrictions_description')}
                                </p>
 
                                <div style={{ marginBottom: '20px' }}>
-                                   <h5 style={{ marginBottom: '10px' }}>Base Models:</h5>
+                                   <h5 style={{ marginBottom: '10px' }}>{t('settings_custom_ai_restrictions_base_models')}</h5>
                                    {loadingBaseModels ? (
-                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>Loading models...</p>
+                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>{t('settings_custom_ai_restrictions_loading')}</p>
                                    ) : baseModelsForDropdown && Object.keys(baseModelsForDropdown).length > 0 ? (
                                        Object.keys(baseModelsForDropdown).map(provider => (
                                        <div key={provider} style={{ marginBottom: '15px' }}>
@@ -2208,14 +2190,14 @@ const SettingsPage: React.FC = () => { // Removed props
                                            ))}
                                        </div>
                                    ))) : (
-                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>No base models available.</p>
+                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>{t('settings_custom_ai_restrictions_no_base')}</p>
                                    )}
                                </div>
 
                                <div style={{ marginBottom: '20px' }}>
-                                   <h5 style={{ marginBottom: '10px' }}>Custom Models:</h5>
+                                   <h5 style={{ marginBottom: '10px' }}>{t('settings_custom_ai_restrictions_custom_models')}</h5>
                                    {loadingAllCustomModels ? (
-                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>Loading custom models...</p>
+                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>{t('settings_custom_ai_restrictions_loading')}</p>
                                    ) : allCustomModels && allCustomModels.length > 0 ? (
                                        allCustomModels.map(model => (
                                            <label key={model._id} style={{
@@ -2239,7 +2221,7 @@ const SettingsPage: React.FC = () => { // Removed props
                                                {model.providerName}: {model.name} (Custom)
                                            </label>
                                        ))) : (
-                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>No custom models available.</p>
+                                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>{t('settings_custom_ai_restrictions_no_custom')}</p>
                                    )}
                                </div>
 
@@ -2251,7 +2233,7 @@ const SettingsPage: React.FC = () => { // Removed props
                                        }}
                                        style={{...smallButtonStyle, background: isDarkMode ? '#555' : '#ccc'}}
                                    >
-                                       Clear All
+                                       {t('settings_custom_ai_restrictions_clear_all')}
                                    </button>
                                    <button
                                        type="button"
@@ -2262,7 +2244,7 @@ const SettingsPage: React.FC = () => { // Removed props
                                            buttonStyle
                                        }
                                    >
-                                       {updateGlobalSettingsLoading ? 'Saving...' : 'Save Restrictions'}
+                                       {updateGlobalSettingsLoading ? t('settings_custom_ai_restrictions_saving') : t('settings_custom_ai_restrictions_save')}
                                    </button>
                                </div>
                            </div>

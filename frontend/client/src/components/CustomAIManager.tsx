@@ -440,7 +440,7 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
                 <label htmlFor="aiModel" style={labelStyle}>AI Model:</label>
                 {isModelRestricted && (
                   <p style={{ fontSize: '0.8em', color: isDarkMode ? '#ffc107' : '#856404', marginBottom: '5px' }}>
-                    ⚠️ Model selection is restricted by administrator
+                    {t('custom_ai_model_restricted_warning')}
                   </p>
                 )}
                 <select
@@ -452,7 +452,7 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
                   disabled={loadingAllowedModels}
                 >
                   <option value="">
-                    {loadingAllowedModels ? 'Loading models...' : 'Select a model...'}
+                    {loadingAllowedModels ? t('custom_ai_loading_models') : t('custom_ai_select_model')}
                   </option>
                   {!loadingAllowedModels && getModelOptions()}
                 </select>
@@ -530,7 +530,7 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
                 <label htmlFor="editAiModel" style={labelStyle}>AI Model:</label>
                 {isModelRestricted && (
                   <p style={{ fontSize: '0.8em', color: isDarkMode ? '#ffc107' : '#856404', marginBottom: '5px' }}>
-                    ⚠️ Model selection is restricted by administrator
+                    {t('custom_ai_model_restricted_warning')}
                   </p>
                 )}
                 <select
@@ -542,7 +542,7 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
                   disabled={loadingAllowedModels}
                 >
                   <option value="">
-                    {loadingAllowedModels ? 'Loading models...' : 'Select a model...'}
+                    {loadingAllowedModels ? t('custom_ai_loading_models') : t('custom_ai_select_model')}
                   </option>
                   {!loadingAllowedModels && getModelOptions()}
                 </select>

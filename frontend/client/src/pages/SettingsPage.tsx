@@ -2234,7 +2234,7 @@ const SettingsPage: React.FC = () => { // Removed props
                                                    }}
                                                    style={{ marginRight: '8px' }}
                                                />
-                                               {model.providerName}: {model.name} (Custom)
+                                               {model.provider.name}: {model.name} (Custom)
                                            </label>
                                        ))) : (
                                        <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>{t('settings_custom_ai_restrictions_no_custom')}</p>

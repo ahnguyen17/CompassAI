@@ -55,6 +55,10 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
   const [isModelRestricted, setIsModelRestricted] = useState(false);
   const [loadingAllowedModels, setLoadingAllowedModels] = useState(true);
 
+  // Knowledge source limits state
+  const [maxKnowledgeSources, setMaxKnowledgeSources] = useState(20); // Default to 20
+  const [loadingKnowledgeLimits, setLoadingKnowledgeLimits] = useState(true);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -155,6 +159,22 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
       setIsModelRestricted(false);
     } finally {
       setLoadingAllowedModels(false);
+    }
+  };
+
+  // Fetch knowledge source limits
+  const fetchKnowledgeLimits = async () => {
+    setLoadingKnowledgeLimits(true);
+    try {
+      const response = await apiClient.get('/customai/knowledge-limits');
+      if (response.data?.success) {
+        setMaxKnowledgeSources(response.data.data.maxKnowledgeSourcesPerAI);
+      }
+    } catch (err: any) {
+      console.error('Error fetching knowledge limits:', err);
+      // Keep default value of 20
+    } finally {
+      setLoadingKnowledgeLimits(false);
     }
   };
 
@@ -331,6 +351,7 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
   useEffect(() => {
     fetchCustomAIs();
     fetchAllowedModels();
+    fetchKnowledgeLimits();
   }, []);
 
   return (
@@ -369,7 +390,7 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
                     }
                   </p>
                   <p style={{ margin: '5px 0', fontSize: '0.8em', opacity: 0.7 }}>
-                    Files: {ai.knowledgeBaseFiles.length}/20 |
+                    Files: {ai.knowledgeBaseFiles.length}/{loadingKnowledgeLimits ? '...' : maxKnowledgeSources} |
                     Created: {new Date(ai.createdAt).toLocaleDateString()}
                   </p>
                 </div>

@@ -16,7 +16,7 @@ const CUSTOM_AI_TEST_PLAN = {
       "CustomAI model validation (required fields)",
       "User association and isolation",
       "Knowledge base file subdocument structure",
-      "File count limit enforcement (max 20 files)",
+      "File count limit enforcement (configurable max files per AI)",
       "Name uniqueness per user",
       "Character limits (name: 50, instructions: 2000)"
     ]
@@ -57,7 +57,7 @@ const CUSTOM_AI_TEST_PLAN = {
       "Error handling for corrupted files",
       "Processing status tracking",
       "S3 upload and cleanup",
-      "Maximum file count enforcement (20 files)"
+      "Maximum file count enforcement (configurable limit)"
     ]
   },
 
@@ -195,8 +195,10 @@ function validateFileUpload(file, existingFileCount = 0) {
     return { isValid: false, errors };
   }
   
-  if (existingFileCount >= 20) {
-    errors.push("Maximum of 20 files allowed per custom AI");
+  // Note: In production, this limit is configurable by admin (default: 20)
+  const maxFiles = 20; // This would be fetched from settings in real implementation
+  if (existingFileCount >= maxFiles) {
+    errors.push(`Maximum of ${maxFiles} files allowed per custom AI`);
   }
   
   if (file.size > maxSize) {

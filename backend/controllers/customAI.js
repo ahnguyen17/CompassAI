@@ -46,6 +46,20 @@ exports.getAllowedModels = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Get knowledge source limits for custom AI
+// @route   GET /api/v1/customai/knowledge-limits
+// @access  Private
+exports.getKnowledgeLimits = asyncHandler(async (req, res, next) => {
+  const settings = await Setting.getSettings();
+
+  res.status(200).json({
+    success: true,
+    data: {
+      maxKnowledgeSourcesPerAI: settings.maxKnowledgeSourcesPerAI || 20
+    }
+  });
+});
+
 // @desc    Get single custom AI
 // @route   GET /api/v1/customai/:id
 // @access  Private
@@ -263,9 +277,12 @@ exports.uploadKnowledgeBaseFile = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(validation.error, 400));
   }
   
-  // Check file limit
-  if (customAI.knowledgeBaseFiles.length >= 20) {
-    return next(new ErrorResponse('Maximum of 20 files allowed per custom AI', 400));
+  // Check file limit based on admin settings
+  const settings = await Setting.getSettings();
+  const maxFiles = settings.maxKnowledgeSourcesPerAI || 20; // Fallback to 20 if not set
+
+  if (customAI.knowledgeBaseFiles.length >= maxFiles) {
+    return next(new ErrorResponse(`Maximum of ${maxFiles} files allowed per custom AI`, 400));
   }
   
   // Upload file to S3

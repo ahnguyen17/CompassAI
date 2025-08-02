@@ -16,6 +16,12 @@ const SettingSchema = new mongoose.Schema({
     type: [String], // Array of model identifiers that can be used for custom AIs
     default: [], // Empty array means all models are allowed
   },
+  maxKnowledgeSourcesPerAI: {
+    type: Number, // Maximum number of knowledge base files per custom AI
+    default: 20, // Default limit of 20 files per custom AI
+    min: 0, // Minimum 0 (no files allowed)
+    max: 100, // Maximum 100 files per custom AI
+  },
   // Add other global settings here as needed in the future
   lastUpdatedAt: {
     type: Date,
@@ -40,6 +46,10 @@ SettingSchema.statics.getSettings = async function () {
     let needsUpdate = false;
     if (settings.allowedCustomAIModels === undefined) {
       settings.allowedCustomAIModels = [];
+      needsUpdate = true;
+    }
+    if (settings.maxKnowledgeSourcesPerAI === undefined) {
+      settings.maxKnowledgeSourcesPerAI = 20;
       needsUpdate = true;
     }
     if (needsUpdate) {

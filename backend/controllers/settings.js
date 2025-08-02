@@ -23,7 +23,7 @@ exports.updateSettings = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Not authorized to update settings', 403));
   }
 
-  const { globalStreamingEnabled, allowedCustomAIModels } = req.body;
+  const { globalStreamingEnabled, allowedCustomAIModels, maxKnowledgeSourcesPerAI } = req.body;
 
   // Find the settings document (should always exist due to getSettings logic)
   let settings = await Setting.findOne({ key: 'globalSettings' });
@@ -34,6 +34,7 @@ exports.updateSettings = asyncHandler(async (req, res, next) => {
     const createData = { key: 'globalSettings' };
     if (typeof globalStreamingEnabled === 'boolean') createData.globalStreamingEnabled = globalStreamingEnabled;
     if (Array.isArray(allowedCustomAIModels)) createData.allowedCustomAIModels = allowedCustomAIModels;
+    if (typeof maxKnowledgeSourcesPerAI === 'number') createData.maxKnowledgeSourcesPerAI = maxKnowledgeSourcesPerAI;
     settings = await Setting.create(createData);
   } else {
     // Update the specific setting if provided in the request body
@@ -42,6 +43,9 @@ exports.updateSettings = asyncHandler(async (req, res, next) => {
     }
     if (Array.isArray(allowedCustomAIModels)) {
       settings.allowedCustomAIModels = allowedCustomAIModels;
+    }
+    if (typeof maxKnowledgeSourcesPerAI === 'number' && maxKnowledgeSourcesPerAI >= 0 && maxKnowledgeSourcesPerAI <= 100) {
+      settings.maxKnowledgeSourcesPerAI = maxKnowledgeSourcesPerAI;
     }
     // Add updates for other settings here in the future
     // e.g., if (req.body.someOtherSetting !== undefined) settings.someOtherSetting = req.body.someOtherSetting;

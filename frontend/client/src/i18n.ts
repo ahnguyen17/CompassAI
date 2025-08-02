@@ -92,6 +92,16 @@ const resources = {
       "settings_custom_ai_restrictions_clear_all": "Clear All",
       "settings_custom_ai_restrictions_save": "Save Restrictions",
       "settings_custom_ai_restrictions_saving": "Saving...",
+      // Knowledge Source Limits
+      "settings_knowledge_source_limits_title": "Knowledge Source Limits",
+      "settings_knowledge_source_limits_configure": "Configure",
+      "settings_knowledge_source_limits_cancel": "Cancel",
+      "settings_knowledge_source_limits_description": "Set the maximum number of knowledge base files users can upload per custom AI.",
+      "settings_knowledge_source_limits_current": "Maximum files per custom AI: {{count}}",
+      "settings_knowledge_source_limits_label": "Maximum Files per Custom AI:",
+      "settings_knowledge_source_limits_range": "(0-100 files)",
+      "settings_knowledge_source_limits_save": "Save Limit",
+      "settings_knowledge_source_limits_saving": "Saving...",
       // Custom AI Manager
       "custom_ai_model_restricted_warning": "⚠️ Model selection is restricted by administrator",
       "custom_ai_loading_models": "Loading models...",
@@ -187,6 +197,16 @@ const resources = {
       "settings_custom_ai_restrictions_clear_all": "Xóa Tất cả",
       "settings_custom_ai_restrictions_save": "Lưu Hạn chế",
       "settings_custom_ai_restrictions_saving": "Đang lưu...",
+      // Knowledge Source Limits
+      "settings_knowledge_source_limits_title": "Giới hạn Nguồn Kiến thức",
+      "settings_knowledge_source_limits_configure": "Cấu hình",
+      "settings_knowledge_source_limits_cancel": "Hủy",
+      "settings_knowledge_source_limits_description": "Đặt số lượng tối đa tệp cơ sở kiến thức mà người dùng có thể tải lên cho mỗi AI tùy chỉnh.",
+      "settings_knowledge_source_limits_current": "Tối đa tệp mỗi AI tùy chỉnh: {{count}}",
+      "settings_knowledge_source_limits_label": "Tối đa Tệp mỗi AI Tùy chỉnh:",
+      "settings_knowledge_source_limits_range": "(0-100 tệp)",
+      "settings_knowledge_source_limits_save": "Lưu Giới hạn",
+      "settings_knowledge_source_limits_saving": "Đang lưu...",
       // Custom AI Manager
       "custom_ai_model_restricted_warning": "⚠️ Lựa chọn mô hình bị hạn chế bởi quản trị viên",
       "custom_ai_loading_models": "Đang tải mô hình...",

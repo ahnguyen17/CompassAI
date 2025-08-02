@@ -89,11 +89,26 @@ CustomAISchema.index({ userId: 1, createdAt: -1 });
 CustomAISchema.index({ userId: 1, name: 1 }, { unique: true });
 
 // Pre-save hook to validate knowledge base files limit
-CustomAISchema.pre('save', function (next) {
-  if (this.knowledgeBaseFiles && this.knowledgeBaseFiles.length > 20) {
-    const error = new Error('Cannot have more than 20 knowledge base files.');
-    error.name = 'ValidationError';
-    return next(error);
+CustomAISchema.pre('save', async function (next) {
+  if (this.knowledgeBaseFiles && this.knowledgeBaseFiles.length > 0) {
+    try {
+      const Setting = require('./Setting');
+      const settings = await Setting.getSettings();
+      const maxFiles = settings.maxKnowledgeSourcesPerAI || 20; // Fallback to 20 if not set
+
+      if (this.knowledgeBaseFiles.length > maxFiles) {
+        const error = new Error(`Cannot have more than ${maxFiles} knowledge base files.`);
+        error.name = 'ValidationError';
+        return next(error);
+      }
+    } catch (err) {
+      // If we can't get settings, use default limit of 20
+      if (this.knowledgeBaseFiles.length > 20) {
+        const error = new Error('Cannot have more than 20 knowledge base files.');
+        error.name = 'ValidationError';
+        return next(error);
+      }
+    }
   }
   next();
 });

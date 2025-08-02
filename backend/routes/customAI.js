@@ -10,7 +10,8 @@ const {
   uploadKnowledgeBaseFile,
   deleteKnowledgeBaseFile,
   getCustomAIForChat,
-  getAllowedModels
+  getAllowedModels,
+  getKnowledgeLimits
 } = require('../controllers/customAI');
 
 const { protect } = require('../middleware/auth');
@@ -50,6 +51,10 @@ router.use(protect);
 // Allowed models route (must come before /:id routes)
 router.route('/allowed-models')
   .get(getAllowedModels);
+
+// Knowledge limits route (must come before /:id routes)
+router.route('/knowledge-limits')
+  .get(getKnowledgeLimits);
 
 // Main custom AI routes
 router.route('/')

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/api';
 
@@ -49,6 +49,27 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [maxKnowledgeSources, setMaxKnowledgeSources] = useState(20); // Default to 20
+  const [loadingLimits, setLoadingLimits] = useState(true);
+
+  // Fetch knowledge source limits on component mount
+  useEffect(() => {
+    const fetchKnowledgeLimits = async () => {
+      try {
+        const response = await apiClient.get('/customai/knowledge-limits');
+        if (response.data?.success) {
+          setMaxKnowledgeSources(response.data.data.maxKnowledgeSourcesPerAI);
+        }
+      } catch (err) {
+        console.error('Error fetching knowledge limits:', err);
+        // Keep default value of 20
+      } finally {
+        setLoadingLimits(false);
+      }
+    };
+
+    fetchKnowledgeLimits();
+  }, []);
 
   // Styles
   const modalStyle = {
@@ -122,8 +143,8 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
 
   // Handle file upload
   const handleFileUpload = async (file: File) => {
-    if (customAI.knowledgeBaseFiles.length >= 20) {
-      setUploadError('Maximum of 20 files allowed per custom AI.');
+    if (customAI.knowledgeBaseFiles.length >= maxKnowledgeSources) {
+      setUploadError(`Maximum of ${maxKnowledgeSources} files allowed per custom AI.`);
       return;
     }
 
@@ -265,7 +286,7 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
                 Supported: {supportedTypes}
               </p>
               <p style={{ margin: '5px 0 0 0', fontSize: '0.8em', opacity: 0.6 }}>
-                Max 20 files, 10MB per file
+                Max {loadingLimits ? '...' : maxKnowledgeSources} files, 10MB per file
               </p>
             </>
           )}
@@ -274,7 +295,7 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
         {/* Files List */}
         <div>
           <h5 style={{ marginBottom: '15px' }}>
-            Uploaded Files ({customAI.knowledgeBaseFiles.length}/20)
+            Uploaded Files ({customAI.knowledgeBaseFiles.length}/{loadingLimits ? '...' : maxKnowledgeSources})
           </h5>
           
           {customAI.knowledgeBaseFiles.length === 0 ? (

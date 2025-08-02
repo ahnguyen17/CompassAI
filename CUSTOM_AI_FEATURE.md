@@ -20,7 +20,7 @@ The Custom AI feature allows users to create personalized AI assistants with cus
 - **Images**: PNG, JPG, JPEG (placeholder for future OCR integration)
 
 ### File Limits
-- Maximum 20 files per custom AI
+- Configurable maximum files per custom AI (admin setting, default: 20)
 - Maximum 10MB per file
 - Automatic text extraction and processing
 
@@ -79,7 +79,8 @@ GET    /api/v1/customai/:id/chat-context    # Get custom AI context for chat
 ### Admin Controls
 ```
 GET    /api/v1/customai/allowed-models      # Get allowed models for custom AI creation
-PUT    /api/v1/settings                     # Update global settings (including allowedCustomAIModels)
+GET    /api/v1/customai/knowledge-limits    # Get knowledge source limits
+PUT    /api/v1/settings                     # Update global settings (including allowedCustomAIModels, maxKnowledgeSourcesPerAI)
 ```
 
 ## Database Schema
@@ -89,7 +90,8 @@ PUT    /api/v1/settings                     # Update global settings (including 
 {
   key: String,                    // 'globalSettings'
   globalStreamingEnabled: Boolean, // Existing setting
-  allowedCustomAIModels: [String], // NEW: Array of allowed model IDs
+  allowedCustomAIModels: [String], // Array of allowed model IDs
+  maxKnowledgeSourcesPerAI: Number, // NEW: Maximum files per custom AI (0-100, default: 20)
   lastUpdatedAt: Date
 }
 ```
@@ -152,11 +154,24 @@ PUT    /api/v1/settings                     # Update global settings (including 
 3. **Select Models**: Check/uncheck models that users can use for custom AIs
 4. **Save Changes**: Click "Save Restrictions" to apply the settings
 
-#### How Restrictions Work
-- **Empty List**: All models are available to users (default behavior)
-- **Selected Models**: Only checked models can be used for custom AI creation
-- **User Experience**: Users see a warning when restrictions are active
-- **Existing Custom AIs**: Restrictions don't affect already created custom AIs
+#### Setting Knowledge Source Limits
+1. **Navigate to Settings**: Go to Settings > Global Settings (admin only)
+2. **Configure Limits**: Click "Configure" in the Knowledge Source Limits section
+3. **Set Limit**: Enter the maximum number of files (0-100) per custom AI
+4. **Save Changes**: Click "Save Limit" to apply the setting
+
+#### How Admin Controls Work
+- **Model Restrictions**:
+  - Empty List: All models are available to users (default behavior)
+  - Selected Models: Only checked models can be used for custom AI creation
+  - User Experience: Users see a warning when restrictions are active
+  - Existing Custom AIs: Restrictions don't affect already created custom AIs
+
+- **Knowledge Source Limits**:
+  - Default: 20 files per custom AI
+  - Range: 0-100 files per custom AI
+  - Real-time: Changes apply immediately to new file uploads
+  - Existing Files: Already uploaded files are not affected
 
 ## Security Features
 

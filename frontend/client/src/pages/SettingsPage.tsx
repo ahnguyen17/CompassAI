@@ -58,6 +58,7 @@ interface GlobalSettings {
     key?: string; // Optional
     globalStreamingEnabled: boolean;
     allowedCustomAIModels?: string[]; // Optional array of allowed model IDs
+    maxKnowledgeSourcesPerAI?: number; // Optional maximum knowledge sources per AI
     lastUpdatedAt?: string; // Optional
 }
 
@@ -199,6 +200,10 @@ const SettingsPage: React.FC = () => { // Removed props
   const [selectedAllowedModels, setSelectedAllowedModels] = useState<string[]>([]);
   const [showCustomAIModelSettings, setShowCustomAIModelSettings] = useState(false);
 
+  // --- Knowledge Source Limits State (Admin) ---
+  const [knowledgeSourceLimit, setKnowledgeSourceLimit] = useState<number>(20);
+  const [showKnowledgeSourceSettings, setShowKnowledgeSourceSettings] = useState(false);
+
   // --- Custom Provider/Model State (Admin) --- NEW ---
   const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
   const [loadingCustomProviders, setLoadingCustomProviders] = useState(true);
@@ -315,6 +320,8 @@ const SettingsPage: React.FC = () => { // Removed props
               setGlobalSettings(response.data.data);
               // Initialize selected allowed models
               setSelectedAllowedModels(response.data.data.allowedCustomAIModels || []);
+              // Initialize knowledge source limit
+              setKnowledgeSourceLimit(response.data.data.maxKnowledgeSourcesPerAI || 20);
           } else {
               setFetchGlobalSettingsError('Failed to load global settings.');
           }
@@ -877,6 +884,35 @@ const SettingsPage: React.FC = () => { // Removed props
       } catch (err: any) {
           console.error('Error updating custom AI model restrictions:', err);
           setUpdateGlobalSettingsError(err.response?.data?.error || 'Error updating custom AI model restrictions.');
+      } finally {
+          setUpdateGlobalSettingsLoading(false);
+      }
+  };
+
+  // --- Knowledge Source Limits Handler (Admin) ---
+  const handleUpdateKnowledgeSourceLimit = async () => {
+      if (!globalSettings || currentUser?.role !== 'admin') return;
+
+      setUpdateGlobalSettingsLoading(true);
+      setUpdateGlobalSettingsError('');
+
+      try {
+          const response = await apiClient.put('/settings', {
+              maxKnowledgeSourcesPerAI: knowledgeSourceLimit
+          });
+
+          if (response.data?.success) {
+              setGlobalSettings(prev => prev ? {
+                  ...prev,
+                  maxKnowledgeSourcesPerAI: knowledgeSourceLimit
+              } : null);
+              setShowKnowledgeSourceSettings(false);
+          } else {
+              setUpdateGlobalSettingsError(response.data?.error || 'Failed to update knowledge source limit.');
+          }
+      } catch (err: any) {
+          console.error('Error updating knowledge source limit:', err);
+          setUpdateGlobalSettingsError(err.response?.data?.error || 'Error updating knowledge source limit.');
       } finally {
           setUpdateGlobalSettingsLoading(false);
       }
@@ -2245,6 +2281,84 @@ const SettingsPage: React.FC = () => { // Removed props
                                        }
                                    >
                                        {updateGlobalSettingsLoading ? t('settings_custom_ai_restrictions_saving') : t('settings_custom_ai_restrictions_save')}
+                                   </button>
+                               </div>
+                           </div>
+                       )}
+                   </div>
+               )}
+
+               {/* Knowledge Source Limits */}
+               {currentUser?.role === 'admin' && !loadingGlobalSettings && !fetchGlobalSettingsError && globalSettings && (
+                   <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: `1px solid ${isDarkMode ? '#444' : '#eee'}` }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                           <h4 style={{ margin: 0 }}>{t('settings_knowledge_source_limits_title')}</h4>
+                           <button
+                               onClick={() => setShowKnowledgeSourceSettings(!showKnowledgeSourceSettings)}
+                               style={smallButtonStyle}
+                           >
+                               {showKnowledgeSourceSettings ? t('settings_knowledge_source_limits_cancel') : t('settings_knowledge_source_limits_configure')}
+                           </button>
+                       </div>
+
+                       <p style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666', marginBottom: '15px' }}>
+                           {t('settings_knowledge_source_limits_current', { count: globalSettings.maxKnowledgeSourcesPerAI || 20 })}
+                       </p>
+
+                       {showKnowledgeSourceSettings && (
+                           <div style={{
+                               background: isDarkMode ? '#2a2a2a' : '#f9f9f9',
+                               padding: '20px',
+                               borderRadius: '8px',
+                               border: `1px solid ${isDarkMode ? '#444' : '#ddd'}`
+                           }}>
+                               <p style={{ marginBottom: '15px', fontSize: '0.9em' }}>
+                                   {t('settings_knowledge_source_limits_description')}
+                               </p>
+
+                               <div style={{ marginBottom: '20px' }}>
+                                   <label htmlFor="knowledgeSourceLimit" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                                       {t('settings_knowledge_source_limits_label')}
+                                   </label>
+                                   <input
+                                       id="knowledgeSourceLimit"
+                                       type="number"
+                                       min="0"
+                                       max="100"
+                                       value={knowledgeSourceLimit}
+                                       onChange={(e) => setKnowledgeSourceLimit(parseInt(e.target.value) || 0)}
+                                       style={{
+                                           ...inputStyle,
+                                           width: '100px',
+                                           marginRight: '10px'
+                                       }}
+                                   />
+                                   <span style={{ fontSize: '0.9em', color: isDarkMode ? '#ccc' : '#666' }}>
+                                       {t('settings_knowledge_source_limits_range')}
+                                   </span>
+                               </div>
+
+                               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                   <button
+                                       type="button"
+                                       onClick={() => {
+                                           setKnowledgeSourceLimit(globalSettings?.maxKnowledgeSourcesPerAI || 20);
+                                           setShowKnowledgeSourceSettings(false);
+                                       }}
+                                       style={{...smallButtonStyle, background: isDarkMode ? '#555' : '#ccc'}}
+                                   >
+                                       {t('settings_knowledge_source_limits_cancel')}
+                                   </button>
+                                   <button
+                                       type="button"
+                                       onClick={handleUpdateKnowledgeSourceLimit}
+                                       disabled={updateGlobalSettingsLoading}
+                                       style={updateGlobalSettingsLoading ?
+                                           {...buttonStyle, opacity: 0.6, cursor: 'not-allowed'} :
+                                           buttonStyle
+                                       }
+                                   >
+                                       {updateGlobalSettingsLoading ? t('settings_knowledge_source_limits_saving') : t('settings_knowledge_source_limits_save')}
                                    </button>
                                </div>
                            </div>

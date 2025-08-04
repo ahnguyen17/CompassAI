@@ -9,6 +9,8 @@ const {
   duplicateCustomAI,
   uploadKnowledgeBaseFile,
   deleteKnowledgeBaseFile,
+  uploadKnowledgeBaseUrl,
+  deleteKnowledgeBaseUrl,
   getCustomAIForChat,
   getAllowedModels,
   getKnowledgeLimits
@@ -76,6 +78,13 @@ router.route('/:id/files')
 
 router.route('/:id/files/:fileId')
   .delete(deleteKnowledgeBaseFile);
+
+// Knowledge base URL management
+router.route('/:id/urls')
+  .post(uploadKnowledgeBaseUrl);
+
+router.route('/:id/urls/:urlId')
+  .delete(deleteKnowledgeBaseUrl);
 
 // Chat context endpoint
 router.route('/:id/chat-context')

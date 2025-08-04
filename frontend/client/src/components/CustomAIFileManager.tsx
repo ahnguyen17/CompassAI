@@ -17,6 +17,20 @@ interface KnowledgeBaseFile {
   updatedAt: string;
 }
 
+interface KnowledgeBaseUrl {
+  _id: string;
+  originalUrl: string;
+  title: string;
+  contentType: string;
+  extractedText: string;
+  processingStatus: 'pending' | 'processing' | 'completed' | 'failed';
+  processingError: string;
+  fetchTimestamp: string;
+  contentLength: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface CustomAI {
   _id: string;
   userId: string;
@@ -24,6 +38,7 @@ interface CustomAI {
   model: string;
   instructions: string;
   knowledgeBaseFiles: KnowledgeBaseFile[];
+  knowledgeBaseUrls?: KnowledgeBaseUrl[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -51,6 +66,12 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
   const [deleting, setDeleting] = useState<string | null>(null);
   const [maxKnowledgeSources, setMaxKnowledgeSources] = useState(20); // Default to 20
   const [loadingLimits, setLoadingLimits] = useState(true);
+
+  // URL-specific state
+  const [urlInput, setUrlInput] = useState('');
+  const [urlUploading, setUrlUploading] = useState(false);
+  const [urlError, setUrlError] = useState('');
+  const [activeTab, setActiveTab] = useState<'files' | 'urls'>('files');
 
   // Fetch knowledge source limits on component mount
   useEffect(() => {
@@ -141,10 +162,15 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
     transition: 'border-color 0.3s ease'
   };
 
+  // Get total knowledge sources count
+  const getTotalSourcesCount = () => {
+    return customAI.knowledgeBaseFiles.length + (customAI.knowledgeBaseUrls || []).length;
+  };
+
   // Handle file upload
   const handleFileUpload = async (file: File) => {
-    if (customAI.knowledgeBaseFiles.length >= maxKnowledgeSources) {
-      setUploadError(`Maximum of ${maxKnowledgeSources} files allowed per custom AI.`);
+    if (getTotalSourcesCount() >= maxKnowledgeSources) {
+      setUploadError(`Maximum of ${maxKnowledgeSources} knowledge sources (files + URLs) allowed per custom AI.`);
       return;
     }
 
@@ -178,6 +204,65 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  // Handle URL upload
+  const handleUrlUpload = async () => {
+    if (!urlInput.trim()) {
+      setUrlError('Please enter a valid URL.');
+      return;
+    }
+
+    if (getTotalSourcesCount() >= maxKnowledgeSources) {
+      setUrlError(`Maximum of ${maxKnowledgeSources} knowledge sources (files + URLs) allowed per custom AI.`);
+      return;
+    }
+
+    setUrlUploading(true);
+    setUrlError('');
+
+    try {
+      const response = await apiClient.post(`/customai/${customAI._id}/urls`, {
+        url: urlInput.trim()
+      });
+
+      if (response.data?.success) {
+        // Update the custom AI with the new URL
+        const updatedAI = {
+          ...customAI,
+          knowledgeBaseUrls: [...(customAI.knowledgeBaseUrls || []), response.data.data]
+        };
+        onFilesUpdated(updatedAI);
+        setUrlInput('');
+      } else {
+        setUrlError('Failed to add URL to knowledge base.');
+      }
+    } catch (err: any) {
+      setUrlError(err.response?.data?.error || 'Error adding URL to knowledge base.');
+    } finally {
+      setUrlUploading(false);
+    }
+  };
+
+  // Handle URL deletion
+  const handleUrlDelete = async (urlId: string) => {
+    setDeleting(urlId);
+    try {
+      const response = await apiClient.delete(`/customai/${customAI._id}/urls/${urlId}`);
+
+      if (response.data?.success) {
+        // Update the custom AI by removing the URL
+        const updatedAI = {
+          ...customAI,
+          knowledgeBaseUrls: (customAI.knowledgeBaseUrls || []).filter(url => url._id !== urlId)
+        };
+        onFilesUpdated(updatedAI);
+      }
+    } catch (err: any) {
+      console.error('Error deleting URL:', err);
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -238,6 +323,21 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Format URL for display
+  const formatUrlForDisplay = (url: string, maxLength: number = 50) => {
+    if (url.length <= maxLength) return url;
+    return url.substring(0, maxLength) + '...';
+  };
+
+  // Get URL domain
+  const getUrlDomain = (url: string) => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return url;
+    }
+  };
+
   // Get status color
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -255,19 +355,52 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
     <div style={modalStyle}>
       <div style={modalContentStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h4 style={{ margin: 0 }}>Knowledge Base Files - {customAI.name}</h4>
+          <h4 style={{ margin: 0 }}>Knowledge Base - {customAI.name}</h4>
           <button onClick={onClose} style={smallButtonStyle}>✕</button>
         </div>
 
-        {uploadError && <p style={{ color: 'red', marginBottom: '15px' }}>{uploadError}</p>}
+        {/* Tabs */}
+        <div style={{ display: 'flex', marginBottom: '20px', borderBottom: `1px solid ${isDarkMode ? '#444' : '#ddd'}` }}>
+          <button
+            onClick={() => setActiveTab('files')}
+            style={{
+              ...smallButtonStyle,
+              borderRadius: '0',
+              borderBottom: activeTab === 'files' ? `2px solid ${isDarkMode ? '#4CAF50' : '#007bff'}` : 'none',
+              background: 'transparent',
+              color: activeTab === 'files' ? (isDarkMode ? '#4CAF50' : '#007bff') : 'inherit'
+            }}
+          >
+            📁 Files ({customAI.knowledgeBaseFiles.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('urls')}
+            style={{
+              ...smallButtonStyle,
+              borderRadius: '0',
+              borderBottom: activeTab === 'urls' ? `2px solid ${isDarkMode ? '#4CAF50' : '#007bff'}` : 'none',
+              background: 'transparent',
+              color: activeTab === 'urls' ? (isDarkMode ? '#4CAF50' : '#007bff') : 'inherit'
+            }}
+          >
+            🌐 URLs ({(customAI.knowledgeBaseUrls || []).length})
+          </button>
+        </div>
 
-        {/* Upload Area */}
-        <div
-          style={uploadAreaStyle}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onClick={() => fileInputRef.current?.click()}
-        >
+        {/* Error Messages */}
+        {uploadError && <p style={{ color: 'red', marginBottom: '15px' }}>{uploadError}</p>}
+        {urlError && <p style={{ color: 'red', marginBottom: '15px' }}>{urlError}</p>}
+
+        {/* Files Tab Content */}
+        {activeTab === 'files' && (
+          <>
+            {/* Upload Area */}
+            <div
+              style={uploadAreaStyle}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onClick={() => fileInputRef.current?.click()}
+            >
           <input
             ref={fileInputRef}
             type="file"
@@ -286,7 +419,7 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
                 Supported: {supportedTypes}
               </p>
               <p style={{ margin: '5px 0 0 0', fontSize: '0.8em', opacity: 0.6 }}>
-                Max {loadingLimits ? '...' : maxKnowledgeSources} files, 10MB per file
+                Max {loadingLimits ? '...' : maxKnowledgeSources} total sources (files + URLs), 10MB per file
               </p>
             </>
           )}
@@ -295,7 +428,7 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
         {/* Files List */}
         <div>
           <h5 style={{ marginBottom: '15px' }}>
-            Uploaded Files ({customAI.knowledgeBaseFiles.length}/{loadingLimits ? '...' : maxKnowledgeSources})
+            Uploaded Files ({customAI.knowledgeBaseFiles.length} of {loadingLimits ? '...' : maxKnowledgeSources} total sources)
           </h5>
           
           {customAI.knowledgeBaseFiles.length === 0 ? (
@@ -344,6 +477,109 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
             ))
           )}
         </div>
+          </>
+        )}
+
+        {/* URLs Tab Content */}
+        {activeTab === 'urls' && (
+          <>
+            {/* URL Input Area */}
+            <div style={{
+              ...uploadAreaStyle,
+              cursor: 'default'
+            }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
+                <input
+                  type="url"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="Enter a web page URL (e.g., https://example.com/article)"
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    border: `1px solid ${isDarkMode ? '#555' : '#ddd'}`,
+                    borderRadius: '4px',
+                    background: isDarkMode ? '#2a2a2a' : '#fff',
+                    color: isDarkMode ? '#fff' : '#000'
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleUrlUpload();
+                    }
+                  }}
+                />
+                <button
+                  onClick={handleUrlUpload}
+                  disabled={urlUploading || !urlInput.trim()}
+                  style={{
+                    ...buttonStyle,
+                    opacity: (urlUploading || !urlInput.trim()) ? 0.6 : 1,
+                    cursor: (urlUploading || !urlInput.trim()) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {urlUploading ? 'Adding...' : 'Add URL'}
+                </button>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.9em', opacity: 0.7 }}>
+                Add web pages as knowledge sources. The content will be extracted automatically.
+              </p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '0.8em', opacity: 0.6 }}>
+                Max {loadingLimits ? '...' : maxKnowledgeSources} total sources (files + URLs), supports HTTP/HTTPS
+              </p>
+            </div>
+
+            {/* URLs List */}
+            <div>
+              <h5 style={{ marginBottom: '15px' }}>
+                Added URLs ({(customAI.knowledgeBaseUrls || []).length}/{loadingLimits ? '...' : maxKnowledgeSources})
+              </h5>
+
+              {(customAI.knowledgeBaseUrls || []).length === 0 ? (
+                <p style={{ fontStyle: 'italic', opacity: 0.7 }}>
+                  No URLs added yet. Add web page URLs to include their content in your AI's knowledge base.
+                </p>
+              ) : (
+                (customAI.knowledgeBaseUrls || []).map(url => (
+                  <div key={url._id} style={fileCardStyle}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <h6 style={{ margin: '0 0 5px 0' }}>
+                          🌐 {url.title || formatUrlForDisplay(url.originalUrl)}
+                        </h6>
+                        <p style={{ margin: '2px 0', fontSize: '0.8em', opacity: 0.8 }}>
+                          Domain: {getUrlDomain(url.originalUrl)} |
+                          Content: {url.contentLength > 0 ? `${url.contentLength} chars` : 'Pending'}
+                        </p>
+                        <p style={{
+                          margin: '2px 0',
+                          fontSize: '0.8em',
+                          color: getStatusColor(url.processingStatus)
+                        }}>
+                          Status: {url.processingStatus.charAt(0).toUpperCase() + url.processingStatus.slice(1)}
+                          {url.processingError && ` - ${url.processingError}`}
+                        </p>
+                        <p style={{ margin: '2px 0', fontSize: '0.7em', opacity: 0.6 }}>
+                          {formatUrlForDisplay(url.originalUrl, 80)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleUrlDelete(url._id)}
+                        disabled={deleting === url._id}
+                        style={
+                          deleting === url._id ?
+                          {...deleteButtonStyle, opacity: 0.6, cursor: 'not-allowed'} :
+                          deleteButtonStyle
+                        }
+                      >
+                        {deleting === url._id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
           <button onClick={onClose} style={buttonStyle}>

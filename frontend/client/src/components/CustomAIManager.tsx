@@ -19,6 +19,20 @@ interface KnowledgeBaseFile {
   updatedAt: string;
 }
 
+interface KnowledgeBaseUrl {
+  _id: string;
+  originalUrl: string;
+  title: string;
+  contentType: string;
+  extractedText: string;
+  processingStatus: 'pending' | 'processing' | 'completed' | 'failed';
+  processingError: string;
+  fetchTimestamp: string;
+  contentLength: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface CustomAI {
   _id: string;
   userId: string;
@@ -26,6 +40,7 @@ interface CustomAI {
   model: string;
   instructions: string;
   knowledgeBaseFiles: KnowledgeBaseFile[];
+  knowledgeBaseUrls?: KnowledgeBaseUrl[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -390,7 +405,8 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
                     }
                   </p>
                   <p style={{ margin: '5px 0', fontSize: '0.8em', opacity: 0.7 }}>
-                    Files: {ai.knowledgeBaseFiles.length}/{loadingKnowledgeLimits ? '...' : maxKnowledgeSources} |
+                    Sources: {ai.knowledgeBaseFiles.length + (ai.knowledgeBaseUrls || []).length}/{loadingKnowledgeLimits ? '...' : maxKnowledgeSources}
+                    ({ai.knowledgeBaseFiles.length} files, {(ai.knowledgeBaseUrls || []).length} URLs) |
                     Created: {new Date(ai.createdAt).toLocaleDateString()}
                   </p>
                 </div>

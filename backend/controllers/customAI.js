@@ -1,5 +1,6 @@
 const CustomAI = require('../models/CustomAI');
 const Setting = require('../models/Setting');
+const webContentExtractor = require('../services/webContentExtractor');
 const asyncHandler = require('../middleware/async');
 const ErrorResponse = require('../utils/errorResponse');
 const { extractTextFromFile, validateKnowledgeBaseFile, getFileTypeFromExtension } = require('../utils/fileProcessor');
@@ -277,12 +278,13 @@ exports.uploadKnowledgeBaseFile = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(validation.error, 400));
   }
   
-  // Check file limit based on admin settings
+  // Check total knowledge sources limit (files + URLs) based on admin settings
   const settings = await Setting.getSettings();
-  const maxFiles = settings.maxKnowledgeSourcesPerAI || 20; // Fallback to 20 if not set
+  const maxSources = settings.maxKnowledgeSourcesPerAI || 20; // Fallback to 20 if not set
+  const totalSources = customAI.knowledgeBaseFiles.length + (customAI.knowledgeBaseUrls || []).length;
 
-  if (customAI.knowledgeBaseFiles.length >= maxFiles) {
-    return next(new ErrorResponse(`Maximum of ${maxFiles} files allowed per custom AI`, 400));
+  if (totalSources >= maxSources) {
+    return next(new ErrorResponse(`Maximum of ${maxSources} knowledge sources (files + URLs) allowed per custom AI`, 400));
   }
   
   // Upload file to S3
@@ -387,6 +389,116 @@ exports.deleteKnowledgeBaseFile = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Add URL to custom AI knowledge base
+// @route   POST /api/v1/customai/:id/urls
+// @access  Private
+exports.uploadKnowledgeBaseUrl = asyncHandler(async (req, res, next) => {
+  const { url } = req.body;
+
+  if (!url) {
+    return next(new ErrorResponse('URL is required', 400));
+  }
+
+  const customAI = await CustomAI.findById(req.params.id);
+
+  if (!customAI) {
+    return next(new ErrorResponse(`Custom AI not found with id of ${req.params.id}`, 404));
+  }
+
+  // Check if the custom AI belongs to the authenticated user
+  if (customAI.userId.toString() !== req.user.id) {
+    return next(new ErrorResponse('Not authorized to add URLs to this custom AI', 403));
+  }
+
+  // Check total knowledge sources limit (files + URLs) based on admin settings
+  const settings = await Setting.getSettings();
+  const maxSources = settings.maxKnowledgeSourcesPerAI || 20;
+  const totalSources = customAI.knowledgeBaseFiles.length + (customAI.knowledgeBaseUrls || []).length;
+
+  if (totalSources >= maxSources) {
+    return next(new ErrorResponse(`Maximum of ${maxSources} knowledge sources (files + URLs) allowed per custom AI`, 400));
+  }
+
+  // Check if URL already exists
+  const existingUrl = (customAI.knowledgeBaseUrls || []).find(
+    urlSource => urlSource.originalUrl === url
+  );
+
+  if (existingUrl) {
+    return next(new ErrorResponse('This URL has already been added to the knowledge base', 400));
+  }
+
+  // Validate URL format
+  const validation = webContentExtractor.validateUrl(url);
+  if (!validation.isValid) {
+    return next(new ErrorResponse(validation.error, 400));
+  }
+
+  // Create URL entry with pending status
+  const urlEntry = {
+    originalUrl: url,
+    title: '',
+    contentType: '',
+    extractedText: '',
+    processingStatus: 'pending',
+    processingError: '',
+    fetchTimestamp: new Date(),
+    contentLength: 0
+  };
+
+  // Add to knowledge base URLs array
+  if (!customAI.knowledgeBaseUrls) {
+    customAI.knowledgeBaseUrls = [];
+  }
+  customAI.knowledgeBaseUrls.push(urlEntry);
+  await customAI.save();
+
+  // Get the newly added URL entry (with generated _id)
+  const newUrlEntry = customAI.knowledgeBaseUrls[customAI.knowledgeBaseUrls.length - 1];
+
+  // Process URL content asynchronously
+  processUrlContent(customAI._id, newUrlEntry._id, url);
+
+  res.status(201).json({
+    success: true,
+    data: newUrlEntry
+  });
+});
+
+// @desc    Delete URL from custom AI knowledge base
+// @route   DELETE /api/v1/customai/:id/urls/:urlId
+// @access  Private
+exports.deleteKnowledgeBaseUrl = asyncHandler(async (req, res, next) => {
+  const customAI = await CustomAI.findById(req.params.id);
+
+  if (!customAI) {
+    return next(new ErrorResponse(`Custom AI not found with id of ${req.params.id}`, 404));
+  }
+
+  // Check if the custom AI belongs to the authenticated user
+  if (customAI.userId.toString() !== req.user.id) {
+    return next(new ErrorResponse('Not authorized to delete URLs from this custom AI', 403));
+  }
+
+  // Find the URL
+  const urlIndex = (customAI.knowledgeBaseUrls || []).findIndex(
+    url => url._id.toString() === req.params.urlId
+  );
+
+  if (urlIndex === -1) {
+    return next(new ErrorResponse('URL not found', 404));
+  }
+
+  // Remove from array
+  customAI.knowledgeBaseUrls.splice(urlIndex, 1);
+  await customAI.save();
+
+  res.status(200).json({
+    success: true,
+    data: {}
+  });
+});
+
 // @desc    Get custom AI for chat (includes knowledge base text)
 // @route   GET /api/v1/customai/:id/chat-context
 // @access  Private
@@ -410,6 +522,8 @@ exports.getCustomAIForChat = asyncHandler(async (req, res, next) => {
     instructions: customAI.instructions,
     knowledgeBaseText: customAI.getKnowledgeBaseText(),
     fileCount: customAI.knowledgeBaseFiles.length,
+    urlCount: (customAI.knowledgeBaseUrls || []).length,
+    totalSourcesCount: customAI.getTotalKnowledgeSourcesCount(),
     totalSize: customAI.getTotalKnowledgeBaseSize()
   };
 
@@ -418,3 +532,79 @@ exports.getCustomAIForChat = asyncHandler(async (req, res, next) => {
     data: chatContext
   });
 });
+
+// Async function to process URL content
+async function processUrlContent(customAIId, urlEntryId, url) {
+  try {
+    // Update status to processing
+    await CustomAI.updateOne(
+      {
+        _id: customAIId,
+        'knowledgeBaseUrls._id': urlEntryId
+      },
+      {
+        $set: {
+          'knowledgeBaseUrls.$.processingStatus': 'processing',
+          'knowledgeBaseUrls.$.processingError': ''
+        }
+      }
+    );
+
+    // Process the URL
+    const result = await webContentExtractor.processUrl(url);
+
+    if (result.success) {
+      // Update with extracted content
+      await CustomAI.updateOne(
+        {
+          _id: customAIId,
+          'knowledgeBaseUrls._id': urlEntryId
+        },
+        {
+          $set: {
+            'knowledgeBaseUrls.$.processingStatus': 'completed',
+            'knowledgeBaseUrls.$.title': result.title,
+            'knowledgeBaseUrls.$.contentType': result.contentType,
+            'knowledgeBaseUrls.$.extractedText': result.extractedText,
+            'knowledgeBaseUrls.$.contentLength': result.contentLength,
+            'knowledgeBaseUrls.$.processingError': ''
+          }
+        }
+      );
+    } else {
+      // Update with error
+      await CustomAI.updateOne(
+        {
+          _id: customAIId,
+          'knowledgeBaseUrls._id': urlEntryId
+        },
+        {
+          $set: {
+            'knowledgeBaseUrls.$.processingStatus': 'failed',
+            'knowledgeBaseUrls.$.processingError': result.error || 'Unknown error occurred'
+          }
+        }
+      );
+    }
+  } catch (error) {
+    console.error(`Error processing URL ${url}:`, error);
+
+    // Update with error
+    try {
+      await CustomAI.updateOne(
+        {
+          _id: customAIId,
+          'knowledgeBaseUrls._id': urlEntryId
+        },
+        {
+          $set: {
+            'knowledgeBaseUrls.$.processingStatus': 'failed',
+            'knowledgeBaseUrls.$.processingError': 'Internal processing error'
+          }
+        }
+      );
+    } catch (updateError) {
+      console.error('Error updating URL processing status:', updateError);
+    }
+  }
+}

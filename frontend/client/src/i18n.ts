@@ -106,6 +106,17 @@ const resources = {
       "custom_ai_model_restricted_warning": "⚠️ Model selection is restricted by administrator",
       "custom_ai_loading_models": "Loading models...",
       "custom_ai_select_model": "Select a model...",
+      // Knowledge Base URLs
+      "knowledge_base_urls_tab": "🌐 URLs",
+      "knowledge_base_files_tab": "📁 Files",
+      "knowledge_base_url_placeholder": "Enter a web page URL (e.g., https://example.com/article)",
+      "knowledge_base_url_add_button": "Add URL",
+      "knowledge_base_url_adding": "Adding...",
+      "knowledge_base_url_description": "Add web pages as knowledge sources. The content will be extracted automatically.",
+      "knowledge_base_url_limits": "Max {{count}} total sources (files + URLs), supports HTTP/HTTPS",
+      "knowledge_base_urls_empty": "No URLs added yet. Add web page URLs to include their content in your AI's knowledge base.",
+      "knowledge_base_urls_title": "Added URLs",
+      "knowledge_base_sources_count": "Sources: {{total}}/{{max}} ({{files}} files, {{urls}} URLs)",
       // General terms
       "optional": "required", // Changed from Optional to required
       // Add more keys as needed
@@ -211,6 +222,17 @@ const resources = {
       "custom_ai_model_restricted_warning": "⚠️ Lựa chọn mô hình bị hạn chế bởi quản trị viên",
       "custom_ai_loading_models": "Đang tải mô hình...",
       "custom_ai_select_model": "Chọn một mô hình...",
+      // Knowledge Base URLs
+      "knowledge_base_urls_tab": "🌐 URLs",
+      "knowledge_base_files_tab": "📁 Tệp",
+      "knowledge_base_url_placeholder": "Nhập URL trang web (ví dụ: https://example.com/article)",
+      "knowledge_base_url_add_button": "Thêm URL",
+      "knowledge_base_url_adding": "Đang thêm...",
+      "knowledge_base_url_description": "Thêm trang web làm nguồn kiến thức. Nội dung sẽ được trích xuất tự động.",
+      "knowledge_base_url_limits": "Tối đa {{count}} nguồn tổng (tệp + URLs), hỗ trợ HTTP/HTTPS",
+      "knowledge_base_urls_empty": "Chưa có URL nào được thêm. Thêm URL trang web để bao gồm nội dung của chúng trong cơ sở kiến thức AI.",
+      "knowledge_base_urls_title": "URLs đã thêm",
+      "knowledge_base_sources_count": "Nguồn: {{total}}/{{max}} ({{files}} tệp, {{urls}} URLs)",
       // General terms
       "optional": "bắt buộc", // Changed from Tùy chọn to bắt buộc
       // Add more keys as needed

@@ -8,21 +8,29 @@ The Custom AI feature allows users to create personalized AI assistants with cus
 
 ### Core Functionality
 - **Custom AI Creation**: Users can create multiple personalized AI assistants
-- **Knowledge Base**: Upload files per custom AI to create a knowledge base (limit configurable by admin)
+- **Knowledge Base**: Upload files and add web URLs per custom AI to create a knowledge base (limit configurable by admin)
 - **Custom Instructions**: Define AI behavior and personality with up to 2000 characters
 - **Model Selection**: Choose from available AI models for each custom AI
 - **Chat Integration**: Use custom AIs directly in chat conversations
 - **Admin Controls**: Administrators can restrict which models are available for custom AI creation
 
-### Supported File Types
+### Supported Knowledge Sources
+
+#### File Types
 - **Documents**: PDF, DOC, DOCX, TXT, MD
 - **Spreadsheets**: XLS, XLSX
 - **Images**: PNG, JPG, JPEG (placeholder for future OCR integration)
 
-### File Limits
-- Configurable maximum files per custom AI (admin setting, default: 20)
+#### Web URLs
+- **HTTP/HTTPS URLs**: Any publicly accessible web page
+- **Automatic Content Extraction**: Text content extracted from HTML pages
+- **Security**: Private/local URLs blocked for security
+
+### Knowledge Source Limits
+- Configurable maximum sources per custom AI (admin setting, default: 20)
+- Combined limit applies to files AND URLs together
 - Maximum 10MB per file
-- Automatic text extraction and processing
+- Automatic text extraction and processing for both files and web content
 
 ## Architecture
 
@@ -65,10 +73,12 @@ DELETE /api/v1/customai/:id          # Delete custom AI (soft delete)
 POST   /api/v1/customai/:id/duplicate # Duplicate custom AI
 ```
 
-### File Management
+### Knowledge Base Management
 ```
 POST   /api/v1/customai/:id/files           # Upload knowledge base file
 DELETE /api/v1/customai/:id/files/:fileId   # Delete knowledge base file
+POST   /api/v1/customai/:id/urls            # Add knowledge base URL
+DELETE /api/v1/customai/:id/urls/:urlId     # Delete knowledge base URL
 ```
 
 ### Chat Integration
@@ -115,6 +125,18 @@ PUT    /api/v1/settings                     # Update global settings (including 
     createdAt: Date,
     updatedAt: Date
   }],
+  knowledgeBaseUrls: [{      // Array of web URLs
+    originalUrl: String,     // Original URL
+    title: String,           // Extracted page title
+    contentType: String,     // MIME type
+    extractedText: String,   // Processed text content
+    processingStatus: String, // pending|processing|completed|failed
+    processingError: String,
+    fetchTimestamp: Date,    // When content was fetched
+    contentLength: Number,   // Length of extracted content
+    createdAt: Date,
+    updatedAt: Date
+  }],
   isActive: Boolean,         // Soft delete flag
   createdAt: Date,
   updatedAt: Date
@@ -133,12 +155,25 @@ PUT    /api/v1/settings                     # Update global settings (including 
    - Write custom instructions (max 2000 characters)
 4. **Save**: Click "Create AI"
 
-### Adding Knowledge Base Files
+### Adding Knowledge Base Sources
 
-1. **Open File Manager**: Click "Files" button on a custom AI
-2. **Upload Files**: Drag and drop or click to browse files (limit set by admin)
-3. **Monitor Processing**: Wait for files to process and extract text
-4. **Manage Files**: View, delete files as needed
+#### Files
+1. **Open Knowledge Base Manager**: Click "Files" button on a custom AI
+2. **Select Files Tab**: Click on the "📁 Files" tab
+3. **Upload Files**: Drag and drop or click to browse files (limit set by admin)
+4. **Monitor Processing**: Wait for files to process and extract text
+5. **Manage Files**: View, delete files as needed
+
+#### Web URLs
+1. **Open Knowledge Base Manager**: Click "Files" button on a custom AI
+2. **Select URLs Tab**: Click on the "🌐 URLs" tab
+3. **Add URL**: Enter a web page URL and click "Add URL"
+4. **Monitor Processing**: Wait for content to be extracted from the web page
+5. **Manage URLs**: View extracted content, delete URLs as needed
+
+#### Combined Limits
+- The admin-configured limit applies to the **total** of files AND URLs combined
+- Example: If limit is 20, you could have 15 files + 5 URLs, or 10 files + 10 URLs, etc.
 
 ### Using Custom AI in Chat
 
@@ -209,6 +244,13 @@ See `backend/tests/customAI.test.js` for comprehensive test scenarios.
 - Performance testing
 
 ## Deployment Notes
+
+### Dependencies
+Install required packages for URL processing:
+```bash
+cd backend
+npm install axios cheerio
+```
 
 ### Environment Variables
 Ensure these are set:

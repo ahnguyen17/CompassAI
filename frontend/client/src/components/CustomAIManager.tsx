@@ -555,19 +555,19 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label htmlFor="aiInstructions" style={labelStyle}>AI Instructions (max 2000 characters):</label>
+                <label htmlFor="aiInstructions" style={labelStyle}>AI Instructions (max 5000 characters):</label>
                 <textarea
                   id="aiInstructions"
                   value={formData.instructions}
                   onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                  maxLength={2000}
+                  maxLength={5000}
                   rows={6}
                   required
                   style={{...inputStyle, height: 'auto', maxWidth: '100%'}}
                   placeholder="Define how your AI should behave, its personality, and any specific instructions..."
                 />
                 <div style={{ fontSize: '0.8em', opacity: 0.7, marginTop: '5px' }}>
-                  {formData.instructions.length}/2000 characters
+                  {formData.instructions.length}/5000 characters
                 </div>
               </div>
 
@@ -645,18 +645,18 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label htmlFor="editAiInstructions" style={labelStyle}>AI Instructions (max 2000 characters):</label>
+                <label htmlFor="editAiInstructions" style={labelStyle}>AI Instructions (max 5000 characters):</label>
                 <textarea
                   id="editAiInstructions"
                   value={formData.instructions}
                   onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                  maxLength={2000}
+                  maxLength={5000}
                   rows={6}
                   required
                   style={{...inputStyle, height: 'auto', maxWidth: '100%'}}
                 />
                 <div style={{ fontSize: '0.8em', opacity: 0.7, marginTop: '5px' }}>
-                  {formData.instructions.length}/2000 characters
+                  {formData.instructions.length}/5000 characters
                 </div>
               </div>
 

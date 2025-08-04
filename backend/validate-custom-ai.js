@@ -64,7 +64,7 @@ async function validateDatabaseSchema() {
       userId: testUser._id,
       name: '', // Invalid: empty name
       model: 'gpt-3.5-turbo',
-      instructions: 'x'.repeat(2001), // Invalid: too long
+      instructions: 'x'.repeat(5001), // Invalid: too long
     });
     
     try {
@@ -102,7 +102,7 @@ async function validateBusinessLogic() {
   const invalidData = {
     name: '', // Empty name
     model: '',
-    instructions: 'x'.repeat(2001) // Too long
+    instructions: 'x'.repeat(5001) // Too long
   };
   
   const invalidResult = validateCustomAIData(invalidData);

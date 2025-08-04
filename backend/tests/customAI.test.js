@@ -18,7 +18,7 @@ const CUSTOM_AI_TEST_PLAN = {
       "Knowledge base file subdocument structure",
       "File count limit enforcement (configurable max files per AI)",
       "Name uniqueness per user",
-      "Character limits (name: 50, instructions: 2000)"
+      "Character limits (name: 50, instructions: 5000)"
     ]
   },
 
@@ -162,8 +162,8 @@ function validateCustomAIData(data) {
     errors.push("Instructions are required");
   }
   
-  if (data.instructions && data.instructions.length > 2000) {
-    errors.push("Instructions must be 2000 characters or less");
+  if (data.instructions && data.instructions.length > 5000) {
+    errors.push("Instructions must be 5000 characters or less");
   }
   
   return {

@@ -9,7 +9,7 @@ The Custom AI feature allows users to create personalized AI assistants with cus
 ### Core Functionality
 - **Custom AI Creation**: Users can create multiple personalized AI assistants
 - **Knowledge Base**: Upload files and add web URLs per custom AI to create a knowledge base (limit configurable by admin)
-- **Custom Instructions**: Define AI behavior and personality with up to 2000 characters
+- **Custom Instructions**: Define AI behavior and personality with up to 5000 characters
 - **Model Selection**: Choose from available AI models for each custom AI
 - **Chat Integration**: Use custom AIs directly in chat conversations
 - **Admin Controls**: Administrators can restrict which models are available for custom AI creation
@@ -112,7 +112,7 @@ PUT    /api/v1/settings                     # Update global settings (including 
   userId: ObjectId,           // Reference to User
   name: String,              // AI name (max 50 chars, unique per user)
   model: String,             // Selected AI model
-  instructions: String,      // Custom instructions (max 2000 chars)
+  instructions: String,      // Custom instructions (max 5000 chars)
   knowledgeBaseFiles: [{     // Array of uploaded files
     originalName: String,
     fileName: String,        // S3 key
@@ -152,7 +152,7 @@ PUT    /api/v1/settings                     # Update global settings (including 
 3. **Fill Details**:
    - Enter a unique name (max 50 characters)
    - Select an AI model
-   - Write custom instructions (max 2000 characters)
+   - Write custom instructions (max 5000 characters)
 4. **Save**: Click "Create AI"
 
 ### Adding Knowledge Base Sources

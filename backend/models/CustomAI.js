@@ -116,7 +116,7 @@ const CustomAISchema = new mongoose.Schema(
       type: String,
       required: [true, 'AI instructions are required.'],
       trim: true,
-      maxlength: [2000, 'AI instructions cannot exceed 2000 characters.'],
+      maxlength: [5000, 'AI instructions cannot exceed 5000 characters.'],
     },
     knowledgeBaseFiles: [KnowledgeBaseFileSchema],
     knowledgeBaseUrls: [KnowledgeBaseUrlSchema],

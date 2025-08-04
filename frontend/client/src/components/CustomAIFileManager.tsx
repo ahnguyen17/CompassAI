@@ -424,7 +424,7 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
     <div style={modalStyle}>
       <div style={modalContentStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h4 style={{ margin: 0 }}>Knowledge Base - {customAI.name}</h4>
+          <h4 style={{ margin: 0 }}>Knowledge Sources - {customAI.name}</h4>
           <button onClick={onClose} style={smallButtonStyle}>✕</button>
         </div>
 

@@ -117,6 +117,8 @@ const resources = {
       "knowledge_base_urls_empty": "No URLs added yet. Add web page URLs to include their content in your AI's knowledge base.",
       "knowledge_base_urls_title": "Added URLs",
       "knowledge_base_sources_count": "Sources: {{total}}/{{max}} ({{files}} files, {{urls}} URLs)",
+      "custom_ai_sources_button": "Sources",
+      "custom_ai_sources_modal_title": "Knowledge Sources",
       // General terms
       "optional": "required", // Changed from Optional to required
       // Add more keys as needed
@@ -233,6 +235,8 @@ const resources = {
       "knowledge_base_urls_empty": "Chưa có URL nào được thêm. Thêm URL trang web để bao gồm nội dung của chúng trong cơ sở kiến thức AI.",
       "knowledge_base_urls_title": "URLs đã thêm",
       "knowledge_base_sources_count": "Nguồn: {{total}}/{{max}} ({{files}} tệp, {{urls}} URLs)",
+      "custom_ai_sources_button": "Nguồn",
+      "custom_ai_sources_modal_title": "Nguồn Kiến thức",
       // General terms
       "optional": "bắt buộc", // Changed from Tùy chọn to bắt buộc
       // Add more keys as needed

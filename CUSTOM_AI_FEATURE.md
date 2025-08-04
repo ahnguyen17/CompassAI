@@ -158,14 +158,14 @@ PUT    /api/v1/settings                     # Update global settings (including 
 ### Adding Knowledge Base Sources
 
 #### Files
-1. **Open Knowledge Base Manager**: Click "Files" button on a custom AI
+1. **Open Knowledge Sources Manager**: Click "Sources" button on a custom AI
 2. **Select Files Tab**: Click on the "📁 Files" tab
 3. **Upload Files**: Drag and drop or click to browse files (limit set by admin)
 4. **Monitor Processing**: Wait for files to process and extract text
 5. **Manage Files**: View, delete files as needed
 
 #### Web URLs
-1. **Open Knowledge Base Manager**: Click "Files" button on a custom AI
+1. **Open Knowledge Sources Manager**: Click "Sources" button on a custom AI
 2. **Select URLs Tab**: Click on the "🌐 URLs" tab
 3. **Add URL**: Enter a web page URL and click "Add URL"
 4. **Monitor Processing**: Wait for content to be extracted from the web page

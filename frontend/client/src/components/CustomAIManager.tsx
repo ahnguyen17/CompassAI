@@ -62,7 +62,7 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAI, setEditingAI] = useState<CustomAI | null>(null);
-  const [showFilesModal, setShowFilesModal] = useState(false);
+  const [showSourcesModal, setShowSourcesModal] = useState(false);
   const [selectedAI, setSelectedAI] = useState<CustomAI | null>(null);
 
   // Allowed models state
@@ -339,17 +339,17 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
     setShowEditModal(true);
   };
 
-  // Open files modal
-  const openFilesModal = (ai: CustomAI) => {
+  // Open sources modal
+  const openSourcesModal = (ai: CustomAI) => {
     setSelectedAI(ai);
-    setShowFilesModal(true);
+    setShowSourcesModal(true);
   };
 
   // Close modals
   const closeModals = () => {
     setShowCreateModal(false);
     setShowEditModal(false);
-    setShowFilesModal(false);
+    setShowSourcesModal(false);
     setEditingAI(null);
     setSelectedAI(null);
     setFormData({ name: '', model: '', instructions: '' });
@@ -476,11 +476,11 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
                   >
                     Edit
                   </button>
-                  <button 
-                    onClick={() => openFilesModal(ai)} 
+                  <button
+                    onClick={() => openSourcesModal(ai)}
                     style={smallButtonStyle}
                   >
-                    Files ({ai.knowledgeBaseFiles.length})
+                    Sources ({ai.knowledgeBaseFiles.length + (ai.knowledgeBaseUrls || []).length})
                   </button>
                   <button 
                     onClick={() => handleDuplicateAI(ai._id)} 
@@ -681,16 +681,20 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
         </div>
       )}
 
-      {/* Files Modal */}
-      {showFilesModal && selectedAI && (
+      {/* Sources Modal */}
+      {showSourcesModal && selectedAI && (
         <CustomAIFileManager
           customAI={selectedAI}
           isDarkMode={isDarkMode}
           onClose={closeModals}
           onFilesUpdated={(updatedAI) => {
-            // Update the AI in the list
+            // Update the AI in the list with both files and URLs
             setCustomAIs(customAIs.map(ai =>
-              ai._id === updatedAI._id ? { ...ai, knowledgeBaseFiles: updatedAI.knowledgeBaseFiles } : ai
+              ai._id === updatedAI._id ? {
+                ...ai,
+                knowledgeBaseFiles: updatedAI.knowledgeBaseFiles,
+                knowledgeBaseUrls: updatedAI.knowledgeBaseUrls
+              } : ai
             ));
             // Update the selected AI for the modal
             setSelectedAI(updatedAI);

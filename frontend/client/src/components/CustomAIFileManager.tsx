@@ -72,6 +72,8 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
   const [urlUploading, setUrlUploading] = useState(false);
   const [urlError, setUrlError] = useState('');
   const [activeTab, setActiveTab] = useState<'files' | 'urls'>('files');
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   // Fetch knowledge source limits on component mount
   useEffect(() => {
@@ -90,6 +92,27 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
     };
 
     fetchKnowledgeLimits();
+  }, []);
+
+  // Start polling if there are pending URLs
+  useEffect(() => {
+    if (hasPendingUrls()) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      stopPolling();
+    };
+  }, [customAI.knowledgeBaseUrls]);
+
+  // Cleanup polling on component unmount
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
   }, []);
 
   // Styles
@@ -167,6 +190,49 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
     return customAI.knowledgeBaseFiles.length + (customAI.knowledgeBaseUrls || []).length;
   };
 
+  // Check if there are any pending/processing URLs
+  const hasPendingUrls = () => {
+    return (customAI.knowledgeBaseUrls || []).some(url =>
+      url.processingStatus === 'pending' || url.processingStatus === 'processing'
+    );
+  };
+
+  // Fetch updated custom AI data
+  const refreshCustomAI = async () => {
+    try {
+      const response = await apiClient.get(`/customai/${customAI._id}`);
+      if (response.data?.success) {
+        onFilesUpdated(response.data.data);
+        setLastRefresh(new Date());
+      }
+    } catch (err) {
+      console.error('Error refreshing custom AI data:', err);
+    }
+  };
+
+  // Start polling for URL processing updates
+  const startPolling = () => {
+    if (pollingInterval) return; // Already polling
+
+    const interval = setInterval(() => {
+      if (hasPendingUrls()) {
+        refreshCustomAI();
+      } else {
+        stopPolling();
+      }
+    }, 3000); // Poll every 3 seconds
+
+    setPollingInterval(interval);
+  };
+
+  // Stop polling
+  const stopPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
+  };
+
   // Handle file upload
   const handleFileUpload = async (file: File) => {
     if (getTotalSourcesCount() >= maxKnowledgeSources) {
@@ -235,6 +301,9 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
         };
         onFilesUpdated(updatedAI);
         setUrlInput('');
+
+        // Start polling since we just added a URL that needs processing
+        startPolling();
       } else {
         setUrlError('Failed to add URL to knowledge base.');
       }
@@ -384,6 +453,7 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
             }}
           >
             🌐 URLs ({(customAI.knowledgeBaseUrls || []).length})
+            {hasPendingUrls() && <span style={{ marginLeft: '5px', fontSize: '0.8em', opacity: 0.7 }}>⏳</span>}
           </button>
         </div>
 
@@ -530,9 +600,34 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
 
             {/* URLs List */}
             <div>
-              <h5 style={{ marginBottom: '15px' }}>
-                Added URLs ({(customAI.knowledgeBaseUrls || []).length}/{loadingLimits ? '...' : maxKnowledgeSources})
-              </h5>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h5 style={{ margin: 0 }}>
+                  Added URLs ({(customAI.knowledgeBaseUrls || []).length}/{loadingLimits ? '...' : maxKnowledgeSources})
+                  {hasPendingUrls() && (
+                    <span style={{ marginLeft: '10px', fontSize: '0.8em', opacity: 0.7 }}>
+                      ⏳ Processing content...
+                    </span>
+                  )}
+                  {lastRefresh && (
+                    <span style={{ marginLeft: '10px', fontSize: '0.7em', opacity: 0.5 }}>
+                      Last updated: {lastRefresh.toLocaleTimeString()}
+                    </span>
+                  )}
+                </h5>
+                {(customAI.knowledgeBaseUrls || []).length > 0 && (
+                  <button
+                    onClick={refreshCustomAI}
+                    style={{
+                      ...smallButtonStyle,
+                      fontSize: '0.8em',
+                      padding: '4px 8px'
+                    }}
+                    title="Refresh status"
+                  >
+                    🔄
+                  </button>
+                )}
+              </div>
 
               {(customAI.knowledgeBaseUrls || []).length === 0 ? (
                 <p style={{ fontStyle: 'italic', opacity: 0.7 }}>

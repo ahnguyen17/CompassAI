@@ -74,6 +74,9 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
   const [maxKnowledgeSources, setMaxKnowledgeSources] = useState(20); // Default to 20
   const [loadingKnowledgeLimits, setLoadingKnowledgeLimits] = useState(true);
 
+  // Polling state for URL processing
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -190,6 +193,38 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
       // Keep default value of 20
     } finally {
       setLoadingKnowledgeLimits(false);
+    }
+  };
+
+  // Check if any custom AI has pending URLs
+  const hasPendingUrls = () => {
+    return customAIs.some(ai =>
+      (ai.knowledgeBaseUrls || []).some(url =>
+        url.processingStatus === 'pending' || url.processingStatus === 'processing'
+      )
+    );
+  };
+
+  // Start polling for URL processing updates
+  const startPolling = () => {
+    if (pollingInterval) return; // Already polling
+
+    const interval = setInterval(() => {
+      if (hasPendingUrls()) {
+        fetchCustomAIs();
+      } else {
+        stopPolling();
+      }
+    }, 5000); // Poll every 5 seconds (less frequent than file manager)
+
+    setPollingInterval(interval);
+  };
+
+  // Stop polling
+  const stopPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
     }
   };
 
@@ -369,6 +404,27 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
     fetchKnowledgeLimits();
   }, []);
 
+  // Start/stop polling based on pending URLs
+  useEffect(() => {
+    if (hasPendingUrls()) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      stopPolling();
+    };
+  }, [customAIs]);
+
+  // Cleanup polling on component unmount
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, []);
+
   return (
     <div style={sectionStyle}>
       <h3 style={h3Style}>Custom AI Assistants</h3>
@@ -406,7 +462,10 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
                   </p>
                   <p style={{ margin: '5px 0', fontSize: '0.8em', opacity: 0.7 }}>
                     Sources: {ai.knowledgeBaseFiles.length + (ai.knowledgeBaseUrls || []).length}/{loadingKnowledgeLimits ? '...' : maxKnowledgeSources}
-                    ({ai.knowledgeBaseFiles.length} files, {(ai.knowledgeBaseUrls || []).length} URLs) |
+                    ({ai.knowledgeBaseFiles.length} files, {(ai.knowledgeBaseUrls || []).length} URLs)
+                    {(ai.knowledgeBaseUrls || []).some(url => url.processingStatus === 'pending' || url.processingStatus === 'processing') &&
+                      <span style={{ marginLeft: '5px' }}>⏳</span>
+                    } |
                     Created: {new Date(ai.createdAt).toLocaleDateString()}
                   </p>
                 </div>

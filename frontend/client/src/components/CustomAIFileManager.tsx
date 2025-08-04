@@ -72,7 +72,7 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
   const [urlUploading, setUrlUploading] = useState(false);
   const [urlError, setUrlError] = useState('');
   const [activeTab, setActiveTab] = useState<'files' | 'urls'>('files');
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<number | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   // Fetch knowledge source limits on component mount

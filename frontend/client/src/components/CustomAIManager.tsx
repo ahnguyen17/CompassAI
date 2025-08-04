@@ -75,7 +75,7 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
   const [loadingKnowledgeLimits, setLoadingKnowledgeLimits] = useState(true);
 
   // Polling state for URL processing
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<number | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({

@@ -375,6 +375,73 @@ body.dark .noSessionsInGroup {
     line-height: 1;
     flex-shrink: 0;
 }
+
+/* Rename functionality styles */
+.sessionTitleContainer {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0; /* Allow text to truncate */
+}
+
+.renameButton {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    font-size: 1em;
+    padding: 2px 4px;
+    line-height: 1;
+    margin-left: 4px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.sessionListItem:hover .renameButton {
+    opacity: 1;
+}
+
+.renameButton:hover {
+    color: #495057;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.renameContainer {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 8px;
+}
+
+.renameInput {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9em;
+    background-color: #ffffff;
+    color: #495057;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.renameInput:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.renameInput:disabled {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
+
+.renameLoading {
+    color: #6c757d;
+    font-size: 0.8em;
+    flex-shrink: 0;
+}
 .newChatButton { /* Style for the new chat button */
     flex-grow: 1;
     margin-right: 10px;
@@ -428,6 +495,35 @@ body.dark .sessionListItem:hover {
 }
 body.dark .deleteSessionButton {
     color: #ff6b6b; /* Lighter red */
+}
+
+/* Dark mode rename functionality styles */
+body.dark .renameButton {
+    color: #adb5bd;
+}
+
+body.dark .renameButton:hover {
+    color: #e0e0e0;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark .renameInput {
+    background-color: #3a3d41;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark .renameInput:focus {
+    border-color: #64b5f6;
+    box-shadow: 0 0 0 2px rgba(100, 181, 246, 0.25);
+}
+
+body.dark .renameInput:disabled {
+    background-color: #2a2a2a;
+}
+
+body.dark .renameLoading {
+    color: #adb5bd;
 }
 body.dark .newChatButton {
      background-color: #0d6efd;

@@ -2,7 +2,7 @@ import * as React from 'react'; // Explicit import
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { MdSend, MdAttachFile, MdMic, MdMicOff, MdLightbulbOutline, MdClose, MdChevronLeft, MdShare, MdLinkOff, MdAddCircleOutline, MdAutoAwesome } from 'react-icons/md'; // Added MdAutoAwesome
+import { MdSend, MdAttachFile, MdMic, MdMicOff, MdLightbulbOutline, MdClose, MdChevronLeft, MdShare, MdLinkOff, MdAddCircleOutline, MdAutoAwesome, MdEdit } from 'react-icons/md'; // Added MdEdit for rename functionality
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
  // Import both light and dark themes
@@ -264,6 +264,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
   const [isSessionMemoryActive, setIsSessionMemoryActive] = useState(true); // State for session memory toggle
   // const [isTextareaElevated, setIsTextareaElevated] = useState(false); // No longer needed, textarea is always "elevated"
 
+  // Rename functionality state
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null); // Track which session is being renamed
+  const [renameValue, setRenameValue] = useState<string>(''); // Current value in rename input
+  const [renameLoading, setRenameLoading] = useState<string | null>(null); // Track which session is being renamed (loading state)
+
     // --- Helper Function for Parsing Perplexity Content ---
   const parsePerplexityContent = (content: string): { reasoning: string | null; mainContent: string } => {
       const reasoningMatch = content.match(/<think>([\s\S]*?)<\/think>/);
@@ -357,6 +362,76 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
           setShareLoading(false);
       }
   };
+
+  // Rename functionality handlers
+  const handleStartRename = (session: ChatSession) => {
+      setRenamingSessionId(session._id);
+      setRenameValue(session.title || 'Untitled Chat');
+  };
+
+  const handleCancelRename = () => {
+      setRenamingSessionId(null);
+      setRenameValue('');
+  };
+
+  const handleSaveRename = async (sessionId: string) => {
+      const trimmedValue = renameValue.trim();
+
+      // Find the original session to compare with
+      const originalSession = sessions.find(s => s._id === sessionId);
+      const originalTitle = originalSession?.title || 'Untitled Chat';
+
+      // If no changes were made, just cancel
+      if (trimmedValue === originalTitle) {
+          handleCancelRename();
+          return;
+      }
+
+      if (!trimmedValue) {
+          setError('Chat title cannot be empty.');
+          return;
+      }
+
+      if (trimmedValue.length > 100) {
+          setError('Chat title must be 100 characters or less.');
+          return;
+      }
+
+      setRenameLoading(sessionId);
+      setError('');
+
+      try {
+          const response = await apiClient.put(`/chatsessions/${sessionId}`, {
+              title: trimmedValue
+          });
+
+          if (response.data?.success) {
+              const updatedSession: ChatSession = response.data.data;
+
+              // Update current session if it's the one being renamed
+              if (currentSession?._id === sessionId) {
+                  setCurrentSession(updatedSession);
+              }
+
+              // Update sessions in global store
+              setSessions(sessions.map((s: ChatSession): ChatSession =>
+                  s._id === sessionId ? updatedSession : s
+              ));
+
+              // Clear rename state
+              setRenamingSessionId(null);
+              setRenameValue('');
+          } else {
+              setError('Failed to rename chat session.');
+          }
+      } catch (err: any) {
+          setError(err.response?.data?.error || 'Error renaming chat session.');
+          if (err.response?.status === 401) navigate('/login');
+      } finally {
+          setRenameLoading(null);
+      }
+  };
+
   const fetchMessages = async (sessionId: string) => {
       if (!sessionId) return;
       setLoadingMessages(true);
@@ -1077,17 +1152,65 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
                           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                             {group.sessions.map((session: ChatSession) => (
                               <li key={session._id} className={`${styles.sessionListItem} ${currentSession?._id === session._id ? styles.sessionListItemActive : ''}`} title={session.title}>
-                                <span onClick={() => handleSelectSession(session)} className={styles.sessionTitle}>
-                                  {session.title || 'Untitled Chat'}
-                                </span>
-                                <button
-                                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); deleteSession(session._id, currentSession?._id ?? null, navigate); }}
-                                  disabled={deleteLoading === session._id}
-                                  className={styles.deleteSessionButton}
-                                  aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}
-                                >
-                                  {deleteLoading === session._id ? '...' : <MdClose size="0.9em" />}
-                                </button>
+                                {renamingSessionId === session._id ? (
+                                  // Rename mode: show input field
+                                  <div className={styles.renameContainer}>
+                                    <input
+                                      type="text"
+                                      value={renameValue}
+                                      onChange={(e) => setRenameValue(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          handleSaveRename(session._id);
+                                        } else if (e.key === 'Escape') {
+                                          e.preventDefault();
+                                          handleCancelRename();
+                                        }
+                                      }}
+                                      onBlur={() => handleSaveRename(session._id)}
+                                      className={styles.renameInput}
+                                      disabled={renameLoading === session._id}
+                                      autoFocus
+                                      maxLength={100}
+                                    />
+                                    {renameLoading === session._id && (
+                                      <span className={styles.renameLoading}>...</span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  // Normal mode: show title with hover edit icon
+                                  <>
+                                    <div className={styles.sessionTitleContainer}>
+                                      <span
+                                        onClick={() => handleSelectSession(session)}
+                                        className={styles.sessionTitle}
+                                        onDoubleClick={() => handleStartRename(session)}
+                                      >
+                                        {session.title || 'Untitled Chat'}
+                                      </span>
+                                      <button
+                                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                          e.stopPropagation();
+                                          handleStartRename(session);
+                                        }}
+                                        className={styles.renameButton}
+                                        aria-label={`Rename ${session.title || 'Untitled Chat'}`}
+                                        title="Rename chat"
+                                      >
+                                        <MdEdit size="0.8em" />
+                                      </button>
+                                    </div>
+                                    <button
+                                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); deleteSession(session._id, currentSession?._id ?? null, navigate); }}
+                                      disabled={deleteLoading === session._id}
+                                      className={styles.deleteSessionButton}
+                                      aria-label={t('chat_delete_session_tooltip', { title: session.title || 'Untitled Chat' })}
+                                    >
+                                      {deleteLoading === session._id ? '...' : <MdClose size="0.9em" />}
+                                    </button>
+                                  </>
+                                )}
                               </li>
                             ))}
                           </ul>

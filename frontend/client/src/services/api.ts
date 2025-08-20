@@ -115,6 +115,10 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 second timeout
+  // Performance optimizations
+  maxRedirects: 5,
+  validateStatus: (status) => status < 500, // Don't throw on 4xx errors
 });
 
 // Optional: Add interceptor to include JWT token in requests
@@ -125,6 +129,12 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Add cache control for GET requests
+    if (config.method === 'get') {
+      config.headers['Cache-Control'] = 'max-age=300'; // 5 minute cache
+    }
+
     // Log the request URL being used
     // console.log(`Requesting URL: ${config.baseURL}${config.url}`);
     return config;

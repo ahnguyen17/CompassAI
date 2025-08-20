@@ -1,5 +1,5 @@
 import * as React from 'react'; // Explicit import
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { MdSend, MdAttachFile, MdMic, MdMicOff, MdLightbulbOutline, MdClose, MdChevronLeft, MdShare, MdLinkOff, MdAddCircleOutline, MdAutoAwesome, MdEdit } from 'react-icons/md'; // Added MdEdit for rename functionality
@@ -473,11 +473,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
    };
    // Removed local handleNewChat function - Navbar icon uses global store action now
 
+   // Debounced send message to prevent rapid submissions
+   const debouncedSendMessage = useCallback(() => {
+       let timeoutId: NodeJS.Timeout;
+       return (e?: React.FormEvent) => {
+           clearTimeout(timeoutId);
+           timeoutId = setTimeout(() => handleSendMessage(e), 100); // 100ms debounce
+       };
+   }, []);
+
    // Handle keydown for textarea (Shift+Enter to send, Enter for newline)
    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
        if (e.key === 'Enter' && e.shiftKey) { // Check for Shift+Enter
            e.preventDefault(); // Prevent default newline from Shift+Enter if any
-           handleSendMessage(); // Send the message
+           debouncedSendMessage(); // Use debounced version
        }
        // If only Enter is pressed (without Shift), do nothing here,
        // allowing the default newline behavior of the textarea.

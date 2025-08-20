@@ -64,7 +64,12 @@ const corsOptions = {
 };
 // */ // End comment block for original options
 app.use(cors(corsOptions)); // Use the original options again
-app.use(express.json()); // Parse JSON request bodies
+app.use(express.json({ limit: '50mb' })); // Parse JSON request bodies with size limit
+app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Parse URL-encoded bodies
+
+// Performance optimizations
+app.set('trust proxy', 1); // Trust first proxy for performance
+app.disable('x-powered-by'); // Remove Express signature for security/performance
 
 // Basic route
 app.get('/', (req, res) => {

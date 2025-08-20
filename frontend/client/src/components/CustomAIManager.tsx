@@ -209,7 +209,7 @@ const CustomAIManager: React.FC<CustomAIManagerProps> = ({ isDarkMode, available
   const startPolling = () => {
     if (pollingInterval) return; // Already polling
 
-    const interval = setInterval(() => {
+    const interval = window.setInterval(() => {
       if (hasPendingUrls()) {
         fetchCustomAIs();
       } else {

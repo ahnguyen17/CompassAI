@@ -475,10 +475,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
 
    // Debounced send message to prevent rapid submissions
    const debouncedSendMessage = useCallback(() => {
-       let timeoutId: NodeJS.Timeout;
+       let timeoutId: number;
        return (e?: React.FormEvent) => {
            clearTimeout(timeoutId);
-           timeoutId = setTimeout(() => handleSendMessage(e), 100); // 100ms debounce
+           timeoutId = window.setTimeout(() => handleSendMessage(e), 100); // 100ms debounce
        };
    }, []);
 

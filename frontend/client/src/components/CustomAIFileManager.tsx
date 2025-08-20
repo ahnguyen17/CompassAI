@@ -214,7 +214,7 @@ const CustomAIFileManager: React.FC<CustomAIFileManagerProps> = ({
   const startPolling = () => {
     if (pollingInterval) return; // Already polling
 
-    const interval = setInterval(() => {
+    const interval = window.setInterval(() => {
       if (hasPendingUrls()) {
         refreshCustomAI();
       } else {

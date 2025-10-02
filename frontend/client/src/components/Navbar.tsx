@@ -160,6 +160,13 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarVisible, toggleSidebarVisibili
               {isUserDropdownOpen && (
                 <div className={styles.dropdown}>
                   <Link
+                    to="/aidoc"
+                    onClick={() => setIsUserDropdownOpen(false)}
+                    className={styles.dropdownItem}
+                  >
+                    🏥 AIDoc
+                  </Link>
+                  <Link
                     to="/settings"
                     onClick={() => setIsUserDropdownOpen(false)}
                     className={styles.dropdownItem}

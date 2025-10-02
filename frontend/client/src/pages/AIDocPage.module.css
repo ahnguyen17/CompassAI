@@ -1,0 +1,309 @@
+.aiDocContainer {
+    display: flex;
+    height: calc(100vh - 60px);
+    position: relative;
+    overflow: hidden;
+}
+
+.aiDocSidebar {
+    border-right: 1px solid #dee2e6;
+    flex-shrink: 0;
+    width: 280px;
+    min-width: 280px;
+    padding: 15px;
+    transition: transform 0.3s ease-in-out;
+    overflow-y: auto;
+    overflow-x: hidden;
+    white-space: nowrap;
+    transform: translateX(0);
+}
+
+.aiDocSidebarHidden {
+    transform: translateX(-100%);
+    min-width: 0;
+    padding: 0 15px 0 0;
+    border-right: none;
+    overflow: hidden;
+}
+
+.mainAIDocArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    position: relative;
+    overflow-y: auto;
+}
+
+.medicalHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    border-bottom: 2px solid;
+    margin-bottom: 20px;
+}
+
+.medicalIcon {
+    font-size: 32px;
+}
+
+.medicalTitle {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.settingsButton {
+    margin-left: auto;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.settingsButton:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.disclaimer {
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-size: 13px;
+    border-left: 4px solid;
+}
+
+.messageList {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    padding: 10px;
+}
+
+.messageContainer {
+    display: flex;
+    margin-bottom: 20px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.messageContainerUser {
+    justify-content: flex-end;
+}
+
+.messageContainerAi {
+    justify-content: flex-start;
+}
+
+.messageBubble {
+    max-width: 70%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.messageBubbleUser {
+    border-bottom-right-radius: 4px;
+}
+
+.messageBubbleAi {
+    border-bottom-left-radius: 4px;
+}
+
+.inputForm {
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color-subtle);
+}
+
+.inputControls {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0px;
+    padding: 8px;
+    background-color: var(--surface-color);
+    border: 1px solid var(--input-border);
+    border-radius: 24px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.messageInput {
+    border: none;
+    outline: none;
+    padding: 8px 12px;
+    font-size: 15px;
+    background: transparent;
+    resize: none;
+    overflow-y: auto;
+    max-height: 150px;
+    min-height: 24px;
+    font-family: inherit;
+    color: inherit;
+}
+
+.iconRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px 0 8px;
+}
+
+.iconGroupLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.iconGroupRight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.iconButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.iconButton:hover:not(:disabled) {
+    background-color: rgba(0,0,0,0.05);
+}
+
+.iconButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sendButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.sendButton:hover:not(:disabled) {
+    transform: scale(1.1);
+}
+
+.sendButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sessionList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sessionListItem {
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sessionListItem:hover {
+    transform: translateX(4px);
+}
+
+.sessionListItemActive {
+    font-weight: 600;
+}
+
+.newSessionButton {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.newSessionButton:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.deleteButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: #dc3545;
+}
+
+.sessionListItem:hover .deleteButton {
+    opacity: 1;
+}
+
+.deleteButton:hover {
+    transform: scale(1.2);
+}
+
+.toggleButton {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.toggleButton:hover {
+    background-color: rgba(0,0,0,0.05);
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .aiDocSidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        z-index: 100;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+    
+    .messageBubble {
+        max-width: 85%;
+    }
+}
+

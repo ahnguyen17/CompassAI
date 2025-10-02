@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import SettingsPage from './pages/SettingsPage';
 import SharedChatPage from './pages/SharedChatPage';
+import AIDocPage from './pages/AIDocPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute'; // Import AdminRoute
 // Removed apiClient import, handled in store
@@ -75,6 +76,9 @@ function App() {
              <Route path="/chat/:sessionId" element={<ChatPage isSidebarVisible={isSidebarVisible} toggleSidebarVisibility={toggleSidebarVisibility} />} />
              {/* SettingsPage will now internally use useAuthStore */}
              <Route path="/settings" element={<SettingsPage />} />
+             {/* AIDoc Routes */}
+             <Route path="/aidoc" element={<AIDocPage />} />
+             <Route path="/aidoc/:sessionId" element={<AIDocPage />} />
          </Route>
 
          {/* Admin Protected Route - Can be removed if no other admin-only routes exist */}

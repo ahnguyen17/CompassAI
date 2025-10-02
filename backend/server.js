@@ -20,6 +20,7 @@ const customProviderRoutes = require('./routes/customProviders'); // Import cust
 const customAIRoutes = require('./routes/customAI'); // Import custom AI routes
 const customModelRoutes = require('./routes/customModels'); // Import custom model routes
 const userMemoryRoutes = require('./routes/userMemoryRoutes'); // Import user memory routes
+const aiDocSessionRoutes = require('./routes/aiDocSessions'); // Import AIDoc session routes
 
 // Connect to Database
 connectDB();
@@ -90,6 +91,7 @@ app.use('/api/v1/customproviders', customProviderRoutes); // Mount custom provid
 app.use('/api/v1/custommodels', customModelRoutes); // Mount custom model routes (handles nested too)
 app.use('/api/v1/customai', customAIRoutes); // Mount custom AI routes
 app.use('/api/v1/usermemory', userMemoryRoutes); // Mount user memory routes
+app.use('/api/v1/aidocsessions', aiDocSessionRoutes); // Mount AIDoc session routes
 
 // Define the port
 const PORT = process.env.PORT || 5000; // Use port from .env or default to 5000

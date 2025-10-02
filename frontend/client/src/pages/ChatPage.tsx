@@ -482,13 +482,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ isSidebarVisible, toggleSidebarVisi
        };
    }, []);
 
-   // Handle keydown for textarea (Shift+Enter to send, Enter for newline)
+   // Handle keydown for textarea (Enter to send, Shift+Enter for newline)
    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-       if (e.key === 'Enter' && e.shiftKey) { // Check for Shift+Enter
-           e.preventDefault(); // Prevent default newline from Shift+Enter if any
+       if (e.key === 'Enter' && !e.shiftKey) { // Check for Enter without Shift
+           e.preventDefault(); // Prevent default newline from Enter
            debouncedSendMessage(); // Use debounced version
        }
-       // If only Enter is pressed (without Shift), do nothing here,
+       // If Shift+Enter is pressed, do nothing here,
        // allowing the default newline behavior of the textarea.
    };
 

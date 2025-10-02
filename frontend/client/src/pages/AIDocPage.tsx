@@ -116,8 +116,11 @@ const AIDocPage: React.FC = () => {
                     const models: AvailableModel[] = [];
                     const modelData = response.data.data;
 
-                    // Filter for Gemini, DeepSeek, and OpenAI models
-                    ['Gemini', 'DeepSeek', 'OpenAI'].forEach(provider => {
+                    // Preferred providers for medical use
+                    const preferredProviders = ['Gemini', 'DeepSeek', 'OpenAI', 'Anthropic'];
+
+                    // First, try to get models from preferred providers
+                    preferredProviders.forEach(provider => {
                         if (modelData[provider]) {
                             modelData[provider].forEach((model: any) => {
                                 models.push({
@@ -129,8 +132,23 @@ const AIDocPage: React.FC = () => {
                         }
                     });
 
+                    // If no preferred models found, include all available models
+                    if (models.length === 0) {
+                        Object.keys(modelData).forEach(provider => {
+                            if (modelData[provider]) {
+                                modelData[provider].forEach((model: any) => {
+                                    models.push({
+                                        name: model.name,
+                                        displayName: model.displayName,
+                                        provider: provider
+                                    });
+                                });
+                            }
+                        });
+                    }
+
                     setAvailableModels(models);
-                    
+
                     // Set default model if not already set
                     if (!localStorage.getItem('aiDocSelectedModel') && models.length > 0) {
                         setSelectedModel(models[0].name);
@@ -138,6 +156,18 @@ const AIDocPage: React.FC = () => {
                 }
             } catch (err) {
                 console.error('Error fetching models:', err);
+                // Set fallback models if API fails
+                const fallbackModels: AvailableModel[] = [
+                    { name: 'gpt-3.5-turbo', displayName: 'GPT-3.5 Turbo', provider: 'OpenAI' },
+                    { name: 'gpt-4', displayName: 'GPT-4', provider: 'OpenAI' },
+                    { name: 'gemini-pro', displayName: 'Gemini Pro', provider: 'Gemini' },
+                    { name: 'deepseek-chat', displayName: 'DeepSeek Chat', provider: 'DeepSeek' },
+                    { name: 'claude-3-5-sonnet-20241022', displayName: 'Claude 3.5 Sonnet', provider: 'Anthropic' }
+                ];
+                setAvailableModels(fallbackModels);
+                if (!localStorage.getItem('aiDocSelectedModel')) {
+                    setSelectedModel('gpt-3.5-turbo');
+                }
             }
         };
 

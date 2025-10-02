@@ -140,13 +140,27 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
                         value={localSelectedModel}
                         onChange={(e) => setLocalSelectedModel(e.target.value)}
                         style={selectStyle}
+                        disabled={availableModels.length === 0}
                     >
-                        {availableModels.map((model) => (
-                            <option key={model.name} value={model.name}>
-                                {model.displayName} ({model.provider})
-                            </option>
-                        ))}
+                        {availableModels.length === 0 ? (
+                            <option value="">Loading models...</option>
+                        ) : (
+                            availableModels.map((model) => (
+                                <option key={model.name} value={model.name}>
+                                    {model.displayName} ({model.provider})
+                                </option>
+                            ))
+                        )}
                     </select>
+                    {availableModels.length === 0 && (
+                        <div style={{
+                            fontSize: '12px',
+                            color: isDarkMode ? '#999' : '#666',
+                            marginTop: '5px'
+                        }}>
+                            ⚠️ No models available. Please configure API keys in Settings.
+                        </div>
+                    )}
                 </div>
 
                 <div style={buttonContainerStyle}>

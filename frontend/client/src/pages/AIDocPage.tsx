@@ -105,14 +105,12 @@ const AIDocPage: React.FC = () => {
         updateSettings: updateVoiceSettings,
     } = useVoiceInteraction({
         onTranscriptComplete: (transcript) => {
-            // Set the transcript as the new message
+            // Set the transcript as the new message (for display in input)
             setNewMessage(transcript);
-            // Auto-send the message after a brief delay
-            setTimeout(() => {
-                if (transcript.trim() && currentSession?._id && !sendingMessage) {
-                    handleSendMessage();
-                }
-            }, 100);
+            // Auto-send the message immediately with the transcript
+            if (transcript.trim() && currentSession?._id && !sendingMessage) {
+                handleSendMessage(undefined, transcript);
+            }
         },
         onError: (error) => {
             setError(error);
@@ -403,9 +401,13 @@ const AIDocPage: React.FC = () => {
         }
     };
 
-    const handleSendMessage = async (e?: React.FormEvent) => {
+    const handleSendMessage = async (e?: React.FormEvent, messageOverride?: string) => {
         if (e) e.preventDefault();
-        if (!newMessage.trim() || !currentSession?._id || sendingMessage) return;
+
+        // Use messageOverride if provided (for voice input), otherwise use newMessage
+        const messageToSend = messageOverride !== undefined ? messageOverride : newMessage;
+
+        if (!messageToSend.trim() || !currentSession?._id || sendingMessage) return;
 
         const sessionId = currentSession._id;
         setSendingMessage(true);
@@ -413,7 +415,7 @@ const AIDocPage: React.FC = () => {
         setStreamingMessageId(null);
         setStreamingMessageContent('');
 
-        const userMessageContent = newMessage;
+        const userMessageContent = messageToSend;
         setNewMessage('');
 
         // Optimistic user message

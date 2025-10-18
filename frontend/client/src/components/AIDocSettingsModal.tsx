@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
+import { VoiceSettings } from '../hooks/useVoiceInteraction';
 
 interface AIDocSettingsModalProps {
     isOpen: boolean;
@@ -8,6 +9,9 @@ interface AIDocSettingsModalProps {
     selectedModel: string;
     availableModels: Array<{ name: string; displayName: string; provider: string }>;
     onSave: (systemPrompt: string, selectedModel: string) => void;
+    voiceSettings?: VoiceSettings;
+    availableVoices?: SpeechSynthesisVoice[];
+    onVoiceSettingsChange?: (settings: Partial<VoiceSettings>) => void;
 }
 
 const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
@@ -16,11 +20,15 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
     systemPrompt,
     selectedModel,
     availableModels,
-    onSave
+    onSave,
+    voiceSettings,
+    availableVoices = [],
+    onVoiceSettingsChange
 }) => {
     const { isDarkMode } = useAuthStore();
     const [localSystemPrompt, setLocalSystemPrompt] = useState(systemPrompt);
     const [localSelectedModel, setLocalSelectedModel] = useState(selectedModel);
+    const [activeTab, setActiveTab] = useState<'general' | 'voice'>('general');
 
     useEffect(() => {
         setLocalSystemPrompt(systemPrompt);
@@ -119,49 +127,222 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
         color: '#ffffff',
     };
 
+    const tabContainerStyle: React.CSSProperties = {
+        display: 'flex',
+        gap: '10px',
+        marginBottom: '20px',
+        borderBottom: `2px solid ${isDarkMode ? '#444' : '#ddd'}`,
+    };
+
+    const tabStyle = (isActive: boolean): React.CSSProperties => ({
+        padding: '10px 20px',
+        cursor: 'pointer',
+        border: 'none',
+        background: 'none',
+        fontSize: '14px',
+        fontWeight: '600',
+        color: isActive ? (isDarkMode ? '#4a90e2' : '#007bff') : (isDarkMode ? '#999' : '#666'),
+        borderBottom: isActive ? `3px solid ${isDarkMode ? '#4a90e2' : '#007bff'}` : 'none',
+        marginBottom: '-2px',
+        transition: 'all 0.2s',
+    });
+
+    const checkboxContainerStyle: React.CSSProperties = {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        marginBottom: '15px',
+    };
+
+    const checkboxStyle: React.CSSProperties = {
+        width: '18px',
+        height: '18px',
+        cursor: 'pointer',
+    };
+
+    const rangeContainerStyle: React.CSSProperties = {
+        marginBottom: '15px',
+    };
+
+    const rangeStyle: React.CSSProperties = {
+        width: '100%',
+        cursor: 'pointer',
+    };
+
     return (
         <div style={modalOverlayStyle} onClick={onClose}>
             <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
                 <h2 style={{ marginTop: 0, marginBottom: '20px' }}>AIDoc Settings</h2>
-                
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={labelStyle}>System Prompt</label>
-                    <textarea
-                        value={localSystemPrompt}
-                        onChange={(e) => setLocalSystemPrompt(e.target.value)}
-                        style={textareaStyle}
-                        placeholder="Enter the system prompt for AIDoc..."
-                    />
+
+                {/* Tabs */}
+                <div style={tabContainerStyle}>
+                    <button
+                        style={tabStyle(activeTab === 'general')}
+                        onClick={() => setActiveTab('general')}
+                    >
+                        General
+                    </button>
+                    <button
+                        style={tabStyle(activeTab === 'voice')}
+                        onClick={() => setActiveTab('voice')}
+                    >
+                        🎤 Voice Mode
+                    </button>
                 </div>
 
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={labelStyle}>AI Model</label>
-                    <select
-                        value={localSelectedModel}
-                        onChange={(e) => setLocalSelectedModel(e.target.value)}
-                        style={selectStyle}
-                        disabled={availableModels.length === 0}
-                    >
-                        {availableModels.length === 0 ? (
-                            <option value="">Loading models...</option>
-                        ) : (
-                            availableModels.map((model) => (
-                                <option key={model.name} value={model.name}>
-                                    {model.displayName} ({model.provider})
-                                </option>
-                            ))
-                        )}
-                    </select>
-                    {availableModels.length === 0 && (
-                        <div style={{
-                            fontSize: '12px',
-                            color: isDarkMode ? '#999' : '#666',
-                            marginTop: '5px'
-                        }}>
-                            ⚠️ No models available. Please configure API keys in Settings.
+                {/* General Settings Tab */}
+                {activeTab === 'general' && (
+                    <>
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={labelStyle}>System Prompt</label>
+                            <textarea
+                                value={localSystemPrompt}
+                                onChange={(e) => setLocalSystemPrompt(e.target.value)}
+                                style={textareaStyle}
+                                placeholder="Enter the system prompt for AIDoc..."
+                            />
                         </div>
-                    )}
-                </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={labelStyle}>AI Model</label>
+                            <select
+                                value={localSelectedModel}
+                                onChange={(e) => setLocalSelectedModel(e.target.value)}
+                                style={selectStyle}
+                                disabled={availableModels.length === 0}
+                            >
+                                {availableModels.length === 0 ? (
+                                    <option value="">Loading models...</option>
+                                ) : (
+                                    availableModels.map((model) => (
+                                        <option key={model.name} value={model.name}>
+                                            {model.displayName} ({model.provider})
+                                        </option>
+                                    ))
+                                )}
+                            </select>
+                            {availableModels.length === 0 && (
+                                <div style={{
+                                    fontSize: '12px',
+                                    color: isDarkMode ? '#999' : '#666',
+                                    marginTop: '5px'
+                                }}>
+                                    ⚠️ No models available. Please configure API keys in Settings.
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+
+                {/* Voice Settings Tab */}
+                {activeTab === 'voice' && voiceSettings && onVoiceSettingsChange && (
+                    <>
+                        <div style={checkboxContainerStyle}>
+                            <input
+                                type="checkbox"
+                                id="pushToTalk"
+                                checked={voiceSettings.pushToTalk}
+                                onChange={(e) => onVoiceSettingsChange({ pushToTalk: e.target.checked })}
+                                style={checkboxStyle}
+                            />
+                            <label htmlFor="pushToTalk" style={{ cursor: 'pointer', fontSize: '14px' }}>
+                                Push-to-Talk Mode (click mic to speak, otherwise continuous listening)
+                            </label>
+                        </div>
+
+                        <div style={checkboxContainerStyle}>
+                            <input
+                                type="checkbox"
+                                id="autoSpeak"
+                                checked={voiceSettings.autoSpeak}
+                                onChange={(e) => onVoiceSettingsChange({ autoSpeak: e.target.checked })}
+                                style={checkboxStyle}
+                            />
+                            <label htmlFor="autoSpeak" style={{ cursor: 'pointer', fontSize: '14px' }}>
+                                Auto-speak AI responses
+                            </label>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={labelStyle}>Speech Language</label>
+                            <select
+                                value={voiceSettings.language}
+                                onChange={(e) => onVoiceSettingsChange({ language: e.target.value })}
+                                style={selectStyle}
+                            >
+                                <option value="en-US">English (US)</option>
+                                <option value="en-GB">English (UK)</option>
+                                <option value="es-ES">Spanish</option>
+                                <option value="fr-FR">French</option>
+                                <option value="de-DE">German</option>
+                                <option value="it-IT">Italian</option>
+                                <option value="pt-BR">Portuguese (Brazil)</option>
+                                <option value="zh-CN">Chinese (Mandarin)</option>
+                                <option value="ja-JP">Japanese</option>
+                                <option value="ko-KR">Korean</option>
+                                <option value="vi-VN">Vietnamese</option>
+                            </select>
+                        </div>
+
+                        <div style={rangeContainerStyle}>
+                            <label style={labelStyle}>
+                                Speech Rate: {voiceSettings.speechRate.toFixed(1)}x
+                            </label>
+                            <input
+                                type="range"
+                                min="0.5"
+                                max="2.0"
+                                step="0.1"
+                                value={voiceSettings.speechRate}
+                                onChange={(e) => onVoiceSettingsChange({ speechRate: parseFloat(e.target.value) })}
+                                style={rangeStyle}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: isDarkMode ? '#999' : '#666' }}>
+                                <span>Slower</span>
+                                <span>Faster</span>
+                            </div>
+                        </div>
+
+                        {availableVoices.length > 0 && (
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={labelStyle}>Voice Selection</label>
+                                <select
+                                    value={voiceSettings.voiceName || ''}
+                                    onChange={(e) => onVoiceSettingsChange({ voiceName: e.target.value || undefined })}
+                                    style={selectStyle}
+                                >
+                                    <option value="">Default Voice</option>
+                                    {availableVoices
+                                        .filter(voice => voice.lang.startsWith(voiceSettings.language.split('-')[0]))
+                                        .map((voice) => (
+                                            <option key={voice.name} value={voice.name}>
+                                                {voice.name} ({voice.lang})
+                                            </option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+                        )}
+
+                        <div style={{
+                            padding: '12px',
+                            borderRadius: '8px',
+                            backgroundColor: isDarkMode ? '#1a3a1f' : '#d4edda',
+                            border: `1px solid ${isDarkMode ? '#2d5f3d' : '#c3e6cb'}`,
+                            fontSize: '13px',
+                            marginTop: '15px'
+                        }}>
+                            <strong>💡 Voice Mode Tips:</strong>
+                            <ul style={{ marginTop: '8px', marginBottom: '0', paddingLeft: '20px' }}>
+                                <li>Click the microphone button to enable/disable voice mode</li>
+                                <li>In continuous mode, speak naturally - the system detects when you finish</li>
+                                <li>In push-to-talk mode, click the mic each time you want to speak</li>
+                                <li>Use the speaker icon to mute/unmute AI responses</li>
+                                <li>Grant microphone permissions when prompted by your browser</li>
+                            </ul>
+                        </div>
+                    </>
+                )}
 
                 <div style={buttonContainerStyle}>
                     <button

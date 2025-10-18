@@ -5,6 +5,8 @@ import apiClient from '../services/api';
 import styles from './AIDocPage.module.css';
 import AIDocPasswordModal from '../components/AIDocPasswordModal';
 import AIDocSettingsModal from '../components/AIDocSettingsModal';
+import VoiceControls from '../components/VoiceControls';
+import { useVoiceInteraction } from '../hooks/useVoiceInteraction';
 
 // Default medical triage system prompt
 const DEFAULT_SYSTEM_PROMPT = `You are an AI Medical Doctor designed to triage patients efficiently and safely. Your responsibilities include:
@@ -90,6 +92,32 @@ const AIDocPage: React.FC = () => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
+    const lastAiMessageRef = useRef<string>('');
+
+    // Voice interaction hook
+    const {
+        voiceState,
+        settings: voiceSettings,
+        availableVoices,
+        toggleListening,
+        speak,
+        stopSpeaking,
+        updateSettings: updateVoiceSettings,
+    } = useVoiceInteraction({
+        onTranscriptComplete: (transcript) => {
+            // Set the transcript as the new message
+            setNewMessage(transcript);
+            // Auto-send the message after a brief delay
+            setTimeout(() => {
+                if (transcript.trim() && currentSession?._id && !sendingMessage) {
+                    handleSendMessage();
+                }
+            }, 100);
+        },
+        onError: (error) => {
+            setError(error);
+        },
+    });
 
     // Check authentication on mount
     useEffect(() => {
@@ -348,6 +376,33 @@ const AIDocPage: React.FC = () => {
         }
     };
 
+    // Voice mode handlers
+    const handleToggleVoiceMode = () => {
+        const newEnabled = !voiceSettings.enabled;
+        updateVoiceSettings({ enabled: newEnabled });
+
+        if (newEnabled) {
+            // Start listening when voice mode is enabled
+            toggleListening();
+        } else {
+            // Stop everything when voice mode is disabled
+            stopSpeaking();
+        }
+    };
+
+    const handleToggleMute = () => {
+        updateVoiceSettings({ autoSpeak: !voiceSettings.autoSpeak });
+        if (!voiceSettings.autoSpeak) {
+            // If we're unmuting and there's a recent AI message, offer to replay it
+            if (lastAiMessageRef.current) {
+                speak(lastAiMessageRef.current, true);
+            }
+        } else {
+            // If muting, stop current speech
+            stopSpeaking();
+        }
+    };
+
     const handleSendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!newMessage.trim() || !currentSession?._id || sendingMessage) return;
@@ -467,6 +522,12 @@ const AIDocPage: React.FC = () => {
                                         );
                                         setStreamingMessageId(null);
                                         setStreamingMessageContent('');
+
+                                        // Speak AI response if voice mode is enabled and autoSpeak is on
+                                        if (voiceSettings.enabled && voiceSettings.autoSpeak && parsed.message?.content) {
+                                            lastAiMessageRef.current = parsed.message.content;
+                                            speak(parsed.message.content, true);
+                                        }
                                     } else if (parsed.type === 'error') {
                                         setError(parsed.error);
                                         setMessages((prev) =>
@@ -756,11 +817,20 @@ const AIDocPage: React.FC = () => {
                             />
                             <div className={styles.iconRow}>
                                 <div className={styles.iconGroupLeft}>
-                                    <span style={{ fontSize: '12px', color: medicalTheme.text, opacity: 0.7 }}>
-                                        Press Enter to send, Shift+Enter for new line
-                                    </span>
+                                    {/* Voice Controls */}
+                                    <VoiceControls
+                                        voiceState={voiceState}
+                                        settings={voiceSettings}
+                                        onToggleVoice={handleToggleVoiceMode}
+                                        onToggleMute={handleToggleMute}
+                                        isDarkMode={isDarkMode}
+                                        medicalTheme={medicalTheme}
+                                    />
                                 </div>
                                 <div className={styles.iconGroupRight}>
+                                    <span style={{ fontSize: '12px', color: medicalTheme.text, opacity: 0.7, marginRight: '8px' }}>
+                                        Press Enter to send, Shift+Enter for new line
+                                    </span>
                                     <button
                                         type="submit"
                                         className={styles.sendButton}
@@ -784,6 +854,9 @@ const AIDocPage: React.FC = () => {
                 selectedModel={selectedModel}
                 availableModels={availableModels}
                 onSave={handleSaveSettings}
+                voiceSettings={voiceSettings}
+                availableVoices={availableVoices}
+                onVoiceSettingsChange={updateVoiceSettings}
             />
         </div>
     );

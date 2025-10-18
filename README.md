@@ -60,6 +60,16 @@ ai-chatbox/
 *   **Dark Mode:** Toggle between light and dark themes.
 *   **Internationalization (i18n):** Basic setup for multi-language support.
 *   **Responsive Design:** Adapts to different screen sizes.
+*   **AIDoc Medical Triage:** Password-protected medical consultation interface with specialized prompts.
+*   **Voice Interaction Mode (AIDoc):** 🎤 NEW!
+    *   Real-time speech-to-text for hands-free consultations
+    *   Automatic text-to-speech for AI responses
+    *   Continuous conversation mode with voice activity detection
+    *   Push-to-talk mode option
+    *   Multi-language support (11 languages)
+    *   Adjustable speech rate and voice selection
+    *   Visual indicators for listening and speaking states
+    *   See [VOICE_MODE_QUICK_START.md](VOICE_MODE_QUICK_START.md) for usage guide
 
 ## Local Development Setup
 

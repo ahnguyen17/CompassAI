@@ -157,18 +157,23 @@
     justify-content: space-between;
     align-items: center;
     padding: 4px 8px 0 8px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .iconGroupLeft {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex: 1;
+    min-width: 200px;
 }
 
 .iconGroupRight {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .iconButton {
@@ -301,9 +306,20 @@
         z-index: 100;
         box-shadow: 2px 0 10px rgba(0,0,0,0.1);
     }
-    
+
     .messageBubble {
         max-width: 85%;
+    }
+
+    .iconRow {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .iconGroupLeft,
+    .iconGroupRight {
+        width: 100%;
+        justify-content: space-between;
     }
 }
 

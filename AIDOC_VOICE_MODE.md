@@ -3,6 +3,23 @@
 ## Overview
 The AIDoc Voice Interaction Mode enables hands-free, natural conversation with the AI medical triage assistant. Users can speak their symptoms and concerns, and the AI responds with spoken answers, creating a more accessible and intuitive medical consultation experience.
 
+### Voice Providers
+
+AIDoc now supports **two voice providers**:
+
+1. **Browser Voice** (Free, Offline)
+   - Uses Web Speech API
+   - Works offline
+   - No API costs
+   - Good for basic consultations
+
+2. **OpenAI Voice** (Premium, Requires API Key) 🆕
+   - Uses Whisper API for STT
+   - Uses OpenAI TTS for speech synthesis
+   - Superior accuracy and voice quality
+   - Better medical terminology handling
+   - **See [AIDOC_OPENAI_VOICE.md](AIDOC_OPENAI_VOICE.md) for complete OpenAI voice documentation**
+
 ## Features
 
 ### 🎤 Speech-to-Text (STT)

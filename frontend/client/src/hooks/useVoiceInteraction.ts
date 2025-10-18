@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import apiClient from '../services/api';
 
 export interface VoiceSettings {
     enabled: boolean;
@@ -7,6 +8,9 @@ export interface VoiceSettings {
     speechRate: number;
     voiceName?: string;
     pushToTalk: boolean; // If false, continuous listening
+    provider: 'browser' | 'openai'; // Voice provider selection
+    openaiVoice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'; // OpenAI TTS voice
+    openaiSpeed?: number; // OpenAI TTS speed (0.25 - 4.0)
 }
 
 export interface VoiceState {
@@ -30,6 +34,9 @@ const DEFAULT_SETTINGS: VoiceSettings = {
     language: 'en-US',
     speechRate: 1.0,
     pushToTalk: false,
+    provider: 'browser',
+    openaiVoice: 'alloy',
+    openaiSpeed: 1.0,
 };
 
 export const useVoiceInteraction = ({
@@ -65,6 +72,9 @@ export const useVoiceInteraction = ({
     const synthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
     const silenceTimerRef = useRef<number | null>(null);
     const restartTimerRef = useRef<number | null>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
     // Load available voices
     useEffect(() => {
@@ -200,7 +210,7 @@ export const useVoiceInteraction = ({
                 onTranscriptComplete(transcript);
                 setVoiceState(prev => ({ ...prev, transcript: '' }));
             }
-        }, 1500);
+        }, 1500) as unknown as number;
     }, [onTranscriptComplete]);
 
     // Restart recognition after a brief delay
@@ -217,7 +227,7 @@ export const useVoiceInteraction = ({
                     console.error('Error restarting recognition:', err);
                 }
             }
-        }, 300);
+        }, 300) as unknown as number;
     }, [settings.enabled, settings.pushToTalk]);
 
     // Start listening
@@ -250,19 +260,179 @@ export const useVoiceInteraction = ({
         }
     }, []);
 
-    // Toggle listening
+    // ============================================
+    // OpenAI Voice Functions (Whisper + TTS)
+    // ============================================
+
+    // OpenAI Whisper: Transcribe audio
+    const transcribeWithWhisper = useCallback(async (audioBlob: Blob) => {
+        try {
+            setVoiceState(prev => ({ ...prev, isProcessing: true }));
+
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+            formData.append('language', settings.language.split('-')[0]); // Extract language code (e.g., 'en' from 'en-US')
+
+            const response = await apiClient.post('/aidoc/voice/transcribe', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (response.data.success && response.data.transcript) {
+                const transcript = response.data.transcript;
+                setVoiceState(prev => ({ ...prev, transcript, isProcessing: false }));
+                onTranscriptComplete(transcript);
+            } else {
+                throw new Error('No transcript received');
+            }
+        } catch (error: any) {
+            console.error('Whisper transcription error:', error);
+            const errorMessage = error.response?.data?.error || 'Failed to transcribe audio';
+            setVoiceState(prev => ({ ...prev, error: errorMessage, isProcessing: false }));
+            onError?.(errorMessage);
+        }
+    }, [settings.language, onTranscriptComplete, onError]);
+
+    // OpenAI Whisper: Start recording audio
+    const startOpenAIRecording = useCallback(async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                await transcribeWithWhisper(audioBlob);
+
+                // Stop all tracks
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            setVoiceState(prev => ({ ...prev, isListening: true, error: null }));
+
+            // In push-to-talk mode, we'll stop manually
+            // In continuous mode, stop after silence detection
+            if (!settings.pushToTalk) {
+                // Start silence detection timer
+                silenceTimerRef.current = window.setTimeout(() => {
+                    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                        mediaRecorderRef.current.stop();
+                    }
+                }, 5000); // 5 seconds of recording max in continuous mode
+            }
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            const errorMessage = 'Microphone access denied. Please allow microphone access.';
+            setVoiceState(prev => ({ ...prev, error: errorMessage, isListening: false }));
+            onError?.(errorMessage);
+        }
+    }, [settings.pushToTalk, onError, transcribeWithWhisper]);
+
+    // OpenAI Whisper: Stop recording audio
+    const stopOpenAIRecording = useCallback(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+        }
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+        }
+        setVoiceState(prev => ({ ...prev, isListening: false }));
+    }, []);
+
+    // OpenAI TTS: Speak text
+    const speakWithOpenAI = useCallback(async (text: string, interrupt: boolean = false) => {
+        if (!text.trim()) return;
+
+        try {
+            // Stop current audio if interrupting
+            if (interrupt && currentAudioRef.current) {
+                currentAudioRef.current.pause();
+                currentAudioRef.current = null;
+            }
+
+            setVoiceState(prev => ({ ...prev, isSpeaking: true }));
+
+            const response = await apiClient.post('/aidoc/voice/speak', {
+                text,
+                voice: settings.openaiVoice || 'alloy',
+                speed: settings.openaiSpeed || 1.0,
+            }, {
+                responseType: 'blob',
+            });
+
+            const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            currentAudioRef.current = audio;
+
+            audio.onended = () => {
+                setVoiceState(prev => ({ ...prev, isSpeaking: false }));
+                URL.revokeObjectURL(audioUrl);
+                currentAudioRef.current = null;
+
+                // Resume listening after speaking in continuous mode
+                if (settings.enabled && !settings.pushToTalk && settings.provider === 'openai') {
+                    setTimeout(() => startOpenAIRecording(), 500);
+                }
+            };
+
+            audio.onerror = (error) => {
+                console.error('Audio playback error:', error);
+                setVoiceState(prev => ({ ...prev, isSpeaking: false }));
+                URL.revokeObjectURL(audioUrl);
+                currentAudioRef.current = null;
+            };
+
+            await audio.play();
+        } catch (error: any) {
+            console.error('OpenAI TTS error:', error);
+            const errorMessage = error.response?.data?.error || 'Failed to generate speech';
+            setVoiceState(prev => ({ ...prev, error: errorMessage, isSpeaking: false }));
+            onError?.(errorMessage);
+        }
+    }, [settings, onError, startOpenAIRecording]);
+
+    // ============================================
+    // Provider-Aware Functions
+    // ============================================
+
+    // Toggle listening (provider-aware)
     const toggleListening = useCallback(() => {
         if (voiceState.isListening) {
-            stopListening();
+            if (settings.provider === 'openai') {
+                stopOpenAIRecording();
+            } else {
+                stopListening();
+            }
         } else {
-            startListening();
+            if (settings.provider === 'openai') {
+                startOpenAIRecording();
+            } else {
+                startListening();
+            }
         }
-    }, [voiceState.isListening, startListening, stopListening]);
+    }, [voiceState.isListening, settings.provider, startListening, stopListening, startOpenAIRecording, stopOpenAIRecording]);
 
-    // Speak text using TTS
+    // Speak text using TTS (provider-aware)
     const speak = useCallback((text: string, interrupt: boolean = false) => {
         if (!text.trim()) return;
 
+        // Use OpenAI TTS if provider is set to openai
+        if (settings.provider === 'openai') {
+            speakWithOpenAI(text, interrupt);
+            return;
+        }
+
+        // Browser TTS (original implementation)
         // Stop current speech if interrupting
         if (interrupt && window.speechSynthesis.speaking) {
             window.speechSynthesis.cancel();
@@ -303,11 +473,19 @@ export const useVoiceInteraction = ({
 
         synthesisRef.current = utterance;
         window.speechSynthesis.speak(utterance);
-    }, [settings, availableVoices, voiceState.isListening, startListening, stopListening]);
+    }, [settings, availableVoices, voiceState.isListening, startListening, stopListening, speakWithOpenAI]);
 
-    // Stop speaking
+    // Stop speaking (provider-aware)
     const stopSpeaking = useCallback(() => {
+        // Stop browser TTS
         window.speechSynthesis.cancel();
+
+        // Stop OpenAI TTS
+        if (currentAudioRef.current) {
+            currentAudioRef.current.pause();
+            currentAudioRef.current = null;
+        }
+
         setVoiceState(prev => ({ ...prev, isSpeaking: false }));
     }, []);
 
@@ -319,16 +497,28 @@ export const useVoiceInteraction = ({
     // Cleanup
     useEffect(() => {
         return () => {
+            // Cleanup browser voice
             if (recognitionRef.current) {
                 recognitionRef.current.abort();
             }
+            window.speechSynthesis.cancel();
+
+            // Cleanup OpenAI voice
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                mediaRecorderRef.current.stop();
+            }
+            if (currentAudioRef.current) {
+                currentAudioRef.current.pause();
+                currentAudioRef.current = null;
+            }
+
+            // Cleanup timers
             if (silenceTimerRef.current) {
                 clearTimeout(silenceTimerRef.current);
             }
             if (restartTimerRef.current) {
                 clearTimeout(restartTimerRef.current);
             }
-            window.speechSynthesis.cancel();
         };
     }, []);
 

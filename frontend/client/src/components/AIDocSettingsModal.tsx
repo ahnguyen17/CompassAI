@@ -237,6 +237,34 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
                 {/* Voice Settings Tab */}
                 {activeTab === 'voice' && voiceSettings && onVoiceSettingsChange && (
                     <>
+                        {/* Voice Provider Selection */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={labelStyle}>Voice Provider</label>
+                            <select
+                                value={voiceSettings.provider || 'browser'}
+                                onChange={(e) => onVoiceSettingsChange({ provider: e.target.value as 'browser' | 'openai' })}
+                                style={selectStyle}
+                            >
+                                <option value="browser">Browser Voice (Free, Offline)</option>
+                                <option value="openai">OpenAI Voice (Premium, Requires API Key)</option>
+                            </select>
+                            <div style={{
+                                fontSize: '12px',
+                                color: isDarkMode ? '#999' : '#666',
+                                marginTop: '5px'
+                            }}>
+                                {voiceSettings.provider === 'openai' ? (
+                                    <>
+                                        ✨ <strong>OpenAI Voice:</strong> More natural-sounding voices with better medical terminology pronunciation. Requires OpenAI API key and incurs usage costs.
+                                    </>
+                                ) : (
+                                    <>
+                                        🌐 <strong>Browser Voice:</strong> Free and works offline. Uses your device's built-in speech recognition and synthesis.
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
                         <div style={checkboxContainerStyle}>
                             <input
                                 type="checkbox"
@@ -303,9 +331,10 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
                             </div>
                         </div>
 
-                        {availableVoices.length > 0 && (
+                        {/* Browser Voice Selection */}
+                        {voiceSettings.provider === 'browser' && availableVoices.length > 0 && (
                             <div style={{ marginBottom: '20px' }}>
-                                <label style={labelStyle}>Voice Selection</label>
+                                <label style={labelStyle}>Voice Selection (Browser)</label>
                                 <select
                                     value={voiceSettings.voiceName || ''}
                                     onChange={(e) => onVoiceSettingsChange({ voiceName: e.target.value || undefined })}
@@ -324,6 +353,71 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
                             </div>
                         )}
 
+                        {/* OpenAI Voice Settings */}
+                        {voiceSettings.provider === 'openai' && (
+                            <>
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={labelStyle}>OpenAI Voice</label>
+                                    <select
+                                        value={voiceSettings.openaiVoice || 'alloy'}
+                                        onChange={(e) => onVoiceSettingsChange({ openaiVoice: e.target.value as any })}
+                                        style={selectStyle}
+                                    >
+                                        <option value="alloy">Alloy (Neutral, Balanced)</option>
+                                        <option value="echo">Echo (Male, Clear)</option>
+                                        <option value="fable">Fable (British, Expressive)</option>
+                                        <option value="onyx">Onyx (Deep Male)</option>
+                                        <option value="nova">Nova (Female, Warm)</option>
+                                        <option value="shimmer">Shimmer (Female, Soft)</option>
+                                    </select>
+                                    <div style={{
+                                        fontSize: '12px',
+                                        color: isDarkMode ? '#999' : '#666',
+                                        marginTop: '5px'
+                                    }}>
+                                        🎭 Preview different voices to find the one that sounds best for medical consultations
+                                    </div>
+                                </div>
+
+                                <div style={rangeContainerStyle}>
+                                    <label style={labelStyle}>
+                                        OpenAI Speech Speed: {(voiceSettings.openaiSpeed || 1.0).toFixed(1)}x
+                                    </label>
+                                    <input
+                                        type="range"
+                                        min="0.25"
+                                        max="4.0"
+                                        step="0.25"
+                                        value={voiceSettings.openaiSpeed || 1.0}
+                                        onChange={(e) => onVoiceSettingsChange({ openaiSpeed: parseFloat(e.target.value) })}
+                                        style={rangeStyle}
+                                    />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: isDarkMode ? '#999' : '#666' }}>
+                                        <span>0.25x</span>
+                                        <span>4.0x</span>
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    backgroundColor: isDarkMode ? '#3a2a1a' : '#fff3cd',
+                                    border: `1px solid ${isDarkMode ? '#5f4d2d' : '#ffeaa7'}`,
+                                    fontSize: '13px',
+                                    marginTop: '15px',
+                                    marginBottom: '15px'
+                                }}>
+                                    <strong>⚠️ OpenAI Voice Costs:</strong>
+                                    <ul style={{ marginTop: '8px', marginBottom: '0', paddingLeft: '20px' }}>
+                                        <li>Whisper (STT): ~$0.006 per minute of audio</li>
+                                        <li>TTS: ~$0.015 per 1,000 characters</li>
+                                        <li>Costs are charged to your OpenAI API account</li>
+                                        <li>Consider using browser mode for cost-free operation</li>
+                                    </ul>
+                                </div>
+                            </>
+                        )}
+
                         <div style={{
                             padding: '12px',
                             borderRadius: '8px',
@@ -339,6 +433,9 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
                                 <li>In push-to-talk mode, click the mic each time you want to speak</li>
                                 <li>Use the speaker icon to mute/unmute AI responses</li>
                                 <li>Grant microphone permissions when prompted by your browser</li>
+                                {voiceSettings.provider === 'openai' && (
+                                    <li><strong>OpenAI mode:</strong> Requires internet connection and API key</li>
+                                )}
                             </ul>
                         </div>
                     </>

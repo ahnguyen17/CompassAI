@@ -4,6 +4,20 @@
 
 Voice Mode allows you to have natural, spoken conversations with the AIDoc medical triage assistant. Simply speak your symptoms and concerns, and the AI will respond with both text and voice.
 
+### Two Voice Options
+
+**🌐 Browser Voice** (Free, Default)
+- Uses your device's built-in speech recognition
+- Works offline
+- No additional costs
+
+**✨ OpenAI Voice** (Premium, Optional)
+- More accurate transcription
+- Natural-sounding voices
+- Better medical terminology
+- Requires OpenAI API key (~$0.06 per 10-min consultation)
+- See [AIDOC_OPENAI_VOICE.md](AIDOC_OPENAI_VOICE.md) for details
+
 ## 🚀 Getting Started (3 Easy Steps)
 
 ### Step 1: Enable Voice Mode

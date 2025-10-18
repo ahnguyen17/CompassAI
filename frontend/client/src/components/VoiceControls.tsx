@@ -71,6 +71,33 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
                 </button>
             )}
 
+            {/* Provider Badge */}
+            {enabled && (
+                <div
+                    style={{
+                        fontSize: '10px',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        backgroundColor: settings.provider === 'openai'
+                            ? (isDarkMode ? '#2a4a2a' : '#d4edda')
+                            : (isDarkMode ? '#2a3a4a' : '#d4e4ed'),
+                        color: settings.provider === 'openai'
+                            ? (isDarkMode ? '#4ade80' : '#28a745')
+                            : (isDarkMode ? '#60a5fa' : '#0066cc'),
+                        border: `1px solid ${settings.provider === 'openai'
+                            ? (isDarkMode ? '#4ade80' : '#28a745')
+                            : (isDarkMode ? '#60a5fa' : '#0066cc')}`,
+                        fontWeight: 'bold',
+                        whiteSpace: 'nowrap',
+                    }}
+                    title={settings.provider === 'openai'
+                        ? 'Using OpenAI Whisper & TTS (Premium)'
+                        : 'Using Browser Voice (Free)'}
+                >
+                    {settings.provider === 'openai' ? '✨ OpenAI' : '🌐 Browser'}
+                </div>
+            )}
+
             {/* Voice Status Indicator */}
             {enabled && (
                 <div className={styles.statusContainer}>

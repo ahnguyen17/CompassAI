@@ -71,7 +71,7 @@ const AIDocPage: React.FC = () => {
     const [loadingMessages, setLoadingMessages] = useState(false);
 
     // UI state
-    const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+    const [isSidebarVisible, setIsSidebarVisible] = useState(window.innerWidth > 768);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [newMessage, setNewMessage] = useState('');
     const [sendingMessage, setSendingMessage] = useState(false);
@@ -102,9 +102,26 @@ const AIDocPage: React.FC = () => {
     useEffect(() => {
         const savedPrompt = localStorage.getItem('aiDocSystemPrompt');
         const savedModel = localStorage.getItem('aiDocSelectedModel');
-        
+
         if (savedPrompt) setSystemPrompt(savedPrompt);
         if (savedModel) setSelectedModel(savedModel);
+    }, []);
+
+    // Handle responsive sidebar - auto-collapse on mobile
+    useEffect(() => {
+        const handleResize = () => {
+            const isMobile = window.innerWidth <= 768;
+            setIsSidebarVisible(!isMobile);
+        };
+
+        // Set initial state
+        handleResize();
+
+        // Add event listener
+        window.addEventListener('resize', handleResize);
+
+        // Cleanup
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     // Fetch available models
@@ -267,12 +284,16 @@ const AIDocPage: React.FC = () => {
                 systemPrompt: systemPrompt,
                 modelUsed: selectedModel
             });
-            
+
             if (response.data?.success) {
                 const newSession = response.data.data;
                 setSessions([newSession, ...sessions]);
                 setCurrentSession(newSession);
                 navigate(`/aidoc/${newSession._id}`);
+                // Auto-close sidebar on mobile after creating new session
+                if (window.innerWidth <= 768) {
+                    setIsSidebarVisible(false);
+                }
             }
         } catch (err: any) {
             console.error('Error creating session:', err);
@@ -518,6 +539,22 @@ const AIDocPage: React.FC = () => {
 
     return (
         <div className={styles.aiDocContainer} style={{ backgroundColor: medicalTheme.background }}>
+            {/* Mobile overlay backdrop */}
+            {isSidebarVisible && window.innerWidth <= 768 && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        zIndex: 99,
+                    }}
+                    onClick={() => setIsSidebarVisible(false)}
+                />
+            )}
+
             {/* Sidebar */}
             <div
                 className={`${styles.aiDocSidebar} ${isSidebarVisible ? '' : styles.aiDocSidebarHidden}`}
@@ -563,6 +600,10 @@ const AIDocPage: React.FC = () => {
                                         onClick={() => {
                                             setCurrentSession(session);
                                             navigate(`/aidoc/${session._id}`);
+                                            // Auto-close sidebar on mobile after selecting session
+                                            if (window.innerWidth <= 768) {
+                                                setIsSidebarVisible(false);
+                                            }
                                         }}
                                     >
                                         {session.title}

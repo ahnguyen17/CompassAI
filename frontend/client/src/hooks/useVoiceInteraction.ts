@@ -63,8 +63,8 @@ export const useVoiceInteraction = ({
 
     const recognitionRef = useRef<SpeechRecognition | null>(null);
     const synthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
-    const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const restartTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const silenceTimerRef = useRef<number | null>(null);
+    const restartTimerRef = useRef<number | null>(null);
 
     // Load available voices
     useEffect(() => {

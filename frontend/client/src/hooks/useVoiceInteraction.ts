@@ -182,6 +182,17 @@ export const useVoiceInteraction = ({
                 currentAudioRef.current = null;
             }
 
+            // Stop listening while AI is speaking to prevent recording AI's voice
+            const wasListening = voiceState.isListening;
+            if (wasListening) {
+                // Temporarily disable auto-restart
+                const previousRestartSetting = shouldRestartListeningRef.current;
+                shouldRestartListeningRef.current = false;
+                stopRecording();
+                // Restore the restart setting for after speech ends
+                shouldRestartListeningRef.current = previousRestartSetting;
+            }
+
             setVoiceState(prev => ({ ...prev, isSpeaking: true }));
 
             const response = await apiClient.post('/aidoc/voice/speak', {
@@ -203,7 +214,7 @@ export const useVoiceInteraction = ({
                 currentAudioRef.current = null;
 
                 // Resume listening after speaking in continuous mode
-                if (settings.enabled && !settings.pushToTalk) {
+                if (shouldRestartListeningRef.current && !settings.pushToTalk) {
                     setTimeout(() => startRecording(), 500);
                 }
             };
@@ -213,6 +224,11 @@ export const useVoiceInteraction = ({
                 setVoiceState(prev => ({ ...prev, isSpeaking: false }));
                 URL.revokeObjectURL(audioUrl);
                 currentAudioRef.current = null;
+
+                // Resume listening after error in continuous mode
+                if (shouldRestartListeningRef.current && !settings.pushToTalk) {
+                    setTimeout(() => startRecording(), 500);
+                }
             };
 
             await audio.play();
@@ -221,8 +237,13 @@ export const useVoiceInteraction = ({
             const errorMessage = error.response?.data?.error || 'Failed to generate speech';
             setVoiceState(prev => ({ ...prev, error: errorMessage, isSpeaking: false }));
             onError?.(errorMessage);
+
+            // Resume listening after error in continuous mode
+            if (shouldRestartListeningRef.current && !settings.pushToTalk) {
+                setTimeout(() => startRecording(), 500);
+            }
         }
-    }, [settings, onError, startRecording]);
+    }, [settings, voiceState.isListening, onError, startRecording, stopRecording]);
 
     // Toggle listening
     const toggleListening = useCallback(() => {

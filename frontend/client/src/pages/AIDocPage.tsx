@@ -98,7 +98,6 @@ const AIDocPage: React.FC = () => {
     const {
         voiceState,
         settings: voiceSettings,
-        availableVoices,
         toggleListening,
         speak,
         stopSpeaking,
@@ -857,7 +856,6 @@ const AIDocPage: React.FC = () => {
                 availableModels={availableModels}
                 onSave={handleSaveSettings}
                 voiceSettings={voiceSettings}
-                availableVoices={availableVoices}
                 onVoiceSettingsChange={updateVoiceSettings}
             />
         </div>

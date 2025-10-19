@@ -65,6 +65,7 @@ export const useVoiceInteraction = ({
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+    const shouldRestartListeningRef = useRef<boolean>(false);
 
     // Save settings to localStorage
     useEffect(() => {
@@ -125,6 +126,14 @@ export const useVoiceInteraction = ({
 
                 // Stop all tracks
                 stream.getTracks().forEach(track => track.stop());
+
+                // In continuous mode, restart listening after transcription
+                if (shouldRestartListeningRef.current && !settings.pushToTalk) {
+                    // Small delay before restarting to avoid immediate re-recording
+                    setTimeout(() => {
+                        startRecording();
+                    }, 500);
+                }
             };
 
             mediaRecorder.start();
@@ -150,6 +159,9 @@ export const useVoiceInteraction = ({
 
     // Stop recording audio
     const stopRecording = useCallback(() => {
+        // Disable auto-restart when manually stopping
+        shouldRestartListeningRef.current = false;
+
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop();
         }
@@ -215,11 +227,15 @@ export const useVoiceInteraction = ({
     // Toggle listening
     const toggleListening = useCallback(() => {
         if (voiceState.isListening) {
+            // Stop listening - disable auto-restart
+            shouldRestartListeningRef.current = false;
             stopRecording();
         } else {
+            // Start listening - enable auto-restart in continuous mode
+            shouldRestartListeningRef.current = !settings.pushToTalk;
             startRecording();
         }
-    }, [voiceState.isListening, startRecording, stopRecording]);
+    }, [voiceState.isListening, settings.pushToTalk, startRecording, stopRecording]);
 
     // Stop speaking
     const stopSpeaking = useCallback(() => {

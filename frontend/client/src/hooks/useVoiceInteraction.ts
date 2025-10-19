@@ -65,7 +65,6 @@ export const useVoiceInteraction = ({
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-    const shouldRestartListeningRef = useRef<boolean>(false);
 
     // Save settings to localStorage
     useEffect(() => {
@@ -126,14 +125,6 @@ export const useVoiceInteraction = ({
 
                 // Stop all tracks
                 stream.getTracks().forEach(track => track.stop());
-
-                // In continuous mode, restart listening after transcription
-                if (shouldRestartListeningRef.current && !settings.pushToTalk) {
-                    // Small delay before restarting to avoid immediate re-recording
-                    setTimeout(() => {
-                        startRecording();
-                    }, 500);
-                }
             };
 
             mediaRecorder.start();
@@ -159,9 +150,6 @@ export const useVoiceInteraction = ({
 
     // Stop recording audio
     const stopRecording = useCallback(() => {
-        // Disable auto-restart when manually stopping
-        shouldRestartListeningRef.current = false;
-
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop();
         }
@@ -180,17 +168,6 @@ export const useVoiceInteraction = ({
             if (interrupt && currentAudioRef.current) {
                 currentAudioRef.current.pause();
                 currentAudioRef.current = null;
-            }
-
-            // Stop listening while AI is speaking to prevent recording AI's voice
-            const wasListening = voiceState.isListening;
-            if (wasListening) {
-                // Temporarily disable auto-restart
-                const previousRestartSetting = shouldRestartListeningRef.current;
-                shouldRestartListeningRef.current = false;
-                stopRecording();
-                // Restore the restart setting for after speech ends
-                shouldRestartListeningRef.current = previousRestartSetting;
             }
 
             setVoiceState(prev => ({ ...prev, isSpeaking: true }));
@@ -214,7 +191,7 @@ export const useVoiceInteraction = ({
                 currentAudioRef.current = null;
 
                 // Resume listening after speaking in continuous mode
-                if (shouldRestartListeningRef.current && !settings.pushToTalk) {
+                if (settings.enabled && !settings.pushToTalk) {
                     setTimeout(() => startRecording(), 500);
                 }
             };
@@ -224,11 +201,6 @@ export const useVoiceInteraction = ({
                 setVoiceState(prev => ({ ...prev, isSpeaking: false }));
                 URL.revokeObjectURL(audioUrl);
                 currentAudioRef.current = null;
-
-                // Resume listening after error in continuous mode
-                if (shouldRestartListeningRef.current && !settings.pushToTalk) {
-                    setTimeout(() => startRecording(), 500);
-                }
             };
 
             await audio.play();
@@ -237,26 +209,17 @@ export const useVoiceInteraction = ({
             const errorMessage = error.response?.data?.error || 'Failed to generate speech';
             setVoiceState(prev => ({ ...prev, error: errorMessage, isSpeaking: false }));
             onError?.(errorMessage);
-
-            // Resume listening after error in continuous mode
-            if (shouldRestartListeningRef.current && !settings.pushToTalk) {
-                setTimeout(() => startRecording(), 500);
-            }
         }
-    }, [settings, voiceState.isListening, onError, startRecording, stopRecording]);
+    }, [settings, onError, startRecording]);
 
     // Toggle listening
     const toggleListening = useCallback(() => {
         if (voiceState.isListening) {
-            // Stop listening - disable auto-restart
-            shouldRestartListeningRef.current = false;
             stopRecording();
         } else {
-            // Start listening - enable auto-restart in continuous mode
-            shouldRestartListeningRef.current = !settings.pushToTalk;
             startRecording();
         }
-    }, [voiceState.isListening, settings.pushToTalk, startRecording, stopRecording]);
+    }, [voiceState.isListening, startRecording, stopRecording]);
 
     // Stop speaking
     const stopSpeaking = useCallback(() => {

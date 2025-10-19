@@ -95,6 +95,15 @@ app.use('/api/v1/usermemory', userMemoryRoutes); // Mount user memory routes
 app.use('/api/v1/aidocsessions', aiDocSessionRoutes); // Mount AIDoc session routes
 app.use('/api/v1/aidoc/voice', aiDocVoiceRoutes); // Mount AIDoc voice routes
 
+// Health check endpoint for monitoring and Docker
+app.get('/api/v1/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // Define the port
 const PORT = process.env.PORT || 5000; // Use port from .env or default to 5000
 

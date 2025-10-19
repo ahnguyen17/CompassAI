@@ -1,4 +1,5 @@
 const { OpenAI } = require('openai');
+const { createClient } = require('@deepgram/sdk');
 const ApiKey = require('../models/ApiKey');
 const fs = require('fs');
 const path = require('path');
@@ -6,7 +7,7 @@ const { promisify } = require('util');
 const unlinkAsync = promisify(fs.unlink);
 
 /**
- * @desc    Transcribe audio using OpenAI Whisper API
+ * @desc    Transcribe audio using Deepgram Nova 2 API
  * @route   POST /api/v1/aidoc/voice/transcribe
  * @access  Private
  */
@@ -20,71 +21,95 @@ exports.transcribeAudio = async (req, res) => {
             });
         }
 
-        // Get language from request (optional)
-        const language = req.body.language || 'en';
+        // Get language from request (optional, defaults to Vietnamese)
+        const language = req.body.language || 'vi';
 
-        // Get OpenAI API key
-        const apiKeyDoc = await ApiKey.findOne({ providerName: 'OpenAI', isEnabled: true });
-        if (!apiKeyDoc) {
-            // Clean up uploaded file
-            if (req.file.path) {
-                await unlinkAsync(req.file.path).catch(err => 
-                    console.error('Error deleting temp file:', err)
-                );
+        // Get Deepgram API key from environment or database
+        let deepgramApiKey = process.env.DEEPGRAM_API_KEY;
+
+        if (!deepgramApiKey) {
+            // Try to get from database (optional)
+            const apiKeyDoc = await ApiKey.findOne({ keyName: 'DEEPGRAM_API_KEY' });
+            if (apiKeyDoc) {
+                deepgramApiKey = apiKeyDoc.keyValue;
             }
-            return res.status(503).json({
+        }
+
+        if (!deepgramApiKey) {
+            return res.status(500).json({
                 success: false,
-                error: 'OpenAI API key not found or disabled'
+                error: 'Deepgram API key not configured'
             });
         }
 
-        // Initialize OpenAI client
-        const openai = new OpenAI({ apiKey: apiKeyDoc.keyValue });
+        // Initialize Deepgram client
+        const deepgram = createClient(deepgramApiKey);
 
-        // Create a read stream from the uploaded file
-        const audioFile = fs.createReadStream(req.file.path);
+        // Read audio file
+        const audioBuffer = fs.readFileSync(req.file.path);
 
-        // Call Whisper API
-        const transcription = await openai.audio.transcriptions.create({
-            file: audioFile,
-            model: 'whisper-1',
-            language: language,
-            response_format: 'json'
-        });
+        // Transcribe audio using Deepgram Nova 2
+        const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
+            audioBuffer,
+            {
+                model: 'nova-2-medical',    // Use medical-optimized model for AIDoc
+                language: language,          // Vietnamese or other language
+                punctuate: true,             // Add punctuation
+                smart_format: true,          // Smart formatting (dates, numbers, etc.)
+                diarize: false,              // No speaker diarization needed
+                utterances: false,           // Don't split into utterances
+                detect_language: false,      // We know the language
+            }
+        );
 
         // Clean up uploaded file
-        await unlinkAsync(req.file.path).catch(err => 
+        await unlinkAsync(req.file.path).catch(err =>
             console.error('Error deleting temp file:', err)
         );
+
+        // Check for errors
+        if (error) {
+            console.error('Deepgram transcription error:', error);
+            return res.status(500).json({
+                success: false,
+                error: error.message || 'Transcription failed'
+            });
+        }
+
+        // Extract transcript from result
+        const transcript = result?.results?.channels[0]?.alternatives[0]?.transcript;
+
+        if (!transcript) {
+            return res.status(500).json({
+                success: false,
+                error: 'No transcription returned'
+            });
+        }
+
+        // Log success
+        console.log('[Deepgram] Transcription successful:', transcript.substring(0, 50) + '...');
 
         // Return transcription
         res.status(200).json({
             success: true,
-            transcript: transcription.text,
-            language: transcription.language || language
+            transcript: transcript,
+            language: language,
+            confidence: result?.results?.channels[0]?.alternatives[0]?.confidence || null
         });
 
     } catch (error) {
-        console.error('Whisper transcription error:', error);
+        console.error('Deepgram transcription error:', error);
 
         // Clean up uploaded file on error
         if (req.file && req.file.path) {
-            await unlinkAsync(req.file.path).catch(err => 
+            await unlinkAsync(req.file.path).catch(err =>
                 console.error('Error deleting temp file:', err)
             );
         }
 
-        // Handle specific OpenAI errors
-        if (error.response) {
-            return res.status(error.response.status || 500).json({
-                success: false,
-                error: error.response.data?.error?.message || 'Whisper API error'
-            });
-        }
-
         res.status(500).json({
             success: false,
-            error: 'Failed to transcribe audio'
+            error: error.message || 'Failed to transcribe audio'
         });
     }
 };

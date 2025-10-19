@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
 import { VoiceSettings } from '../hooks/useVoiceInteraction';
+import apiClient from '../services/api';
 
 interface AIDocSettingsModalProps {
     isOpen: boolean;
@@ -28,10 +29,75 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
     const [localSelectedModel, setLocalSelectedModel] = useState(selectedModel);
     const [activeTab, setActiveTab] = useState<'general' | 'voice'>('general');
 
+    // API Keys state
+    const [deepgramApiKey, setDeepgramApiKey] = useState('');
+    const [openaiApiKey, setOpenaiApiKey] = useState('');
+    const [isLoadingKeys, setIsLoadingKeys] = useState(false);
+    const [isSavingKeys, setIsSavingKeys] = useState(false);
+    const [keysSaveMessage, setKeysSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
     useEffect(() => {
         setLocalSystemPrompt(systemPrompt);
         setLocalSelectedModel(selectedModel);
-    }, [systemPrompt, selectedModel, isOpen]);
+
+        // Load API keys when modal opens
+        if (isOpen && activeTab === 'voice') {
+            loadApiKeys();
+        }
+    }, [systemPrompt, selectedModel, isOpen, activeTab]);
+
+    const loadApiKeys = async () => {
+        setIsLoadingKeys(true);
+        try {
+            // Try to load from backend API keys
+            const response = await apiClient.get('/settings/apikeys');
+            const keys = response.data.apiKeys || [];
+
+            const deepgramKey = keys.find((k: any) => k.keyName === 'DEEPGRAM_API_KEY');
+            const openaiKey = keys.find((k: any) => k.keyName === 'OPENAI_API_KEY');
+
+            if (deepgramKey) setDeepgramApiKey(deepgramKey.keyValue || '');
+            if (openaiKey) setOpenaiApiKey(openaiKey.keyValue || '');
+        } catch (error) {
+            console.error('Failed to load API keys:', error);
+        } finally {
+            setIsLoadingKeys(false);
+        }
+    };
+
+    const handleSaveApiKeys = async () => {
+        setIsSavingKeys(true);
+        setKeysSaveMessage(null);
+
+        try {
+            // Save Deepgram API key
+            if (deepgramApiKey.trim()) {
+                await apiClient.post('/settings/apikeys', {
+                    keyName: 'DEEPGRAM_API_KEY',
+                    keyValue: deepgramApiKey.trim()
+                });
+            }
+
+            // Save OpenAI API key
+            if (openaiApiKey.trim()) {
+                await apiClient.post('/settings/apikeys', {
+                    keyName: 'OPENAI_API_KEY',
+                    keyValue: openaiApiKey.trim()
+                });
+            }
+
+            setKeysSaveMessage({ type: 'success', text: 'API keys saved successfully!' });
+            setTimeout(() => setKeysSaveMessage(null), 3000);
+        } catch (error: any) {
+            console.error('Failed to save API keys:', error);
+            setKeysSaveMessage({
+                type: 'error',
+                text: error.response?.data?.error || 'Failed to save API keys'
+            });
+        } finally {
+            setIsSavingKeys(false);
+        }
+    };
 
     const handleSave = () => {
         onSave(localSystemPrompt, localSelectedModel);
@@ -95,6 +161,17 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
         color: isDarkMode ? '#e0e0e0' : '#333333',
         fontSize: '14px',
         marginBottom: '20px',
+    };
+
+    const inputStyle: React.CSSProperties = {
+        width: '100%',
+        padding: '10px',
+        borderRadius: '8px',
+        border: `1px solid ${isDarkMode ? '#444' : '#ddd'}`,
+        backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
+        color: isDarkMode ? '#e0e0e0' : '#333333',
+        fontSize: '14px',
+        fontFamily: 'monospace',
     };
 
     const buttonContainerStyle: React.CSSProperties = {
@@ -235,6 +312,114 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
                 {/* Voice Settings Tab */}
                 {activeTab === 'voice' && voiceSettings && onVoiceSettingsChange && (
                     <>
+                        {/* API Keys Section */}
+                        <div style={{
+                            padding: '15px',
+                            borderRadius: '8px',
+                            backgroundColor: isDarkMode ? '#1a2a3a' : '#e7f3ff',
+                            border: `1px solid ${isDarkMode ? '#2d4d6d' : '#b3d9ff'}`,
+                            marginBottom: '20px'
+                        }}>
+                            <h3 style={{ marginTop: 0, marginBottom: '15px', fontSize: '16px' }}>
+                                🔑 API Keys Configuration
+                            </h3>
+
+                            {/* Deepgram API Key */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={labelStyle}>
+                                    Deepgram API Key (for Speech-to-Text)
+                                </label>
+                                <input
+                                    type="password"
+                                    value={deepgramApiKey}
+                                    onChange={(e) => setDeepgramApiKey(e.target.value)}
+                                    placeholder="sk_..."
+                                    style={inputStyle}
+                                    disabled={isLoadingKeys}
+                                />
+                                <div style={{
+                                    fontSize: '12px',
+                                    color: isDarkMode ? '#999' : '#666',
+                                    marginTop: '5px'
+                                }}>
+                                    Get free $200 credits at <a
+                                        href="https://console.deepgram.com/signup"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ color: isDarkMode ? '#4a90e2' : '#007bff' }}
+                                    >
+                                        console.deepgram.com
+                                    </a>
+                                </div>
+                            </div>
+
+                            {/* OpenAI API Key */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={labelStyle}>
+                                    OpenAI API Key (for Text-to-Speech)
+                                </label>
+                                <input
+                                    type="password"
+                                    value={openaiApiKey}
+                                    onChange={(e) => setOpenaiApiKey(e.target.value)}
+                                    placeholder="sk-..."
+                                    style={inputStyle}
+                                    disabled={isLoadingKeys}
+                                />
+                                <div style={{
+                                    fontSize: '12px',
+                                    color: isDarkMode ? '#999' : '#666',
+                                    marginTop: '5px'
+                                }}>
+                                    Get API key at <a
+                                        href="https://platform.openai.com/api-keys"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ color: isDarkMode ? '#4a90e2' : '#007bff' }}
+                                    >
+                                        platform.openai.com
+                                    </a>
+                                </div>
+                            </div>
+
+                            {/* Save API Keys Button */}
+                            <button
+                                onClick={handleSaveApiKeys}
+                                disabled={isSavingKeys || isLoadingKeys}
+                                style={{
+                                    ...buttonStyle,
+                                    backgroundColor: '#007bff',
+                                    color: '#ffffff',
+                                    width: '100%',
+                                    opacity: (isSavingKeys || isLoadingKeys) ? 0.6 : 1
+                                }}
+                            >
+                                {isSavingKeys ? 'Saving...' : isLoadingKeys ? 'Loading...' : 'Save API Keys'}
+                            </button>
+
+                            {/* Save Message */}
+                            {keysSaveMessage && (
+                                <div style={{
+                                    marginTop: '10px',
+                                    padding: '10px',
+                                    borderRadius: '6px',
+                                    backgroundColor: keysSaveMessage.type === 'success'
+                                        ? (isDarkMode ? '#1a3a1f' : '#d4edda')
+                                        : (isDarkMode ? '#3a1a1a' : '#f8d7da'),
+                                    border: `1px solid ${keysSaveMessage.type === 'success'
+                                        ? (isDarkMode ? '#2d5f3d' : '#c3e6cb')
+                                        : (isDarkMode ? '#5f2d2d' : '#f5c6cb')}`,
+                                    color: keysSaveMessage.type === 'success'
+                                        ? (isDarkMode ? '#90ee90' : '#155724')
+                                        : (isDarkMode ? '#ff6b6b' : '#721c24'),
+                                    fontSize: '13px',
+                                    textAlign: 'center'
+                                }}>
+                                    {keysSaveMessage.text}
+                                </div>
+                            )}
+                        </div>
+
                         <div style={checkboxContainerStyle}>
                             <input
                                 type="checkbox"
@@ -333,12 +518,12 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
                             marginTop: '15px',
                             marginBottom: '15px'
                         }}>
-                            <strong>⚠️ Voice Costs:</strong>
+                            <strong>💰 Voice Costs:</strong>
                             <ul style={{ marginTop: '8px', marginBottom: '0', paddingLeft: '20px' }}>
-                                <li>Whisper (STT): ~$0.006 per minute of audio</li>
-                                <li>TTS: ~$0.015 per 1,000 characters</li>
-                                <li>Costs are charged to your OpenAI API account</li>
-                                <li>Typical 10-min consultation: ~$0.06</li>
+                                <li>Deepgram Nova 2 (STT): ~$0.0043 per minute of audio</li>
+                                <li>OpenAI TTS: ~$0.015 per 1,000 characters</li>
+                                <li>Typical 10-min consultation: ~$0.05 total</li>
+                                <li>Deepgram offers $200 free credits (~46,500 minutes)</li>
                             </ul>
                         </div>
 
@@ -357,7 +542,8 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
                                 <li>In push-to-talk mode, click the mic each time you want to speak</li>
                                 <li>Use the speaker icon to mute/unmute AI responses</li>
                                 <li>Grant microphone permissions when prompted by your browser</li>
-                                <li>Requires internet connection and OpenAI API key</li>
+                                <li>Requires Deepgram API key (STT) and OpenAI API key (TTS)</li>
+                                <li>Deepgram Nova 2 is 10x faster and 28% cheaper than OpenAI Whisper</li>
                             </ul>
                         </div>
                     </>

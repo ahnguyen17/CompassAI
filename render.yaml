@@ -1,0 +1,55 @@
+# Render Blueprint for CompassAI with Local Whisper Model
+# This configuration deploys the backend with Python Whisper service
+
+services:
+  # Backend API with Whisper STT
+  - type: web
+    name: compassai-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: standard  # Required: 2GB RAM for Whisper model
+    region: oregon  # Choose closest region
+    
+    # Environment variables
+    envVars:
+      - key: NODE_ENV
+        value: production
+      
+      - key: PORT
+        value: 5000
+      
+      - key: JWT_EXPIRE
+        value: 30d
+      
+      # These should be set in Render dashboard (not in code)
+      - key: MONGODB_URI
+        sync: false  # Set manually in dashboard
+      
+      - key: JWT_SECRET
+        sync: false  # Set manually in dashboard
+    
+    # Health check
+    healthCheckPath: /api/v1/health
+    
+    # Auto-deploy on push to main branch
+    autoDeploy: true
+    
+    # Build settings
+    buildFilter:
+      paths:
+        - backend/**
+    
+    # Disk space (for model and uploads)
+    disk:
+      name: compassai-data
+      mountPath: /app/uploads
+      sizeGB: 2
+
+# Database (if using Render PostgreSQL instead of MongoDB Atlas)
+# databases:
+#   - name: compassai-db
+#     databaseName: compassai
+#     user: compassai
+#     plan: starter  # Free tier available
+

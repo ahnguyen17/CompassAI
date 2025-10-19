@@ -28,8 +28,11 @@ exports.transcribeAudio = async (req, res) => {
         let deepgramApiKey = process.env.DEEPGRAM_API_KEY;
 
         if (!deepgramApiKey) {
-            // Try to get from database (optional)
-            const apiKeyDoc = await ApiKey.findOne({ keyName: 'DEEPGRAM_API_KEY' });
+            // Try to get from database (using providerName field)
+            const apiKeyDoc = await ApiKey.findOne({
+                providerName: 'DEEPGRAM_API_KEY',
+                isEnabled: true
+            });
             if (apiKeyDoc) {
                 deepgramApiKey = apiKeyDoc.keyValue;
             }
@@ -38,7 +41,7 @@ exports.transcribeAudio = async (req, res) => {
         if (!deepgramApiKey) {
             return res.status(500).json({
                 success: false,
-                error: 'Deepgram API key not configured'
+                error: 'Deepgram API key not configured. Please add it in Settings > Voice Mode.'
             });
         }
 

@@ -49,15 +49,12 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
     const loadApiKeys = async () => {
         setIsLoadingKeys(true);
         try {
-            // Try to load from backend API keys
-            const response = await apiClient.get('/apikeys');
-            const keys = response.data.data || [];
+            // Load from voice settings endpoint (no admin required)
+            const response = await apiClient.get('/aidoc/voice/settings/apikeys');
+            const data = response.data.data || {};
 
-            const deepgramKey = keys.find((k: any) => k.providerName === 'DEEPGRAM_API_KEY');
-            const openaiKey = keys.find((k: any) => k.providerName === 'OpenAI');
-
-            if (deepgramKey) setDeepgramApiKey(deepgramKey.keyValue || '');
-            if (openaiKey) setOpenaiApiKey(openaiKey.keyValue || '');
+            if (data.deepgram) setDeepgramApiKey(data.deepgram.keyValue || '');
+            if (data.openai) setOpenaiApiKey(data.openai.keyValue || '');
         } catch (error) {
             console.error('Failed to load API keys:', error);
         } finally {
@@ -70,45 +67,11 @@ const AIDocSettingsModal: React.FC<AIDocSettingsModalProps> = ({
         setKeysSaveMessage(null);
 
         try {
-            // Get existing keys to check if we need to create or update
-            const response = await apiClient.get('/apikeys');
-            const existingKeys = response.data.data || [];
-
-            // Save Deepgram API key
-            if (deepgramApiKey.trim()) {
-                const existingDeepgram = existingKeys.find((k: any) => k.providerName === 'DEEPGRAM_API_KEY');
-
-                if (existingDeepgram) {
-                    // Update existing key
-                    await apiClient.put(`/apikeys/${existingDeepgram._id}`, {
-                        keyValue: deepgramApiKey.trim()
-                    });
-                } else {
-                    // Create new key
-                    await apiClient.post('/apikeys', {
-                        providerName: 'DEEPGRAM_API_KEY',
-                        keyValue: deepgramApiKey.trim()
-                    });
-                }
-            }
-
-            // Save OpenAI API key
-            if (openaiApiKey.trim()) {
-                const existingOpenAI = existingKeys.find((k: any) => k.providerName === 'OpenAI');
-
-                if (existingOpenAI) {
-                    // Update existing key
-                    await apiClient.put(`/apikeys/${existingOpenAI._id}`, {
-                        keyValue: openaiApiKey.trim()
-                    });
-                } else {
-                    // Create new key
-                    await apiClient.post('/apikeys', {
-                        providerName: 'OpenAI',
-                        keyValue: openaiApiKey.trim()
-                    });
-                }
-            }
+            // Save both keys in one request to voice settings endpoint
+            await apiClient.post('/aidoc/voice/settings/apikeys', {
+                deepgramApiKey: deepgramApiKey.trim(),
+                openaiApiKey: openaiApiKey.trim()
+            });
 
             setKeysSaveMessage({ type: 'success', text: 'API keys saved successfully!' });
             setTimeout(() => setKeysSaveMessage(null), 3000);

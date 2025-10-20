@@ -10,6 +10,8 @@ const {
     getVoiceStatus
 } = require('../controllers/aiDocVoice');
 
+const { getVoiceApiKeys, saveVoiceApiKeys } = require('../controllers/voiceSettings');
+
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -66,6 +68,10 @@ router.post('/transcribe', protect, upload.single('audio'), transcribeAudio);
 router.post('/speak', protect, generateSpeech);
 router.get('/voices', protect, getAvailableVoices);
 router.get('/status', protect, getVoiceStatus);
+
+// Voice API Keys Settings (no admin required - user-specific settings)
+router.get('/settings/apikeys', protect, getVoiceApiKeys);
+router.post('/settings/apikeys', protect, saveVoiceApiKeys);
 
 module.exports = router;
 

@@ -65,6 +65,12 @@ export const useVoiceInteraction = ({
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+    const settingsRef = useRef<VoiceSettings>(settings);
+
+    // Keep settings ref updated to avoid closure issues
+    useEffect(() => {
+        settingsRef.current = settings;
+    }, [settings]);
 
     // Save settings to localStorage
     useEffect(() => {
@@ -189,7 +195,17 @@ export const useVoiceInteraction = ({
                 currentAudioRef.current = null;
             }
 
-            setVoiceState(prev => ({ ...prev, isSpeaking: true }));
+            // Stop recording if currently listening (AI should not listen while speaking)
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                console.log('[Voice] Stopping recording because AI is about to speak');
+                mediaRecorderRef.current.stop();
+            }
+            if (silenceTimerRef.current) {
+                clearTimeout(silenceTimerRef.current);
+                silenceTimerRef.current = null;
+            }
+
+            setVoiceState(prev => ({ ...prev, isSpeaking: true, isListening: false }));
 
             const response = await apiClient.post('/aidoc/voice/speak', {
                 text,
@@ -211,11 +227,19 @@ export const useVoiceInteraction = ({
                 currentAudioRef.current = null;
 
                 // Resume listening after speaking in continuous mode
-                if (settings.enabled && !settings.pushToTalk) {
+                // Use settingsRef to get the latest settings (avoid closure issues)
+                const currentSettings = settingsRef.current;
+                console.log('[Voice] Checking if should resume listening:', {
+                    enabled: currentSettings.enabled,
+                    pushToTalk: currentSettings.pushToTalk,
+                    shouldResume: currentSettings.enabled && !currentSettings.pushToTalk
+                });
+
+                if (currentSettings.enabled && !currentSettings.pushToTalk) {
                     console.log('[Voice] Resuming listening in continuous mode...');
                     setTimeout(() => startRecording(), 500);
                 } else {
-                    console.log('[Voice] Not resuming - enabled:', settings.enabled, 'pushToTalk:', settings.pushToTalk);
+                    console.log('[Voice] Not resuming - enabled:', currentSettings.enabled, 'pushToTalk:', currentSettings.pushToTalk);
                 }
             };
 

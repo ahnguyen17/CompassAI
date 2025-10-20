@@ -108,6 +108,14 @@ export const useVoiceInteraction = ({
     // Start recording audio
     const startRecording = useCallback(async () => {
         try {
+            // If AI is currently speaking, interrupt it (talk to interrupt feature)
+            if (currentAudioRef.current) {
+                console.log('[Voice] Interrupting AI speech - user started talking');
+                currentAudioRef.current.pause();
+                currentAudioRef.current = null;
+                setVoiceState(prev => ({ ...prev, isSpeaking: false }));
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const mediaRecorder = new MediaRecorder(stream);
             mediaRecorderRef.current = mediaRecorder;

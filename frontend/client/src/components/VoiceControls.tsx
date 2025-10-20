@@ -87,7 +87,7 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
                     )}
                     
                     {isSpeaking && (
-                        <div 
+                        <div
                             className={styles.speakingIndicator}
                             style={{ color: medicalTheme.secondary }}
                         >
@@ -97,7 +97,10 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
                                 <div className={styles.bar}></div>
                                 <div className={styles.bar}></div>
                             </div>
-                            <span className={styles.statusText}>AI Speaking...</span>
+                            <span className={styles.statusText}>
+                                AI Speaking...
+                                <span className={styles.interruptHint}> (Click mic to interrupt)</span>
+                            </span>
                         </div>
                     )}
 

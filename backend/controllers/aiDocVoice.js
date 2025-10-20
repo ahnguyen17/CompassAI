@@ -51,11 +51,16 @@ exports.transcribeAudio = async (req, res) => {
         // Read audio file
         const audioBuffer = fs.readFileSync(req.file.path);
 
+        // Determine which model to use based on language
+        // nova-2-medical only supports English, so use nova-2-general for other languages
+        const isEnglish = language && (language.toLowerCase().startsWith('en') || language === 'en-US');
+        const modelToUse = isEnglish ? 'nova-2-medical' : 'nova-2-general';
+
         // Transcribe audio using Deepgram Nova 2
         const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
             audioBuffer,
             {
-                model: 'nova-2-medical',    // Use medical-optimized model for AIDoc
+                model: modelToUse,           // Use medical model for English, general for others
                 language: language,          // Vietnamese or other language
                 punctuate: true,             // Add punctuation
                 smart_format: true,          // Smart formatting (dates, numbers, etc.)

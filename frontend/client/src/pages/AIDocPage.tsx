@@ -116,6 +116,14 @@ const AIDocPage: React.FC = () => {
         },
     });
 
+    // Ref to track latest voice settings (avoid closure issues in async callbacks)
+    const voiceSettingsRef = useRef(voiceSettings);
+
+    // Keep voiceSettings ref updated
+    useEffect(() => {
+        voiceSettingsRef.current = voiceSettings;
+    }, [voiceSettings]);
+
     // Check authentication on mount
     useEffect(() => {
         const authenticated = sessionStorage.getItem('aiDocAuthenticated') === 'true';
@@ -525,9 +533,24 @@ const AIDocPage: React.FC = () => {
                                         setStreamingMessageContent('');
 
                                         // Speak AI response if voice mode is enabled and autoSpeak is on
-                                        if (voiceSettings.enabled && voiceSettings.autoSpeak && parsed.message?.content) {
+                                        // Use ref to get the latest voice settings (avoid closure issues)
+                                        const currentVoiceSettings = voiceSettingsRef.current;
+                                        console.log('[AIDoc] AI message saved, voice settings:', {
+                                            enabled: currentVoiceSettings.enabled,
+                                            autoSpeak: currentVoiceSettings.autoSpeak,
+                                            hasContent: !!parsed.message?.content
+                                        });
+
+                                        if (currentVoiceSettings.enabled && currentVoiceSettings.autoSpeak && parsed.message?.content) {
+                                            console.log('[AIDoc] Triggering AI speech...');
                                             lastAiMessageRef.current = parsed.message.content;
                                             speak(parsed.message.content, true);
+                                        } else {
+                                            console.log('[AIDoc] Not speaking because:', {
+                                                enabled: currentVoiceSettings.enabled,
+                                                autoSpeak: currentVoiceSettings.autoSpeak,
+                                                hasContent: !!parsed.message?.content
+                                            });
                                         }
                                     } else if (parsed.type === 'error') {
                                         setError(parsed.error);

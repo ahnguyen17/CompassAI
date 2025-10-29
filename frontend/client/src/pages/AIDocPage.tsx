@@ -166,35 +166,70 @@ const AIDocPage: React.FC = () => {
                     const models: AvailableModel[] = [];
                     const modelData = response.data.data;
 
-                    // Preferred providers for medical use
-                    const preferredProviders = ['Gemini', 'DeepSeek', 'OpenAI', 'Anthropic'];
+                    // Check if the response has the new structure with baseModels
+                    if (modelData.baseModels && typeof modelData.baseModels === 'object') {
+                        // New structure: { baseModels: { Gemini: [...], DeepSeek: [...] }, customModels: [...] }
+                        const baseModels = modelData.baseModels;
 
-                    // First, try to get models from preferred providers
-                    preferredProviders.forEach(provider => {
-                        if (modelData[provider]) {
-                            modelData[provider].forEach((model: any) => {
-                                models.push({
-                                    name: model.name,
-                                    displayName: model.displayName,
-                                    provider: provider
-                                });
-                            });
-                        }
-                    });
+                        // Preferred providers for medical use
+                        const preferredProviders = ['Gemini', 'DeepSeek', 'OpenAI', 'Anthropic'];
 
-                    // If no preferred models found, include all available models
-                    if (models.length === 0) {
-                        Object.keys(modelData).forEach(provider => {
-                            if (modelData[provider]) {
-                                modelData[provider].forEach((model: any) => {
+                        // First, try to get models from preferred providers
+                        preferredProviders.forEach(provider => {
+                            if (baseModels[provider] && Array.isArray(baseModels[provider])) {
+                                baseModels[provider].forEach((model: any) => {
                                     models.push({
                                         name: model.name,
-                                        displayName: model.displayName,
+                                        displayName: model.displayName || model.name,
                                         provider: provider
                                     });
                                 });
                             }
                         });
+
+                        // If no preferred models found, include all available base models
+                        if (models.length === 0) {
+                            Object.keys(baseModels).forEach(provider => {
+                                if (baseModels[provider] && Array.isArray(baseModels[provider])) {
+                                    baseModels[provider].forEach((model: any) => {
+                                        models.push({
+                                            name: model.name,
+                                            displayName: model.displayName || model.name,
+                                            provider: provider
+                                        });
+                                    });
+                                }
+                            });
+                        }
+                    } else {
+                        // Old structure (fallback): { Gemini: [...], DeepSeek: [...], ... }
+                        const preferredProviders = ['Gemini', 'DeepSeek', 'OpenAI', 'Anthropic'];
+
+                        preferredProviders.forEach(provider => {
+                            if (modelData[provider] && Array.isArray(modelData[provider])) {
+                                modelData[provider].forEach((model: any) => {
+                                    models.push({
+                                        name: model.name,
+                                        displayName: model.displayName || model.name,
+                                        provider: provider
+                                    });
+                                });
+                            }
+                        });
+
+                        if (models.length === 0) {
+                            Object.keys(modelData).forEach(provider => {
+                                if (modelData[provider] && Array.isArray(modelData[provider])) {
+                                    modelData[provider].forEach((model: any) => {
+                                        models.push({
+                                            name: model.name,
+                                            displayName: model.displayName || model.name,
+                                            provider: provider
+                                        });
+                                    });
+                                }
+                            });
+                        }
                     }
 
                     setAvailableModels(models);

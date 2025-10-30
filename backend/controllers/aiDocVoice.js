@@ -13,69 +13,49 @@ const unlinkAsync = promisify(fs.unlink);
  */
 exports.transcribeAudio = async (req, res) => {
     try {
-        console.log('[Deepgram] Transcription request received');
-
         // Check if file was uploaded
         if (!req.file) {
-            console.error('[Deepgram] No audio file provided');
             return res.status(400).json({
                 success: false,
                 error: 'No audio file provided'
             });
         }
 
-        console.log('[Deepgram] Audio file received:', {
-            filename: req.file.filename,
-            size: req.file.size,
-            mimetype: req.file.mimetype
-        });
-
         // Get language from request (optional, defaults to Vietnamese)
         const language = req.body.language || 'vi';
-        console.log('[Deepgram] Language:', language);
 
         // Get Deepgram API key from environment or database
         let deepgramApiKey = process.env.DEEPGRAM_API_KEY;
-        console.log('[Deepgram] Checking for API key in environment:', !!deepgramApiKey);
 
         if (!deepgramApiKey) {
-            console.log('[Deepgram] No env key, checking database...');
             // Try to get from database (using providerName field)
             const apiKeyDoc = await ApiKey.findOne({
                 providerName: 'DEEPGRAM_API_KEY',
                 isEnabled: true
             });
-            console.log('[Deepgram] Database query result:', !!apiKeyDoc);
             if (apiKeyDoc) {
                 deepgramApiKey = apiKeyDoc.keyValue;
-                console.log('[Deepgram] API key found in database');
             }
         }
 
         if (!deepgramApiKey) {
-            console.error('[Deepgram] No API key configured');
             return res.status(500).json({
                 success: false,
                 error: 'Deepgram API key not configured. Please add it in Settings > Voice Mode.'
             });
         }
 
-        console.log('[Deepgram] Initializing Deepgram client...');
         // Initialize Deepgram client
         const deepgram = createClient(deepgramApiKey);
 
-        console.log('[Deepgram] Reading audio file...');
         // Read audio file
         const audioBuffer = fs.readFileSync(req.file.path);
-        console.log('[Deepgram] Audio buffer size:', audioBuffer.length);
 
         // Determine which model to use based on language
         // nova-2-medical only supports English, so use nova-2-general for other languages
         const isEnglish = language && (language.toLowerCase().startsWith('en') || language === 'en-US');
         const modelToUse = isEnglish ? 'nova-2-medical' : 'nova-2-general';
-        console.log('[Deepgram] Using model:', modelToUse, 'for language:', language);
 
-        console.log('[Deepgram] Calling Deepgram API...');
         // Transcribe audio using Deepgram Nova 2
         const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
             audioBuffer,
@@ -90,16 +70,14 @@ exports.transcribeAudio = async (req, res) => {
             }
         );
 
-        console.log('[Deepgram] API call completed');
-
         // Clean up uploaded file
         await unlinkAsync(req.file.path).catch(err =>
-            console.error('[Deepgram] Error deleting temp file:', err)
+            console.error('Error deleting temp file:', err)
         );
 
         // Check for errors
         if (error) {
-            console.error('[Deepgram] Transcription error from API:', error);
+            console.error('Deepgram transcription error:', error);
             return res.status(500).json({
                 success: false,
                 error: error.message || 'Transcription failed'
@@ -110,7 +88,6 @@ exports.transcribeAudio = async (req, res) => {
         const transcript = result?.results?.channels[0]?.alternatives[0]?.transcript;
 
         if (!transcript) {
-            console.error('[Deepgram] No transcript in result:', JSON.stringify(result, null, 2));
             return res.status(500).json({
                 success: false,
                 error: 'No transcription returned'
@@ -129,13 +106,12 @@ exports.transcribeAudio = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[Deepgram] Transcription error (catch block):', error);
-        console.error('[Deepgram] Error stack:', error.stack);
+        console.error('Deepgram transcription error:', error);
 
         // Clean up uploaded file on error
         if (req.file && req.file.path) {
             await unlinkAsync(req.file.path).catch(err =>
-                console.error('[Deepgram] Error deleting temp file:', err)
+                console.error('Error deleting temp file:', err)
             );
         }
 

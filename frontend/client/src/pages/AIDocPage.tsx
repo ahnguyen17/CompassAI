@@ -7,6 +7,7 @@ import AIDocPasswordModal from '../components/AIDocPasswordModal';
 import AIDocSettingsModal from '../components/AIDocSettingsModal';
 import VoiceControls from '../components/VoiceControls';
 import { useVoiceInteraction } from '../hooks/useVoiceInteraction';
+import { useStreamingTTS } from '../hooks/useStreamingTTS';
 
 // Default medical triage system prompt
 const DEFAULT_SYSTEM_PROMPT = `You are an AI Medical Doctor designed to triage patients efficiently and safely. Your responsibilities include:
@@ -94,6 +95,9 @@ const AIDocPage: React.FC = () => {
     const abortControllerRef = useRef<AbortController | null>(null);
     const lastAiMessageRef = useRef<string>('');
 
+    // Ref to hold streaming TTS instance (to avoid circular dependency)
+    const streamingTTSRef = useRef<any>(null);
+
     // Voice interaction hook
     const {
         voiceState,
@@ -104,6 +108,11 @@ const AIDocPage: React.FC = () => {
         updateSettings: updateVoiceSettings,
     } = useVoiceInteraction({
         onTranscriptComplete: (transcript) => {
+            // Stop any ongoing streaming TTS (user is interrupting)
+            if (streamingTTSRef.current) {
+                streamingTTSRef.current.stop();
+            }
+
             // Set the transcript as the new message (for display in input)
             setNewMessage(transcript);
             // Auto-send the message immediately with the transcript
@@ -115,6 +124,29 @@ const AIDocPage: React.FC = () => {
             setError(error);
         },
     });
+
+    // Streaming TTS hook for real-time speech during AI response generation
+    const streamingTTS = useStreamingTTS({
+        voice: voiceSettings.voice,
+        speed: voiceSettings.speed,
+        onStart: () => {
+            console.log('[AIDoc] Streaming TTS started');
+            // Stop recording if currently listening
+            if (voiceState.isListening) {
+                stopSpeaking();
+            }
+        },
+        onEnd: () => {
+            console.log('[AIDoc] Streaming TTS ended');
+        },
+        onError: (error) => {
+            console.error('[AIDoc] Streaming TTS error:', error);
+            setError(error);
+        },
+    });
+
+    // Update ref
+    streamingTTSRef.current = streamingTTS;
 
     // Ref to track latest voice settings (avoid closure issues in async callbacks)
     const voiceSettingsRef = useRef(voiceSettings);
@@ -438,8 +470,9 @@ const AIDocPage: React.FC = () => {
                 speak(lastAiMessageRef.current, true);
             }
         } else {
-            // If muting, stop current speech
+            // If muting, stop current speech (both streaming and regular)
             stopSpeaking();
+            streamingTTS.stop();
         }
     };
 
@@ -459,6 +492,9 @@ const AIDocPage: React.FC = () => {
 
         const userMessageContent = messageToSend;
         setNewMessage('');
+
+        // Reset streaming TTS for new response
+        streamingTTS.reset();
 
         // Optimistic user message
         const optimisticUserMessage: AIDocMessage = {
@@ -556,6 +592,12 @@ const AIDocPage: React.FC = () => {
                                         }
                                     } else if (parsed.type === 'content') {
                                         setStreamingMessageContent((prev) => prev + parsed.content);
+
+                                        // Add chunk to streaming TTS if voice mode is enabled
+                                        const currentVoiceSettings = voiceSettingsRef.current;
+                                        if (currentVoiceSettings.enabled && currentVoiceSettings.autoSpeak) {
+                                            streamingTTS.addChunk(parsed.content);
+                                        }
                                     } else if (parsed.type === 'ai_message_saved') {
                                         setMessages((prev) =>
                                             prev.map((msg) =>
@@ -567,26 +609,14 @@ const AIDocPage: React.FC = () => {
                                         setStreamingMessageId(null);
                                         setStreamingMessageContent('');
 
-                                        // Speak AI response if voice mode is enabled and autoSpeak is on
-                                        // Use ref to get the latest voice settings (avoid closure issues)
+                                        // Flush any remaining text in streaming TTS
                                         const currentVoiceSettings = voiceSettingsRef.current;
-                                        console.log('[AIDoc] AI message saved, voice settings:', {
-                                            enabled: currentVoiceSettings.enabled,
-                                            autoSpeak: currentVoiceSettings.autoSpeak,
-                                            hasContent: !!parsed.message?.content
-                                        });
-
-                                        if (currentVoiceSettings.enabled && currentVoiceSettings.autoSpeak && parsed.message?.content) {
-                                            console.log('[AIDoc] Triggering AI speech...');
-                                            lastAiMessageRef.current = parsed.message.content;
-                                            speak(parsed.message.content, true);
-                                        } else {
-                                            console.log('[AIDoc] Not speaking because:', {
-                                                enabled: currentVoiceSettings.enabled,
-                                                autoSpeak: currentVoiceSettings.autoSpeak,
-                                                hasContent: !!parsed.message?.content
-                                            });
+                                        console.log('[AIDoc] AI message saved, flushing streaming TTS');
+                                        if (currentVoiceSettings.enabled && currentVoiceSettings.autoSpeak) {
+                                            streamingTTS.flush();
                                         }
+
+                                        lastAiMessageRef.current = parsed.message?.content || '';
                                     } else if (parsed.type === 'error') {
                                         setError(parsed.error);
                                         setMessages((prev) =>

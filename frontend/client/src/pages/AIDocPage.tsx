@@ -611,7 +611,7 @@ const AIDocPage: React.FC = () => {
                                             currentStreamingContent: streamingMessageContent.length
                                         });
 
-                                        // Update the message first
+                                        // Update the message with the saved message
                                         setMessages((prev) => {
                                             const updated = prev.map((msg) =>
                                                 msg._id === optimisticAiMessageId
@@ -626,12 +626,10 @@ const AIDocPage: React.FC = () => {
                                             return updated;
                                         });
 
-                                        // Clear streaming state AFTER message update
-                                        // Use setTimeout to ensure state update completes first
-                                        setTimeout(() => {
-                                            setStreamingMessageId(null);
-                                            setStreamingMessageContent('');
-                                        }, 0);
+                                        // Only clear streamingMessageId, keep streamingMessageContent
+                                        // This ensures the content remains visible until next message
+                                        setStreamingMessageId(null);
+                                        // DON'T clear streamingMessageContent here - it will be cleared on next message
 
                                         // Flush any remaining text in streaming TTS
                                         const currentVoiceSettings = voiceSettingsRef.current;
@@ -667,7 +665,7 @@ const AIDocPage: React.FC = () => {
             }
         } finally {
             setSendingMessage(false);
-            setStreamingMessageId(null);
+            // Don't clear streamingMessageId here - it's handled in ai_message_saved event
         }
     };
 
@@ -884,7 +882,7 @@ const AIDocPage: React.FC = () => {
                                         }}
                                     >
                                         <div style={{ whiteSpace: 'pre-wrap' }}>
-                                            {msg._id === streamingMessageId
+                                            {msg._id === streamingMessageId && streamingMessageContent
                                                 ? streamingMessageContent
                                                 : msg.content}
                                         </div>

@@ -591,7 +591,11 @@ const AIDocPage: React.FC = () => {
                                             );
                                         }
                                     } else if (parsed.type === 'content') {
-                                        setStreamingMessageContent((prev) => prev + parsed.content);
+                                        setStreamingMessageContent((prev) => {
+                                            const updated = prev + parsed.content;
+                                            console.log('[AIDoc] Streaming content updated, length:', updated.length);
+                                            return updated;
+                                        });
 
                                         // Add chunk to streaming TTS if voice mode is enabled
                                         const currentVoiceSettings = voiceSettingsRef.current;
@@ -599,15 +603,35 @@ const AIDocPage: React.FC = () => {
                                             streamingTTS.addChunk(parsed.content);
                                         }
                                     } else if (parsed.type === 'ai_message_saved') {
-                                        setMessages((prev) =>
-                                            prev.map((msg) =>
+                                        console.log('[AIDoc] AI message saved:', {
+                                            optimisticId: optimisticAiMessageId,
+                                            savedMessageId: parsed.message?._id,
+                                            hasContent: !!parsed.message?.content,
+                                            contentLength: parsed.message?.content?.length,
+                                            currentStreamingContent: streamingMessageContent.length
+                                        });
+
+                                        // Update the message first
+                                        setMessages((prev) => {
+                                            const updated = prev.map((msg) =>
                                                 msg._id === optimisticAiMessageId
                                                     ? parsed.message
                                                     : msg
-                                            )
-                                        );
-                                        setStreamingMessageId(null);
-                                        setStreamingMessageContent('');
+                                            );
+                                            console.log('[AIDoc] Messages after update:', updated.map(m => ({
+                                                id: m._id,
+                                                sender: m.sender,
+                                                contentLength: m.content?.length
+                                            })));
+                                            return updated;
+                                        });
+
+                                        // Clear streaming state AFTER message update
+                                        // Use setTimeout to ensure state update completes first
+                                        setTimeout(() => {
+                                            setStreamingMessageId(null);
+                                            setStreamingMessageContent('');
+                                        }, 0);
 
                                         // Flush any remaining text in streaming TTS
                                         const currentVoiceSettings = voiceSettingsRef.current;

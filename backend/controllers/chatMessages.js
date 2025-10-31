@@ -27,7 +27,7 @@ const { AVAILABLE_MODELS } = require('./providers');
 const DEFAULT_MODELS = {
     'Anthropic': 'claude-3-haiku-20240307',
     'OpenAI': 'gpt-3.5-turbo',
-    'Gemini': 'gemini-1.5-flash-latest',
+    'Gemini': 'gemini-flash-latest',
     'DeepSeek': 'deepseek-chat', // Added DeepSeek default
     'Perplexity': 'perplexity/sonar' // Added Perplexity default
 };

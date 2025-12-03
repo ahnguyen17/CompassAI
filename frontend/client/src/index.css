@@ -43,6 +43,10 @@
   --border-radius-md: 12px;
   --border-radius-sm: 8px;
   --transition-base: all 0.2s ease;
+
+  /* Skeleton Loading Variables */
+  --skeleton-base: #e0e0e0;
+  --skeleton-highlight: #f0f0f0;
 }
 
 body.dark {
@@ -83,6 +87,10 @@ body.dark {
   --input-border: var(--border-color);
   --input-focus-border: var(--primary-color);
   --input-focus-shadow: rgba(52, 211, 153, 0.15); /* Adjusted shadow color */
+
+  /* Skeleton Loading Variables - Dark Mode */
+  --skeleton-base: #2a2a2a;
+  --skeleton-highlight: #3a3a3a;
 }
 
 /* Apply base styles using variables */

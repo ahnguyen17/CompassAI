@@ -1,6 +1,6 @@
 .chatPageContainer {
     display: flex;
-    height: calc(100vh - 60px); /* Assuming navbar height is 60px */
+    height: calc(100vh - 64px); /* Match navbar height of 64px */
     /* background-color: #f8f9fa; */ /* Handled by inline style */
     position: relative;
     overflow: hidden; /* Prevent scrollbars caused by transitions */

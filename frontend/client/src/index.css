@@ -1,43 +1,80 @@
 :root {
-  /* Light Theme */
-  --primary-color: #057A55;
-  --primary-hover-color: #046b47; /* Darker shade */
-  --primary-active-color: #035c3d; /* Even darker */
-  --button-primary-bg: #0e9f6e;
-  --button-primary-hover-bg: #0c8a5f; /* Darker shade */
-  --button-primary-active-bg: #0a7550; /* Even darker */
+  /* Primary Color Scale - Enhanced Green Palette */
+  --primary-50: #ecfdf5;
+  --primary-100: #d1fae5;
+  --primary-200: #a7f3d0;
+  --primary-300: #6ee7b7;
+  --primary-400: #34d399;
+  --primary-500: #10b981;
+  --primary-600: #059669;
+  --primary-700: #047857;
+  --primary-800: #065f46;
+  --primary-900: #064e3b;
 
+  /* Semantic Primary Colors */
+  --primary-color: var(--primary-600);
+  --primary-hover-color: var(--primary-700);
+  --primary-active-color: var(--primary-800);
+  --button-primary-bg: var(--primary-600);
+  --button-primary-hover-bg: var(--primary-700);
+  --button-primary-active-bg: var(--primary-800);
+
+  /* Surface & Background Colors */
   --background-color: #ffffff;
-  --surface-color: #ffffff; /* Card/modal backgrounds */
-  --subtle-background-color: #f0f5ff; /* Light blue/grayish */
-  --accent-background-color: #def7ec; /* Light green accent */
+  --surface-color: #ffffff;
+  --surface-elevated: #fafafa;
+  --subtle-background-color: #f8fafc;
+  --accent-background-color: var(--primary-50);
 
-  --text-color: #333333;
-  --text-secondary-color: #555555;
-  --text-accent-color: var(--primary-color);
+  /* Text Colors - Improved Contrast */
+  --text-color: #0f172a;
+  --text-primary: #0f172a;
+  --text-secondary-color: #475569;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  --text-accent-color: var(--primary-600);
   --text-on-primary-color: #ffffff;
 
-  --border-color: #d9d9d9;
-  --border-color-subtle: #eeeeee;
+  /* Border Colors - Enhanced Hierarchy */
+  --border-color: #e2e8f0;
+  --border-color-subtle: #f1f5f9;
+  --border-color-strong: #cbd5e1;
 
-  --link-color: #007bff; /* Keep existing link color for now */
-  --link-hover-color: #0056b3;
+  /* Link Colors */
+  --link-color: var(--primary-600);
+  --link-hover-color: var(--primary-700);
 
-  --code-background: #e9ecef;
-  --code-text: #333;
-  --pre-background: #f0f0f0;
-  --pre-border: #ddd;
-  --pre-text: #333;
+  /* Code Block Colors */
+  --code-background: #f1f5f9;
+  --code-text: #334155;
+  --pre-background: #f8fafc;
+  --pre-border: #e2e8f0;
+  --pre-text: #334155;
 
-  --navbar-background: var(--surface-color);
-  --sidebar-background: #f4f4f9; /* Keep existing light bg for sidebar */
+  /* Shadows - Professional Elevation System */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  /* Interactive States */
+  --hover-overlay: rgba(0, 0, 0, 0.04);
+  --active-overlay: rgba(0, 0, 0, 0.08);
+  --hover-lift-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --focus-ring: 0 0 0 4px rgba(16, 185, 129, 0.1);
+
+  /* Component Specific */
+  --navbar-background: rgba(255, 255, 255, 0.8);
+  --navbar-glass-bg: rgba(255, 255, 255, 0.8);
+  --sidebar-background: var(--surface-color);
   --input-background: var(--background-color);
   --input-border: var(--border-color);
   --input-focus-border: var(--primary-color);
-  --input-focus-shadow: rgba(5, 122, 85, 0.1); /* Adjusted shadow color */
+  --input-focus-shadow: rgba(5, 150, 105, 0.1);
 
   /* Modern Design System Variables */
-  --primary-rgb: 5, 122, 85;
+  --primary-rgb: 5, 150, 105;
   --input-height: 48px;
   --border-radius-lg: 16px;
   --border-radius-md: 12px;
@@ -45,52 +82,79 @@
   --transition-base: all 0.2s ease;
 
   /* Skeleton Loading Variables */
-  --skeleton-base: #e0e0e0;
-  --skeleton-highlight: #f0f0f0;
+  --skeleton-base: #e2e8f0;
+  --skeleton-highlight: #f1f5f9;
 }
 
 body.dark {
-  /* Dark Theme */
-  --primary-color: #34D399; /* Brighter green for dark mode */
-  --primary-hover-color: #29b88a;
-  --primary-active-color: #1f9d7b;
-  --button-primary-bg: #26A146; /* Slightly darker green for buttons */
-  --button-primary-hover-bg: #1f8a3a;
-  --button-primary-active-bg: #1a7330;
-  --user-bubble-dark-bg: #113319; /* Custom dark green for user chat bubble */
+  /* Primary Colors - Adjusted for Dark Mode */
+  --primary-color: var(--primary-400);
+  --primary-hover-color: var(--primary-300);
+  --primary-active-color: var(--primary-200);
+  --button-primary-bg: var(--primary-500);
+  --button-primary-hover-bg: var(--primary-400);
+  --button-primary-active-bg: var(--primary-300);
 
-  --background-color: #1a1a1a;
-  --surface-color: #2a2a2a; /* Card/modal backgrounds */
-  --subtle-background-color: #252525;
-  --accent-background-color: #1f3a30; /* Darker green accent */
+  /* Surface & Background Colors - Dark Mode */
+  --background-color: #0f172a;
+  --surface-color: #1e293b;
+  --surface-elevated: #334155;
+  --subtle-background-color: #1e293b;
+  --accent-background-color: rgba(20, 64, 51, 0.4);
 
-  --text-color: #e0e0e0;
-  --text-secondary-color: #b0b0b0;
-  --text-accent-color: var(--primary-color);
-  --text-on-primary-color: #ffffff; /* Keep white text on dark green buttons */
+  /* Text Colors - Enhanced Contrast for Dark Mode */
+  --text-color: #f1f5f9;
+  --text-primary: #f1f5f9;
+  --text-secondary-color: #cbd5e1;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-accent-color: var(--primary-400);
+  --text-on-primary-color: #0f172a;
 
-  --border-color: #444444;
-  --border-color-subtle: #333333;
+  /* Border Colors - Dark Mode */
+  --border-color: #334155;
+  --border-color-subtle: #1e293b;
+  --border-color-strong: #475569;
 
-  --link-color: #64b5f6;
-  --link-hover-color: #90caf9;
+  /* Link Colors - Dark Mode */
+  --link-color: var(--primary-400);
+  --link-hover-color: var(--primary-300);
 
-  --code-background: #333333;
-  --code-text: #e0e0e0;
-  --pre-background: #2a2a2a;
-  --pre-border: #444;
-  --pre-text: #d4d4d4;
+  /* Code Block Colors - Dark Mode */
+  --code-background: #334155;
+  --code-text: #e2e8f0;
+  --pre-background: #1e293b;
+  --pre-border: #334155;
+  --pre-text: #cbd5e1;
 
-  --navbar-background: var(--surface-color);
-  --sidebar-background: #202020; /* Darker sidebar */
+  /* Shadows - Enhanced for Dark Mode */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+
+  /* Interactive States - Dark Mode */
+  --hover-overlay: rgba(255, 255, 255, 0.08);
+  --active-overlay: rgba(255, 255, 255, 0.12);
+  --hover-lift-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --focus-ring: 0 0 0 4px rgba(52, 211, 153, 0.2);
+
+  /* Component Specific - Dark Mode */
+  --navbar-background: rgba(30, 41, 59, 0.85);
+  --navbar-glass-bg-dark: rgba(30, 41, 59, 0.85);
+  --sidebar-background: #1e293b;
   --input-background: var(--surface-color);
   --input-border: var(--border-color);
   --input-focus-border: var(--primary-color);
-  --input-focus-shadow: rgba(52, 211, 153, 0.15); /* Adjusted shadow color */
+  --input-focus-shadow: rgba(52, 211, 153, 0.2);
+
+  /* Special Colors - Dark Mode */
+  --user-bubble-dark-bg: var(--primary-900);
 
   /* Skeleton Loading Variables - Dark Mode */
-  --skeleton-base: #2a2a2a;
-  --skeleton-highlight: #3a3a3a;
+  --skeleton-base: #1e293b;
+  --skeleton-highlight: #334155;
 }
 
 /* Apply base styles using variables */

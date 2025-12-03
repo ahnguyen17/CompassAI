@@ -35,6 +35,14 @@
   --input-border: var(--border-color);
   --input-focus-border: var(--primary-color);
   --input-focus-shadow: rgba(5, 122, 85, 0.1); /* Adjusted shadow color */
+
+  /* Modern Design System Variables */
+  --primary-rgb: 5, 122, 85;
+  --input-height: 48px;
+  --border-radius-lg: 16px;
+  --border-radius-md: 12px;
+  --border-radius-sm: 8px;
+  --transition-base: all 0.2s ease;
 }
 
 body.dark {
@@ -123,4 +131,27 @@ code:not(pre > code) {
   padding: 0.2em 0.4em;
   border-radius: 3px;
   font-size: 85%;
+}
+
+/* Modern Form Animations */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

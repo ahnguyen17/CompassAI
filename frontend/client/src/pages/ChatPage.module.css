@@ -7,19 +7,17 @@
 }
 
 .chatSidebar {
-    /* background-color: #ffffff; */ /* Handled by inline style */
     border-right: 1px solid #dee2e6;
     flex-shrink: 0;
     width: 280px;
-    min-width: 280px; /* Desktop default width */
-    padding: 15px;
-    /* Use transform for visibility transition */
-    transition: transform 0.3s ease-in-out;
-    overflow-y: auto; /* Allow scrolling if content overflows */
+    min-width: 280px;
+    padding: 20px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
     overflow-x: hidden;
     white-space: nowrap;
-    /* Ensure it starts hidden if needed, or visible based on initial state */
-    transform: translateX(0); /* Assume visible by default unless hidden class is applied */
+    transform: translateX(0);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
 }
 
 .chatSidebarHidden {
@@ -64,33 +62,53 @@
 .messageList {
     flex: 1;
     overflow-y: auto;
-    margin-bottom: 15px;
-    padding: 10px;
-    /* background-color handled by inline style */
+    margin-bottom: 24px;
+    padding: 24px;
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+.messageList::before {
+    content: '';
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to bottom, rgba(248, 249, 250, 1) 0%, rgba(248, 249, 250, 0) 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.messageList::after {
+    content: '';
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to top, rgba(248, 249, 250, 1) 0%, rgba(248, 249, 250, 0) 100%);
+    pointer-events: none;
+    z-index: 1;
 }
 
 .inputForm {
     margin-top: auto;
-    padding-top: 15px;
+    padding-top: 24px;
     border-top: 1px solid var(--border-color-subtle);
 }
 
 .inputControls {
     display: flex;
-    /* align-items: center; Will be controlled by elevated state */
-    gap: 0px; /* Removed gap */
-    padding: 8px;
+    gap: 0px;
+    padding: 12px 16px;
     background-color: var(--surface-color);
-    border: 1px solid var(--input-border);
-    border-radius: 24px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    transition: border-color 0.3s ease, background-color 0.3s ease, flex-direction 0.1s ease, align-items 0.1s ease;
-
-    /* Default to row for the non-elevated state, and center items vertically */
-    /* flex-direction: row; */ /* No longer default, always column */
-    /* align-items: center; */ /* No longer default, always stretch for column */
-    flex-direction: column; /* Textarea on top, icon row below */
-    align-items: stretch; /* Allow textarea to take full width */
+    border: 2px solid var(--input-border);
+    border-radius: 28px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: all 0.3s ease;
+    flex-direction: column;
+    align-items: stretch;
 }
 
 /* .inputControls:not(.inputControlsElevated) .iconRow {
@@ -100,51 +118,78 @@
 
 .iconRow {
     display: flex;
-    align-items: center; /* Vertically center all children */
+    align-items: center;
     width: 100%;
-    /* gap: 8px; */ /* Gap will be handled by groups or space-between */
-    flex-wrap: nowrap; /* Prevent wrapping of items */
-    justify-content: space-between; /* Push left and right groups apart */
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .iconGroupLeft {
     display: flex;
     align-items: center;
-    gap: 8px; /* Spacing within the left group of icons */
+    gap: 8px;
 }
 
 .iconGroupRight {
     display: flex;
     align-items: center;
-    gap: 8px; /* Spacing within the right group of icons */
+    gap: 8px;
 }
 
 .inputControls:focus-within {
     border-color: var(--input-focus-border);
-    box-shadow: 0 0 0 2px var(--input-focus-shadow);
+    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1), 0 4px 16px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
 }
 
-.fileUploadButton, .micButton, .sendButton, .reasoningToggle { /* Common class for icon buttons */
+.fileUploadButton, .micButton, .sendButton, .reasoningToggle {
     background: transparent;
     border: none;
     color: var(--text-secondary-color);
     cursor: pointer;
-    padding: 8px; /* Consistent padding */
-    border-radius: 50%; /* Circular buttons */
+    padding: 0;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5em; /* Icon size */
-    transition: color 0.2s ease, background-color 0.2s ease;
+    font-size: 1.4em;
+    transition: all 0.2s ease;
     flex-shrink: 0;
-    width: 40px; /* Fixed width */
-    height: 40px; /* Fixed height */
-    margin: 0; /* Remove default margins */
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.fileUploadButton::before, .micButton::before, .reasoningToggle::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: var(--primary-color);
+    opacity: 0.15;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+}
+
+.fileUploadButton:active::before, .micButton:active::before, .reasoningToggle:active::before {
+    width: 100%;
+    height: 100%;
 }
 
 .fileUploadButton:hover, .micButton:hover, .sendButton:not(:disabled):hover, .reasoningToggle:hover {
     color: var(--primary-color);
-    background-color: var(--accent-background-color); /* Subtle hover background */
+    background-color: var(--accent-background-color);
+    transform: scale(1.05);
+}
+
+.fileUploadButton:active, .micButton:active, .sendButton:active, .reasoningToggle:active {
+    transform: scale(0.95);
 }
 
 .fileUploadButton:disabled, .micButton:disabled, .sendButton:disabled, .reasoningToggle:disabled {
@@ -219,22 +264,20 @@
 }
 
 .messageInput {
-    /* flex: 1; */ /* Removed to allow natural height based on content and rows attribute */
-    padding: 8px 15px 4px 15px; /* Reduced bottom padding from 8px to 4px */
-    border-radius: 20px; /* Keep rounded for inner input */
-    border: none; /* Remove border, parent .inputControls has it */
+    padding: 12px 16px 8px 16px;
+    border-radius: 20px;
+    border: none;
     font-size: 1rem;
-    background-color: transparent; /* Inherit from .inputControls */
+    background-color: transparent;
     color: var(--text-color);
     resize: none;
-    line-height: 1.5;
+    line-height: 1.6;
     outline: none;
     max-height: 150px;
     overflow-y: auto;
-    margin: 0; /* Remove default margins */
-    width: 100%; /* Ensure it takes full width in the column layout */
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
-    /* margin-bottom: 8px; */ /* Removed to reduce space, parent .inputControls has a gap */
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* .elevatedTextarea class is no longer needed, styles merged or adapted into .messageInput */
@@ -264,9 +307,22 @@
 /* Base Message Styling */
 .messageRow {
     display: flex;
-    margin-bottom: 12px;
+    margin-bottom: 32px;
     align-items: flex-end;
+    animation: slideUp 0.3s ease;
 }
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .messageRowUser {
     justify-content: flex-end;
 }
@@ -277,12 +333,18 @@
      align-items: stretch; /* Stretch items like details/bubble wrapper */
 }
 .messageBubble {
-    padding: 10px 15px;
-    border-radius: 15px;
-    max-width: 75%; /* Default max width */
+    padding: 16px 40px 16px 20px;
+    border-radius: 16px;
+    max-width: 75%;
     word-wrap: break-word;
-    position: relative; /* Needed for absolute positioning of the copy button */
-    padding: 10px 35px 10px 15px; /* Add padding for the button */
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.messageBubble:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .fileLink { /* Style for file download links in messages */
@@ -299,12 +361,12 @@
     opacity: 1;
 }
 .messageBubbleUser {
-    background-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover-color, #0056b3) 100%);
     color: var(--text-on-primary-color);
 }
 .messageBubbleAi {
-     background-color: #e9ecef;
-     color: #343a40;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    color: #343a40;
 }
 
 /* Sidebar List Item Base Styles (if needed) */
@@ -312,19 +374,24 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 12px;
+    padding: 14px 16px;
     cursor: pointer;
-    margin-bottom: 5px;
-    border-radius: 5px;
-    background-color: transparent; /* Default */
-    color: #495057; /* Default */
-    transition: background-color 0.2s ease; /* Add transition */
+    margin-bottom: 8px;
+    border-radius: 10px;
+    background-color: transparent;
+    color: #495057;
+    transition: all 0.3s ease;
+    border-left: 3px solid transparent;
 }
 .sessionListItem:hover {
-    background-color: #f1f3f5; /* Light hover */
+    background-color: #f1f3f5;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 .sessionListItemActive {
-    background-color: #e9ecef; /* Light active */
+    background-color: #e9ecef;
+    border-left-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .sessionGroup {
@@ -487,11 +554,15 @@ body.dark .chatSidebar li span:hover {
 
 /* Use class for active item */
 body.dark .sessionListItemActive {
-    background-color: #3a3d41; /* Darker selection background */
+    background-color: #3a3d41;
     color: #fff;
+    border-left-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 body.dark .sessionListItem:hover {
-    background-color: #343a40; /* Dark hover */
+    background-color: #343a40;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 body.dark .deleteSessionButton {
     color: #ff6b6b; /* Lighter red */
@@ -578,17 +649,24 @@ body.dark .mainChatArea a {
 
 
 body.dark .messageList {
-    /* background: #2a2a2a; */ /* Handled by inline style */
     border-color: #444;
+}
+
+body.dark .messageList::before {
+    background: linear-gradient(to bottom, rgba(26, 26, 26, 1) 0%, rgba(26, 26, 26, 0) 100%);
+}
+
+body.dark .messageList::after {
+    background: linear-gradient(to top, rgba(26, 26, 26, 1) 0%, rgba(26, 26, 26, 0) 100%);
 }
 
 /* Message Bubbles - Dark mode styles */
 body.dark .messageBubbleUser {
-    background-color: #0a1410 !important; /* Very dark green as requested */
-    color: white !important; /* Ensure text is white for maximum contrast */
+    background: linear-gradient(135deg, #0a1410 0%, #0d4a2e 100%) !important;
+    color: white !important;
 }
 body.dark .messageBubbleAi {
-    background-color: #3a3d41;
+    background: linear-gradient(135deg, #3a3d41 0%, #2d3033 100%);
     color: #e0e0e0;
 }
 /* Force SyntaxHighlighter background to be transparent in dark mode */

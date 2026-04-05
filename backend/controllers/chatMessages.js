@@ -32,6 +32,59 @@ const DEFAULT_MODELS = {
     'Perplexity': 'perplexity/sonar' // Added Perplexity default
 };
 
+// --- Chat Compaction Settings ---
+const COMPACTION_THRESHOLD = 30;    // compact when history exceeds this many messages
+const COMPACTION_KEEP_RECENT = 10;  // always keep the most recent N messages verbatim
+const RECOMPACTION_INTERVAL = 10;   // regenerate summary after this many new messages
+
+// Summarise old messages and cache the result on the session document.
+// Returns { history: <recent messages array>, summary: <string|null> }
+const getCompactedHistoryAndSummary = async (history, session) => {
+    const total = history.length;
+    const messagesSinceCompaction = session.compactionMessageCount
+        ? total - session.compactionMessageCount
+        : total;
+
+    const needsNewSummary = !session.compactionSummary || messagesSinceCompaction >= RECOMPACTION_INTERVAL;
+    let summary = session.compactionSummary || null;
+
+    if (needsNewSummary) {
+        const oldMessages = history.slice(0, total - COMPACTION_KEEP_RECENT);
+        if (oldMessages.length > 0) {
+            try {
+                // Pick any enabled API key for the summarisation call
+                const keyEntry = await ApiKey.findOne({ isEnabled: true });
+                if (keyEntry) {
+                    const providerName = keyEntry.providerName;
+                    const apiKey = keyEntry.keyValue;
+                    const model = DEFAULT_MODELS[providerName];
+
+                    const conversationText = oldMessages
+                        .map(m => `${m.sender === 'user' ? 'User' : 'Assistant'}: ${(m.content || '').substring(0, 500)}`)
+                        .join('\n\n');
+                    const summaryPrompt = `Summarize the following conversation concisely, capturing key facts, decisions, and context needed for future replies:\n\n${conversationText}`;
+
+                    const result = await callApi(providerName, apiKey, model, [{ sender: 'user', content: summaryPrompt }], summaryPrompt, null);
+                    if (result && result.content) {
+                        summary = result.content;
+                        await ChatSession.findByIdAndUpdate(session._id, {
+                            compactionSummary: summary,
+                            compactionMessageCount: total,
+                        });
+                        console.log(`[Compaction] Session ${session._id}: summarised ${oldMessages.length} messages.`);
+                    }
+                }
+            } catch (err) {
+                console.error('[Compaction] Error generating summary:', err.message);
+            }
+        }
+    }
+
+    const recentHistory = history.slice(total - COMPACTION_KEEP_RECENT);
+    return { history: recentHistory, summary };
+};
+// --- End Chat Compaction ---
+
 // Helper function to find provider for a given model
 const findProviderForModel = (modelName) => {
     // Special case for Perplexity models which include the "perplexity/" prefix
@@ -801,6 +854,17 @@ exports.addMessageToSession = async (req, res, next) => {
 
         const history = await ChatMessage.find({ session: sessionId }).sort({ timestamp: 1 });
 
+        // Compact long conversations to reduce token usage
+        let historyForApi = history;
+        if (history.length > COMPACTION_THRESHOLD) {
+            const compacted = await getCompactedHistoryAndSummary(history, session);
+            historyForApi = compacted.history;
+            if (compacted.summary) {
+                const summaryNote = `[Earlier Conversation Summary]\n${compacted.summary}\n[End of Summary]`;
+                systemPromptForApi = systemPromptForApi ? `${systemPromptForApi}\n\n${summaryNote}` : summaryNote;
+            }
+        }
+
         if (shouldStream) {
             console.log("Processing request with streaming enabled.");
             let providerUsed = null; let actualModelUsed = null; let finalAiContent = null;
@@ -823,14 +887,14 @@ exports.addMessageToSession = async (req, res, next) => {
                     }
                 }
                 if (providerToTry && modelToTry && apiKeyToUse) {
-                    const result = await callApiStream(providerToTry, apiKeyToUse, modelToTry, history, finalUserMessageContentForApi, sendSse, systemPromptForApi);
+                    const result = await callApiStream(providerToTry, apiKeyToUse, modelToTry, historyForApi, finalUserMessageContentForApi, sendSse, systemPromptForApi);
                     if (!result.errorOccurred) {
                         providerUsed = providerToTry; actualModelUsed = modelToTry; finalAiContent = result.fullResponseContent;
                         finalReasoningContent = result.fullReasoningContent; fullCitations = result.fullCitations;
                     } else {
                         finalModelNameToSave = null; const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
                         if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
-                            const defaultResult = await callApiStream(providerToTry, apiKeyToUse, defaultModelForProvider, history, finalUserMessageContentForApi, sendSse, systemPromptForApi);
+                            const defaultResult = await callApiStream(providerToTry, apiKeyToUse, defaultModelForProvider, historyForApi, finalUserMessageContentForApi, sendSse, systemPromptForApi);
                             if (!defaultResult.errorOccurred) {
                                 providerUsed = providerToTry; actualModelUsed = defaultModelForProvider; finalAiContent = defaultResult.fullResponseContent;
                                 finalReasoningContent = defaultResult.fullReasoningContent; fullCitations = defaultResult.fullCitations; finalModelNameToSave = actualModelUsed;
@@ -847,7 +911,7 @@ exports.addMessageToSession = async (req, res, next) => {
                             const fallbackProvider = apiKeyEntry.providerName; if (providerToTry === fallbackProvider) continue;
                             const fallbackModel = DEFAULT_MODELS[fallbackProvider]; if (!fallbackModel) continue;
                             const fallbackTextContent = typeof finalUserMessageContentForApi === 'string' ? finalUserMessageContentForApi : (finalUserMessageContentForApi.find(part => part.type === 'text')||{text:''}).text;
-                            const fallbackResult = await callApiStream(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, fallbackTextContent, sendSse, null);
+                            const fallbackResult = await callApiStream(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, historyForApi, fallbackTextContent, sendSse, null);
                             if (!fallbackResult.errorOccurred) {
                                 providerUsed = fallbackProvider; actualModelUsed = fallbackModel; finalAiContent = fallbackResult.fullResponseContent;
                                 finalReasoningContent = fallbackResult.fullReasoningContent; fullCitations = fallbackResult.fullCitations; finalModelNameToSave = actualModelUsed;
@@ -900,13 +964,13 @@ exports.addMessageToSession = async (req, res, next) => {
                 }
             }
             if (providerToTry && modelToTry && apiKeyToUse) {
-                apiResult = await callApi(providerToTry, apiKeyToUse, modelToTry, history, finalUserMessageContentForApi, systemPromptForApi);
+                apiResult = await callApi(providerToTry, apiKeyToUse, modelToTry, historyForApi, finalUserMessageContentForApi, systemPromptForApi);
                 if (apiResult && apiResult.content !== null) {
                     providerUsed = providerToTry; actualModelUsed = modelToTry;
                 } else {
                     finalModelNameToSave = null; const defaultModelForProvider = DEFAULT_MODELS[providerToTry];
                     if (defaultModelForProvider && defaultModelForProvider !== modelToTry) {
-                        apiResult = await callApi(providerToTry, apiKeyToUse, defaultModelForProvider, history, finalUserMessageContentForApi, systemPromptForApi);
+                        apiResult = await callApi(providerToTry, apiKeyToUse, defaultModelForProvider, historyForApi, finalUserMessageContentForApi, systemPromptForApi);
                         if (apiResult && apiResult.content !== null) {
                             providerUsed = providerToTry; actualModelUsed = defaultModelForProvider; finalModelNameToSave = actualModelUsed;
                         }
@@ -922,7 +986,7 @@ exports.addMessageToSession = async (req, res, next) => {
                         const fallbackProvider = apiKeyEntry.providerName; if (providerToTry === fallbackProvider) continue;
                         const fallbackModel = DEFAULT_MODELS[fallbackProvider]; if (!fallbackModel) continue;
                         const fallbackTextContent = typeof finalUserMessageContentForApi === 'string' ? finalUserMessageContentForApi : (finalUserMessageContentForApi.find(part => part.type === 'text')||{text:''}).text;
-                        apiResult = await callApi(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, history, fallbackTextContent);
+                        apiResult = await callApi(fallbackProvider, apiKeyEntry.keyValue, fallbackModel, historyForApi, fallbackTextContent);
                         if (apiResult && apiResult.content !== null) { providerUsed = fallbackProvider; actualModelUsed = fallbackModel; finalModelNameToSave = actualModelUsed; break; }
                     }
                 }

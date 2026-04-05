@@ -33,6 +33,13 @@ const ChatSessionSchema = new mongoose.Schema({
     sparse: true, // Allows multiple documents to have null/undefined shareId, but shared ones must be unique
     // We'll generate this only when the user chooses to share
   },
+  compactionSummary: {
+    type: String,
+  },
+  compactionMessageCount: {
+    type: Number,
+    default: 0,
+  },
   // We might want to store the last updated time as well
   // updatedAt: {
   //   type: Date,
